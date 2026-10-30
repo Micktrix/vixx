@@ -13,6 +13,8 @@ npm run db:start   # starter Supabase lokalt og viser URL og nøgler
 npm run dev        # http://localhost:3000
 ```
 
+Supabase Studio (databasen i browseren): http://127.0.0.1:54323
+
 ## Scripts
 
 | Script | Gør |
