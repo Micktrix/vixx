@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* Farver og typografi fra docs/prototype.html. Ingen mørk tilstand foreløbig. */
+@theme {
+  --color-bg: #f5f4f2;
+  --color-surface: #ffffff;
+  --color-ink: #262422;
+  --color-muted: #716c66;
+  --color-line: #e8e5e1;
+  --color-line2: #d9d5cf;
+  --color-soft: #f0eeeb;
+
+  --color-accent: #dd7434;
+  --color-accent-ink: #a9531d;
+  --color-accent-bg: #fbf0e7;
+  --color-accent-line: #f0cbae;
+
+  --color-ok: #3d7a55;
+  --color-ok-bg: #e8f1ea;
+  --color-bad: #b0453a;
+  --color-bad-bg: #faebe8;
+  --color-pend: #716c66;
+  --color-pend-bg: #f1eee9;
+
+  --font-sans: var(--font-dm-sans), Helvetica, Arial, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

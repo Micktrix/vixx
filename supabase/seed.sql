@@ -1,0 +1,6 @@
+-- Testdata til lokal udvikling. Køres automatisk af `npm run db:reset`.
+-- Kun testdata – aldrig rigtige personer.
+--
+-- Fyldes ud i trin 1, når tabellerne findes:
+--   én skole, 2 kontorbrugere, 8–9 lærere, satser, ydelser med priser,
+--   lokaler og køretøjer.
