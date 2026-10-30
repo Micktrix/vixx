@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Cache Components er slået fra: næsten alle sider ligger bag login og er dynamiske,
+  // og klassisk server-rendering holder login-tjekket enkelt.
   turbopack: {
     rules: {
       "*.css": {

@@ -4,9 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { icons } from "@/components/icons";
 import { LogoMark } from "@/components/logo-mark";
+import { signOut } from "@/lib/auth/actions";
 import { officeHref, officeSections } from "./sections";
 
-export function OfficeSidebar() {
+type Props = { schoolName: string; userName: string; canSwitchSchool: boolean };
+
+export function OfficeSidebar({ schoolName, userName, canSwitchSchool }: Props) {
   const pathname = usePathname();
 
   return (
@@ -19,7 +22,7 @@ export function OfficeSidebar() {
           <LogoMark />
           <div className="min-w-0">
             <b className="block text-[15px]">Timeregistrering</b>
-            <span className="text-[13px] text-muted">Vixx</span>
+            <span className="text-[13px] text-muted">{schoolName}</span>
           </div>
         </div>
         {officeSections.map((s) => {
@@ -41,6 +44,20 @@ export function OfficeSidebar() {
             </Link>
           );
         })}
+        <div className="flex items-center gap-2 px-3 py-2.5 text-[15px] min-[860px]:mt-auto min-[860px]:flex-col min-[860px]:items-start min-[860px]:gap-1 min-[860px]:border-t min-[860px]:border-line min-[860px]:pt-4">
+          <span className="hidden text-[13px] text-muted min-[860px]:block">Logget ind som {userName}</span>
+          {canSwitchSchool && (
+            <Link href="/vaelg-skole" className="font-medium text-muted hover:text-ink">
+              Skift skole
+            </Link>
+          )}
+          <form action={signOut}>
+            <button type="submit" className="flex items-center gap-2 font-medium text-muted hover:text-ink">
+              {icons.logout}
+              Log ud
+            </button>
+          </form>
+        </div>
       </div>
     </nav>
   );

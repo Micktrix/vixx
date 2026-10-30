@@ -24,8 +24,10 @@ insert into seed_people values
   ('18', 'Karin Sørensen',    '+4520000018', 'instructor'),
   ('19', 'Bo Rasmussen',      '+4520000019', 'instructor');
 
+-- Login sker med telefon + kode via en intern adresse (se src/lib/auth/login-identity.ts):
+-- +4520000011 -> 4520000011@login.vixx.dk. Telefonnummeret gemmes også, så SMS-kode kan slås til senere.
 insert into auth.users (
-  instance_id, id, aud, role, phone, encrypted_password, phone_confirmed_at,
+  instance_id, id, aud, role, email, email_confirmed_at, phone, phone_confirmed_at, encrypted_password,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
   confirmation_token, recovery_token, email_change_token_new, email_change
 )
@@ -33,10 +35,10 @@ select
   '00000000-0000-0000-0000-000000000000',
   ('00000000-0000-4000-a100-0000000000' || nn)::uuid,
   'authenticated', 'authenticated',
-  substr(phone, 2),                                   -- auth gemmer uden "+"
+  substr(phone, 2) || '@login.vixx.dk', now(),
+  substr(phone, 2), now(),                            -- auth gemmer telefon uden "+"
   extensions.crypt('Test1234!', extensions.gen_salt('bf')),
-  now(),
-  '{"provider": "phone", "providers": ["phone"]}', '{}',
+  '{"provider": "email", "providers": ["email", "phone"]}', '{}',
   now(), now(), '', '', '', ''
 from seed_people;
 
@@ -44,8 +46,12 @@ insert into auth.identities (provider_id, user_id, identity_data, provider, crea
 select
   ('00000000-0000-4000-a100-0000000000' || nn),
   ('00000000-0000-4000-a100-0000000000' || nn)::uuid,
-  jsonb_build_object('sub', '00000000-0000-4000-a100-0000000000' || nn, 'phone', substr(phone, 2)),
-  'phone', now(), now()
+  jsonb_build_object(
+    'sub', '00000000-0000-4000-a100-0000000000' || nn,
+    'email', substr(phone, 2) || '@login.vixx.dk',
+    'email_verified', true
+  ),
+  'email', now(), now()
 from seed_people;
 
 insert into public.profiles (id, full_name, phone, must_change_password)

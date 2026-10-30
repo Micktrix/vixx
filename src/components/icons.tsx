@@ -72,6 +72,11 @@ export const icons = {
       <path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01" />
     </Icon>
   ),
+  logout: (
+    <Icon size={18}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+    </Icon>
+  ),
   settings: (
     <Icon>
       <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
