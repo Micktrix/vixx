@@ -85,23 +85,35 @@ export function TextField({
   );
 }
 
-// Afkrydsning vist som en "chip", som i prototypen.
+// Afkrydsning (eller ét valg ud af flere med type="radio") vist som en "chip", som i prototypen.
 export function CheckChip({
   name,
   value,
   label,
   defaultChecked,
   disabled,
+  required,
+  type = "checkbox",
 }: {
   name: string;
   value: string;
   label: string;
   defaultChecked?: boolean;
   disabled?: boolean;
+  required?: boolean;
+  type?: "checkbox" | "radio";
 }) {
   return (
     <label className="cursor-pointer has-disabled:cursor-default has-disabled:opacity-60">
-      <input type="checkbox" name={name} value={value} defaultChecked={defaultChecked} disabled={disabled} className="peer sr-only" />
+      <input
+        type={type}
+        name={name}
+        value={value}
+        defaultChecked={defaultChecked}
+        disabled={disabled}
+        required={required}
+        className="peer sr-only"
+      />
       <span className="inline-flex h-9 items-center rounded-full border border-line2 bg-surface px-3.5 text-sm font-semibold text-muted peer-checked:border-accent peer-checked:bg-accent-bg peer-checked:text-accent-ink peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
         {label}
       </span>

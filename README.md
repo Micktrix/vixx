@@ -56,6 +56,8 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - Hver lektion husker sin lektionslængde, så ændringer på skolen ikke flytter gamle lektioner.
 - Kategorier (B, C …) er fælles; typer (Kørsel, Rybners …) vedligeholdes pr. skole. Nye skoler får standardtyperne.
 - Lærerrollen er `instructors.active`; rækken slettes aldrig, så historik bevares.
+- Priser: `public.unit_price_ore(registrering)` giver låst pris → lærerens egen pris → ydelsens pris på lektionens dato (`service_price_on`). Samme regel i `src/lib/prices.ts` til visning.
+- En brugt ydelse kan ikke skifte kategori/type eller slettes; en sats med ydelser kan ikke slettes. En ydelse har altid mindst én pris.
 - RLS er slået til på alle tabeller. Hjælpefunktioner ligger i skemaet `private`.
 - Alle ændringer logges automatisk i `audit_log` uden følsomme værdier.
 
@@ -64,5 +66,6 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - `/` – login
 - `/kontor` – kontordelen med sidemenu
 - `/kontor/undervisere` – undervisere og brugere; `/ny` opretter, `/<bruger-id>` er personens side
+- `/kontor/ydelser` – satser, ydelser og priser (kun admin retter)
 - `/kontor/indstillinger` – typer
 - `/laerer` – lærerdelen med bundmenu; `/laerer/oplysninger` er lærerens egne oplysninger
