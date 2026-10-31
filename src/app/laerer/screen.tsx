@@ -24,11 +24,3 @@ export function Screen({
     </>
   );
 }
-
-export function ComingSoon({ step }: { step: string }) {
-  return (
-    <section className="rounded-[20px] border border-line bg-surface p-[18px]">
-      <p className="text-muted">Denne side bygges i {step}.</p>
-    </section>
-  );
-}

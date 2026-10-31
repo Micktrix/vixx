@@ -10,7 +10,7 @@ const tabs = [
   { href: "/laerer/beskeder", label: "Beskeder", icon: icons.message },
 ];
 
-export function BottomNav() {
+export function BottomNav({ unread }: { unread: number }) {
   const pathname = usePathname();
 
   return (
@@ -19,18 +19,26 @@ export function BottomNav() {
       className="flex h-[70px] shrink-0 items-center justify-around border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] box-content"
     >
       {tabs.map((t) => {
-        const current = pathname === t.href;
+        const current = t.href === "/laerer" ? pathname === t.href : pathname.startsWith(t.href);
         return (
           <Link
             key={t.href}
             href={t.href}
             aria-current={current ? "page" : undefined}
-            className={`flex min-w-[72px] flex-col items-center gap-1 text-xs ${
+            className={`relative flex min-w-[72px] flex-col items-center gap-1 text-xs ${
               current ? "font-bold text-accent-ink" : "font-semibold text-muted"
             }`}
           >
             {t.icon}
             {t.label}
+            {t.href === "/laerer/beskeder" && unread > 0 && (
+              <span
+                aria-label={`${unread} ulæste`}
+                className="absolute -top-1 right-3 min-w-[18px] rounded-full bg-accent px-1 text-center text-[11px] leading-[18px] font-bold text-ink"
+              >
+                {unread}
+              </span>
+            )}
           </Link>
         );
       })}

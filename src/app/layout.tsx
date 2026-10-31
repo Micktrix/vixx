@@ -11,10 +11,12 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Vixx",
   description: "Planlægning og timeregistrering for køreskoler",
+  // Lagt på hjemmeskærmen åbner appen uden browserens adresselinje.
+  appleWebApp: { capable: true, title: "Vixx", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: "#f5f4f2",
   viewportFit: "cover",
 };
 
