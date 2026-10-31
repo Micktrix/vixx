@@ -3,11 +3,12 @@
 import { useMemo, useState, useTransition } from "react";
 import { CheckChip, Fieldset, ResultBox, TextField, useFormAction } from "@/components/form";
 import { inputClass, primaryButtonClass } from "@/components/styles";
-import { availability, formatDuration, lessonSpan, slotIsFree, suggestStart, TIME_SLOTS, type DayInfo } from "@/lib/schedule";
-import { getDay, saveLesson } from "./actions";
+import { availability, formatDuration, lessonSpan, overlaps, slotIsFree, suggestStart, TIME_SLOTS, type DayInfo, type Span } from "@/lib/schedule";
+import { getDay, getResourceBusy, saveLesson } from "./actions";
 
 export type FormInstructor = { id: string; name: string; categories: string[]; lessonTypeIds: string[]; onRequest: boolean };
 export type FormService = { id: string; name: string; lessonTypeId: string; categories: string[]; groupName: string };
+export type FormResource = { id: string; kind: "room" | "vehicle"; name: string; category: string | null };
 
 type Initial = {
   id?: string;
@@ -19,6 +20,7 @@ type Initial = {
   category?: string;
   studentName?: string;
   note?: string;
+  resourceId?: string;
 };
 
 export function LessonForm({
@@ -28,6 +30,8 @@ export function LessonForm({
   today,
   initial,
   initialDay,
+  resources,
+  initialResourceBusy,
 }: {
   instructors: FormInstructor[];
   services: FormService[];
@@ -35,6 +39,8 @@ export function LessonForm({
   today: string;
   initial: Initial;
   initialDay: DayInfo | null;
+  resources: FormResource[];
+  initialResourceBusy: Record<string, Span[]>; // bookinger på dagen pr. lokale/køretøj (uden denne lektions)
 }) {
   const { state, onSubmit, pending: saving } = useFormAction(saveLesson);
   const [instructorId, setInstructorId] = useState(initial.instructorId);
@@ -44,6 +50,8 @@ export function LessonForm({
   const [loadingDay, startLoading] = useTransition();
   const [start, setStart] = useState(initial.start ?? "");
   const [serviceId, setServiceId] = useState(initial.serviceId ?? "");
+  const [resourceBusy, setResourceBusy] = useState(initialResourceBusy);
+  const [resourceId, setResourceId] = useState(initial.resourceId ?? "");
 
   const instructor = instructors.find((i) => i.id === instructorId);
   const duration = count * lessonMinutes;
@@ -54,7 +62,14 @@ export function LessonForm({
     setInstructorId(nextInstructor);
     setDate(nextDate);
     if (!nextInstructor || !nextDate) return setDay(null);
-    startLoading(async () => setDay(await getDay(nextInstructor, nextDate, initial.id)));
+    startLoading(async () => {
+      const [nextDay, nextBusy] = await Promise.all([
+        getDay(nextInstructor, nextDate, initial.id),
+        nextDate !== date ? getResourceBusy(nextDate, initial.id) : Promise.resolve(resourceBusy),
+      ]);
+      setDay(nextDay);
+      setResourceBusy(nextBusy);
+    });
   }
 
   // Foreslå 08:00 eller første ledige tid, når det valgte tidspunkt ikke længere er ledigt.
@@ -71,6 +86,12 @@ export function LessonForm({
   const categoryChoices = service ? service.categories.filter((c) => instructor?.categories.includes(c)) : [];
 
   const check = day && shownStart ? availability(day, lessonSpan(shownStart, count, lessonMinutes)) : null;
+
+  // Lokale eller køretøj, der er ledigt i lektionens tidsrum. Køretøjer kun i ydelsens kategorier.
+  const span = shownStart ? lessonSpan(shownStart, count, lessonMinutes) : null;
+  const resourceFree = (id: string) => !span || !(resourceBusy[id] ?? []).some((b) => overlaps(b, span));
+  const fitsService = (r: FormResource) => r.kind === "room" || !r.category || !service || service.categories.includes(r.category);
+  const shownResourceId = resourceId && resourceFree(resourceId) ? resourceId : "";
   const blocked = day?.holiday === "approved";
 
   return (
@@ -190,6 +211,34 @@ export function LessonForm({
         </Fieldset>
       ) : (
         categoryChoices[0] && <input type="hidden" name="category" value={categoryChoices[0]} />
+      )}
+
+      {resources.length > 0 && (
+        <label className="flex flex-col gap-1.5 text-sm font-bold">
+          Lokale eller køretøj (valgfri)
+          <select name="resourceId" value={shownResourceId} onChange={(e) => setResourceId(e.target.value)} className={inputClass}>
+            <option value="">Intet</option>
+            {(["vehicle", "room"] as const).map((kind) => (
+              <optgroup key={kind} label={kind === "vehicle" ? "Køretøjer" : "Lokaler"}>
+                {resources
+                  .filter((r) => r.kind === kind && fitsService(r))
+                  .map((r) => {
+                    const free = resourceFree(r.id);
+                    return (
+                      <option key={r.id} value={r.id} disabled={!free}>
+                        {r.name}
+                        {r.category ? ` (${r.category})` : ""}
+                        {free ? "" : " – optaget"}
+                      </option>
+                    );
+                  })}
+              </optgroup>
+            ))}
+          </select>
+          <span className="text-[13px] font-normal text-muted">
+            Fx bil til en køretime eller lokale til teori. Bookingen følger lektionen, hvis den flyttes.
+          </span>
+        </label>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">

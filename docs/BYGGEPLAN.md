@@ -83,6 +83,15 @@ Tabeller (alle med `school_id`, `created_at`, `updated_at`):
 - Ændringslog med søgning. Beskeder fra kontor til alle/én lærer.
 - Påmindelse i appen om manglende registrering og ventende godkendelser.
 
+### Trin 11 – Lokaler, køretøjer og storskærm
+(Flyttet fra Fase 2 efter ønske, så det kan være med i piloten.)
+- Kalendere for lokaler og køretøjer (dag/uge), booking i ledige tider. Ingen dobbeltbooking.
+- Ved planlægning kan et køretøj eller lokale kobles på lektionen; bookingen følger lektionen.
+- "Book" i lærer-appen: ledige lokaler/køretøjer, egne bookinger kan rettes/slettes.
+- Storskærm: dagens overblik (lektioner, undervisere, fravær/ferie, afventer, bookinger). Aldrig elevnavne.
+- Lokaler og køretøjer vedligeholdes under Indstillinger.
+- **Færdig når:** et køretøj kan ikke dobbeltbookes, og det følger lektionen, når den flyttes.
+
 ### Trin 10 – Klar til pilot
 - Test-miljø med pilotskolens rigtige lærere, ydelser og priser.
 - Backup slået til, fejlovervågning, simpel driftsvejledning.
@@ -91,8 +100,6 @@ Tabeller (alle med `school_id`, `created_at`, `updated_at`):
 ---
 
 ## Fase 2 – efter pilot
-- Lokaler og køretøjer (kalendere, booking fra appen, køretøj på lektioner).
-- Storskærm (dagens overblik, ledige undervisere).
 - Push-beskeder ved ændrede lektioner.
 - SMS-engangskode som login.
 - "Jeg er syg" fra appen, helligdage i kalenderen.

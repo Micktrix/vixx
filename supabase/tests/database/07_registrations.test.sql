@@ -5,6 +5,10 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(10);
 
+-- Uafhængig af manuelle afprøvninger: kun seedens lektion kl. 08:00 for Lars i dag.
+delete from public.scheduled_lessons
+where instructor_id = '00000000-0000-4000-a200-000000000011' and lesson_date = current_date and start_time <> '08:00';
+
 -- Uafhængig af tidligere klik i appen: dagens planlagte lektion er ikke registreret.
 delete from public.registrations
 where scheduled_lesson_id in (select id from public.scheduled_lessons

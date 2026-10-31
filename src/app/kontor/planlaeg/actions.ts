@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { requireRole } from "@/lib/auth/session";
 import { parseDateInput, todayDk } from "@/lib/dates";
-import { TIME_SLOTS, type DayInfo } from "@/lib/schedule";
+import { TIME_SLOTS, type DayInfo, type Span } from "@/lib/schedule";
+import { busyByResource, loadBookings } from "@/lib/booking-data";
 import { createClient } from "@/lib/supabase/server";
 import { calendarHref } from "../calendar/params";
 import { dayInfo, loadSchedule } from "../schedule-data";
@@ -17,6 +18,13 @@ export async function getDay(instructorId: string, date: string, ignoreLessonId?
   const schedule = await loadSchedule(membership.schoolId, date, date);
   const instructor = schedule.instructors.find((i) => i.id === instructorId);
   return instructor ? dayInfo(schedule, instructor, date, ignoreLessonId) : null;
+}
+
+// Optagede tider pr. lokale/køretøj på en dato (uden bookingen til lektionen, der rettes).
+export async function getResourceBusy(date: string, ignoreLessonId?: string): Promise<Record<string, Span[]>> {
+  const { membership } = await requireRole(["admin", "office"]);
+  if (!parseDateInput(date)) return {};
+  return busyByResource(await loadBookings(membership.schoolId, date, date), ignoreLessonId);
 }
 
 // Fejl fra databasens regler (overlap, kompetence, kategori) er skrevet til brugeren.
@@ -57,26 +65,58 @@ export async function saveLesson(_prev: ActionState, formData: FormData): Promis
     note: text("note") || null,
   };
 
+  const resourceId = text("resourceId") || null;
   const supabase = await createClient();
+  let lesson: { id: string; lesson_minutes: number };
   if (id) {
     const { data, error } = await supabase
       .from("scheduled_lessons")
       .update(values)
       .eq("id", id)
       .eq("school_id", membership.schoolId)
-      .select("id");
+      .select("id, lesson_minutes");
     const failed = dbError(error, "Lektionen kunne ikke gemmes. Prøv igen.");
     if (failed) return failed;
     if (!data?.length) return { error: "Lektionen findes ikke længere." };
+    lesson = data[0];
   } else {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("scheduled_lessons")
-      .insert({ ...values, school_id: membership.schoolId, origin: "office", created_by: user.id });
+      .insert({ ...values, school_id: membership.schoolId, origin: "office", created_by: user.id })
+      .select("id, lesson_minutes")
+      .single();
     const failed = dbError(error, "Lektionen kunne ikke planlægges. Prøv igen.");
     if (failed) return failed;
+    lesson = data!;
+  }
+
+  // Lokale eller køretøj til lektionen. Bookingen følger lektionen (databasen flytter den med).
+  const { data: existing } = await supabase.from("bookings").select("id, resource_id").eq("scheduled_lesson_id", lesson.id).maybeSingle();
+  let bookingError: { code?: string; message: string } | null = null;
+  if (existing && !resourceId) {
+    ({ error: bookingError } = await supabase.from("bookings").delete().eq("id", existing.id));
+  } else if (existing && existing.resource_id !== resourceId) {
+    ({ error: bookingError } = await supabase.from("bookings").update({ resource_id: resourceId }).eq("id", existing.id));
+  } else if (!existing && resourceId) {
+    ({ error: bookingError } = await supabase.from("bookings").insert({
+      school_id: membership.schoolId,
+      resource_id: resourceId,
+      booking_date: date,
+      start_time: start,
+      minutes: count * lesson.lesson_minutes,
+      instructor_id: instructorId,
+      scheduled_lesson_id: lesson.id,
+      created_by: user.id,
+    }));
+  }
+  if (bookingError) {
+    // En ny lektion uden den ønskede bil/lokale fortrydes, så intet halvt bliver liggende.
+    if (!id) await supabase.from("scheduled_lessons").delete().eq("id", lesson.id);
+    return dbError(bookingError, "Lokale eller køretøj kunne ikke bookes. Prøv igen.");
   }
 
   revalidatePath("/kontor", "layout");
+  revalidatePath("/laerer", "layout");
   redirect(calendarHref({ view: "dag", date }));
 }
 
@@ -95,3 +135,4 @@ export async function deleteLesson(_prev: ActionState, formData: FormData): Prom
   revalidatePath("/kontor", "layout");
   redirect(calendarHref({ view: "dag", date: data[0].lesson_date }));
 }
+

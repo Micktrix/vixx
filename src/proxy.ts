@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
 
-const PROTECTED = ["/kontor", "/laerer", "/ny-kode", "/vaelg-skole", "/ingen-skole"];
+const PROTECTED = ["/kontor", "/laerer", "/storskaerm", "/ny-kode", "/vaelg-skole", "/ingen-skole"];
 
 // Fornyer Supabase-sessionen ved hver navigation og sender ikke-indloggede til forsiden.
 // Rollerne tjekkes i layouts på serveren (src/lib/auth/session.ts) og i databasen (RLS).

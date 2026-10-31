@@ -85,4 +85,21 @@ export const icons = {
       <circle cx="18" cy="18" r="2" />
     </Icon>
   ),
+  room: (
+    <Icon>
+      <path d="M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M2 21h20M16 7h3a1 1 0 0 1 1 1v13" />
+      <circle cx="12.5" cy="12" r="0.8" />
+    </Icon>
+  ),
+  car: (
+    <Icon>
+      <path d="M5 17H3v-5l2-5h11l3 5h2v5h-2M5 17a2 2 0 1 0 4 0M5 17a2 2 0 1 1 4 0M15 17a2 2 0 1 0 4 0M15 17a2 2 0 1 1 4 0M9 17h6M3 12h18" />
+    </Icon>
+  ),
+  screen: (
+    <Icon>
+      <rect x="2" y="4" width="20" height="13" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+    </Icon>
+  ),
 };

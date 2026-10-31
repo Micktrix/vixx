@@ -7,6 +7,7 @@ import { icons } from "@/components/icons";
 const tabs = [
   { href: "/laerer", label: "Kalender", icon: icons.calendar },
   { href: "/laerer/overblik", label: "Overblik", icon: icons.chart },
+  { href: "/laerer/book", label: "Book", icon: icons.car },
   { href: "/laerer/beskeder", label: "Beskeder", icon: icons.message },
 ];
 
@@ -25,7 +26,7 @@ export function BottomNav({ unread }: { unread: number }) {
             key={t.href}
             href={t.href}
             aria-current={current ? "page" : undefined}
-            className={`relative flex min-w-[72px] flex-col items-center gap-1 text-xs ${
+            className={`relative flex min-w-[64px] flex-col items-center gap-1 text-xs ${
               current ? "font-bold text-accent-ink" : "font-semibold text-muted"
             }`}
           >

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/form";
 import { requireRole } from "@/lib/auth/session";
+import { busyByResource, loadBookings, loadResources } from "@/lib/booking-data";
 import { formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { calendarHref } from "../calendar/params";
@@ -36,7 +37,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
   if (lessonId && !lesson) notFound();
 
   const date = lesson?.lesson_date ?? parseDateInput(one("dato") ?? "") ?? today;
-  const [schedule, { data: services }, { data: school }] = await Promise.all([
+  const [schedule, { data: services }, { data: school }, resources, bookings] = await Promise.all([
     loadSchedule(membership.schoolId, date, date),
     supabase
       .from("services")
@@ -45,7 +46,10 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
       .eq("active", true)
       .order("name"),
     supabase.from("schools").select("lesson_minutes").eq("id", membership.schoolId).single(),
+    loadResources(membership.schoolId),
+    loadBookings(membership.schoolId, date, date),
   ]);
+  const lessonBooking = lesson ? bookings.find((b) => b.lessonId === lesson.id) : undefined;
 
   const instructorId = lesson?.instructor_id ?? one("laerer") ?? "";
   const instructor = schedule.instructors.find((i) => i.id === instructorId);
@@ -76,6 +80,8 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
           lessonMinutes={lesson?.lesson_minutes ?? school?.lesson_minutes ?? 45}
           today={today}
           initialDay={instructor ? dayInfo(schedule, instructor, date, lesson?.id) : null}
+          resources={resources}
+          initialResourceBusy={busyByResource(bookings, lesson?.id)}
           initial={{
             id: lesson?.id,
             instructorId,
@@ -86,6 +92,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
             category: lesson?.category_code,
             studentName: lesson?.student_name ?? undefined,
             note: lesson?.note ?? undefined,
+            resourceId: lessonBooking?.resourceId,
           }}
         />
       </section>

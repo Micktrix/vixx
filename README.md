@@ -63,6 +63,7 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - Godkendelse: databasen låser prisen (lærerens egen → ydelsens pris på datoen) og gemmer hvem/hvornår; klienten kan ikke sende en pris. En afvisning kræver kommentar. Kontorets rettelser markeres, og læreren får besked i appen.
 - Lønperioder: kontor og admin kan låse; kun admin kan låse op (logges). Lønberegning og Dataløn-CSV i `src/lib/payroll.ts` (kolonner i `DATALON_COLUMNS`, tilpasses skolens importfil). Gæster er ikke med i eksporten.
 - Ændringslog: `public.search_audit` søger i ændringer, i hvem der ændrede og på lærerens navn; `src/lib/audit.ts` oversætter til dansk.
+- Booking: et lokale/køretøj kan ikke dobbeltbookes (lås pr. ressource). En lektions booking følger lektionen (`private.follow_lesson_bookings`) og kan kun ændres af kontoret. Lærere booker kun til sig selv, fra i dag og frem.
 - En brugt ydelse kan få flere kategorier, men ikke miste nogen, skifte type eller slettes; en sats med ydelser kan ikke slettes. En ydelse har altid mindst én pris og én kategori.
 - RLS er slået til på alle tabeller. Hjælpefunktioner ligger i skemaet `private`.
 - Alle ændringer logges automatisk i `audit_log` uden følsomme værdier.
@@ -75,6 +76,8 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - `/kontor/godkendelser` – godkend, godkend alle der matcher, afvis, ret (`/ret?id=`)
 - `/kontor/loen` – lønoverblik pr. periode, lås/lås op; `/kontor/loen/eksport?periode=` henter Dataløn-CSV
 - `/kontor/beskeder` – beskeder til alle/én lærer med læst-status; `/kontor/log` – ændringslog med søgning
+- `/kontor/lokaler`, `/kontor/koeretoejer`, `/kontor/booking` – kalendere og booking; `/laerer/book` – lærerens booking
+- `/storskaerm` – dagens overblik til en skærm på kontoret (opdaterer sig selv hvert minut, ingen elevnavne)
 - Påmindelser: tal i kontorets menu (godkendelser, ferie), "Send påmindelse" under Godkendelser, og i lærer-appen "Du mangler at registrere" og afviste lektioner
 - `/kontor/undervisere` – undervisere og brugere; `/ny` opretter, `/<bruger-id>` er personens side
 - `/kontor/ydelser` – satser, ydelser og priser (kun admin retter)
