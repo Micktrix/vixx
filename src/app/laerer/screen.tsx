@@ -13,7 +13,7 @@ export function Screen({
 }) {
   return (
     <>
-      <header className="flex items-center justify-between gap-3 px-5 pt-[calc(22px+env(safe-area-inset-top))] pb-3">
+      <header className="flex items-center justify-between gap-3 px-5 pt-[calc(22px+env(safe-area-inset-top))] pb-3 group-data-[switch]/frame:pt-4">
         <div>
           <p className="text-[13px] text-muted">{sub}</p>
           <h1 className="text-2xl font-bold">{title}</h1>

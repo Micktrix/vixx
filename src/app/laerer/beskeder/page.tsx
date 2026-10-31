@@ -4,7 +4,7 @@ import { icons } from "@/components/icons";
 import { formatDate } from "@/lib/dates";
 import { markMessagesRead } from "../self-service-actions";
 import { signOut } from "@/lib/auth/actions";
-import { isStaff, requireRole } from "@/lib/auth/session";
+import { requireRole } from "@/lib/auth/session";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../screen";
@@ -84,11 +84,6 @@ export default async function InstructorMessagesPage() {
         <Link href="/laerer/oplysninger" className={linkButton}>
           Ret mine oplysninger
         </Link>
-        {isStaff(membership) && (
-          <Link href="/kontor" className={linkButton}>
-            Skift til kontoret
-          </Link>
-        )}
         {user.memberships.length > 1 && (
           <Link href="/vaelg-skole" className="font-semibold text-accent-ink underline underline-offset-[3px]">
             Skift skole

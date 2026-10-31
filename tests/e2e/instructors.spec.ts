@@ -1,20 +1,45 @@
 import { expect, test } from "@playwright/test";
 import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, chooseOwnPassword, createMember, loginOk, logout } from "./helpers";
 
-test("en person med både kontor og lærer kan skifte mellem delene", async ({ page }) => {
+test("en person med både kontor og lærer skifter med knappen, og Vixx husker valget", async ({ page }) => {
   await loginOk(page, ADMIN, PASSWORD);
   const { phone, temp } = await createMember(page, "E2E Kontor og lærer", { roles: ["Kontor", "Lærer"] });
   await logout(page);
 
+  // Første gang på en computer: kontoret.
   await loginOk(page, phone, temp);
   await chooseOwnPassword(page, "kontor-og-laerer");
   await expect(page).toHaveURL("/kontor");
 
-  await page.getByRole("link", { name: "Skift til lærer-appen" }).click();
+  const parts = page.getByRole("navigation", { name: "Skift mellem kontor og lærer" });
+  await parts.getByRole("link", { name: "Lærer" }).click();
   await expect(page).toHaveURL("/laerer");
+
+  // Næste login lander i lærer-appen, fordi det var der, man sidst var.
   await page.goto("/laerer/beskeder");
-  await page.getByRole("link", { name: "Skift til kontoret" }).click();
+  await logout(page);
+  await loginOk(page, phone, "kontor-og-laerer");
+  await expect(page).toHaveURL("/laerer");
+
+  await page.getByRole("navigation", { name: "Skift mellem kontor og lærer" }).getByRole("link", { name: "Kontor" }).click();
   await expect(page).toHaveURL("/kontor");
+});
+
+test("på en telefon lander en person med begge roller første gang i lærer-appen", async ({ browser }) => {
+  const office = await browser.newPage();
+  await loginOk(office, ADMIN, PASSWORD);
+  const { phone, temp } = await createMember(office, "E2E Telefon begge", { roles: ["Kontor", "Lærer"] });
+  await office.close();
+
+  const context = await browser.newContext({
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await loginOk(page, phone, temp);
+  await chooseOwnPassword(page, "telefon-begge");
+  await expect(page).toHaveURL("/laerer");
+  await context.close();
 });
 
 test("en gæst efter \"aktiv til\" kan ikke komme ind", async ({ page }) => {

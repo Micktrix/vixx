@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { todayDk } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
@@ -25,6 +25,8 @@ export type CurrentUser = {
 };
 
 export const SCHOOL_COOKIE = "vixx_school";
+// Den del af appen, man sidst brugte ("kontor" eller "laerer"). Sættes af src/proxy.ts.
+export const PART_COOKIE = "vixx_part";
 
 // Den indloggede bruger, eller null. Tjekker tokenet (getClaims) og at sessionen ikke er
 // afbrudt med "Log ud af alle enheder". Køres højst én gang pr. forespørgsel.
@@ -83,9 +85,17 @@ export async function getActiveMembership(user: CurrentUser): Promise<Membership
   return user.memberships.find((m) => m.schoolId === chosen) ?? null;
 }
 
-export function homeFor(membership: Membership): string {
-  return isStaff(membership) ? "/kontor" : "/laerer";
+// Har man både kontor og lærer, lander man der, hvor man sidst var. Første gang afgør enheden:
+// telefon → lærer-appen, computer → kontoret.
+export async function homeFor(membership: Membership): Promise<string> {
+  if (!isStaff(membership)) return "/laerer";
+  if (!membership.teaches) return "/kontor";
+  const last = (await cookies()).get(PART_COOKIE)?.value;
+  if (last === "laerer" || last === "kontor") return `/${last}`;
+  return isPhone((await headers()).get("user-agent") ?? "") ? "/laerer" : "/kontor";
 }
+
+export const isPhone = (userAgent: string) => /Mobi|Android|iPhone|iPod/i.test(userAgent);
 
 // Hvor en indlogget bruger skal hen lige nu.
 export async function homePath(user: CurrentUser): Promise<string> {
@@ -93,7 +103,7 @@ export async function homePath(user: CurrentUser): Promise<string> {
   if (user.memberships.length === 0) return "/ingen-skole";
   const membership = await getActiveMembership(user);
   if (!membership) return "/vaelg-skole";
-  return homeFor(membership);
+  return await homeFor(membership);
 }
 
 // Til layouts og serverhandlinger: kræver login, ny kode valgt og en af rollerne på den aktive skole.
@@ -106,7 +116,7 @@ export async function requireRole(roles: Role[]): Promise<{ user: CurrentUser; m
   const membership = await getActiveMembership(user);
   if (!membership) redirect(await homePath(user));
   const allowed = roles.some((r) => (r === "instructor" ? membership.teaches : membership.role === r));
-  if (!allowed) redirect(homeFor(membership));
+  if (!allowed) redirect(await homeFor(membership));
 
   return { user, membership };
 }

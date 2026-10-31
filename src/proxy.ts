@@ -32,6 +32,12 @@ export async function proxy(request: NextRequest) {
     return redirect;
   }
 
+  // Husk hvilken del man bruger, så personer med både kontor og lærer lander samme sted næste gang.
+  const part = path === "/kontor" || path.startsWith("/kontor/") ? "kontor" : path === "/laerer" || path.startsWith("/laerer/") ? "laerer" : null;
+  if (data?.claims && part && request.cookies.get("vixx_part")?.value !== part) {
+    response.cookies.set("vixx_part", part, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", httpOnly: true });
+  }
+
   return response;
 }
 

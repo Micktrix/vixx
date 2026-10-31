@@ -1,4 +1,5 @@
-import { requireRole } from "@/lib/auth/session";
+import { PartSwitch } from "@/components/part-switch";
+import { isStaff, requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "./bottom-nav";
 
@@ -17,7 +18,15 @@ export default async function InstructorLayout({ children }: LayoutProps<"/laere
 
   return (
     <div className="flex h-dvh justify-center sm:p-5">
-      <div className="flex w-full flex-col overflow-hidden bg-bg sm:max-h-[844px] sm:max-w-[400px] sm:rounded-[36px] sm:border sm:border-line sm:shadow-[0_20px_50px_-30px_rgba(38,36,34,0.35)]">
+      <div
+        data-switch={isStaff(membership) ? "" : undefined}
+        className="group/frame flex w-full flex-col overflow-hidden bg-bg sm:max-h-[844px] sm:max-w-[400px] sm:rounded-[36px] sm:border sm:border-line sm:shadow-[0_20px_50px_-30px_rgba(38,36,34,0.35)]"
+      >
+        {isStaff(membership) && (
+          <div className="px-5 pt-[calc(12px+env(safe-area-inset-top))]">
+            <PartSwitch current="laerer" />
+          </div>
+        )}
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>
         <BottomNav unread={unread} />
       </div>
