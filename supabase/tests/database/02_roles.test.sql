@@ -2,7 +2,7 @@
 -- Bygger på seed.sql (Testkøreskolen).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(23);
 
 -- En person uden medlemskab, som kontoret kan forsøge at tilføje.
 insert into auth.users (id, aud, role, phone) values
@@ -38,7 +38,9 @@ select lives_ok(
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000013', current_date, '08:00', 2, 'other')$$,
   'Kontoret kan registrere fravær');
 
-update public.pay_periods set locked = false where locked;
+select throws_ok(
+  $$update public.pay_periods set locked = false where locked$$,
+  '42501', 'Kun admin kan låse en lønperiode op.', 'Kontoret får besked om, at kun admin kan låse op');
 reset role;
 
 select is((select count(*) from public.pay_periods where locked), 1::bigint,
