@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { CheckChip, Fieldset, ResultBox, TextField, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import type { FormAction } from "@/lib/action-state";
@@ -8,7 +8,8 @@ import { fromMinutes, slotIsFree, suggestStart, TIME_SLOTS, toMinutes, type Span
 
 type Service = { id: string; name: string; groupName: string; categories: string[] };
 
-// Lærerens formular til at registrere en kørt lektion eller planlægge en lektion frem i tiden.
+// Formular til at registrere en kørt lektion eller planlægge en lektion frem i tiden.
+// Bruges af lærer-appen og af kontoret, når en registrering rettes.
 export function TeacherLessonForm({
   action,
   submitLabel,
@@ -17,6 +18,7 @@ export function TeacherLessonForm({
   busy,
   hiddenFields,
   initial,
+  children,
 }: {
   action: FormAction;
   submitLabel: string;
@@ -25,6 +27,7 @@ export function TeacherLessonForm({
   busy: Span[];
   hiddenFields: Record<string, string>;
   initial: { serviceId?: string; category?: string; count?: number; start?: string; studentName?: string; note?: string };
+  children?: ReactNode; // ekstra felter før knappen
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
   const [serviceId, setServiceId] = useState(initial.serviceId ?? (services.length === 1 ? services[0].id : ""));
@@ -140,6 +143,7 @@ export function TeacherLessonForm({
         />
       </label>
 
+      {children}
       <button
         type="submit"
         disabled={pending}

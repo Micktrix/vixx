@@ -1,4 +1,5 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
+import { localAdmin } from "./db";
 
 // Testbrugere fra supabase/seed.sql.
 export const PASSWORD = "Test1234!";
@@ -68,4 +69,25 @@ export async function chooseOwnPassword(page: Page, password: string) {
   await page.getByLabel("Gentag kode").fill(password);
   await page.getByRole("button", { name: "Gem kode" }).click();
   await page.waitForURL((url) => url.pathname !== "/ny-kode");
+}
+
+// En ny lærer (kategori B, alle typer), logget ind på sin egen side. Returnerer også lærerkortets id.
+export async function newTeacher(browser: Browser, name: string) {
+  const office = await browser.newPage();
+  await loginOk(office, OFFICE, PASSWORD);
+  const { phone, temp } = await createMember(office, name, { categories: ["B"] });
+  await office.close();
+
+  const { data } = await localAdmin()
+    .from("profiles")
+    .select("id, instructors:school_members(instructors(id))")
+    .eq("phone", `+45${phone}`)
+    .single();
+  const instructorId = (data as unknown as { instructors: { instructors: { id: string } | { id: string }[] }[] }).instructors
+    .map((m) => (Array.isArray(m.instructors) ? m.instructors[0] : m.instructors))[0].id;
+
+  const page = await browser.newPage();
+  await loginOk(page, phone, temp);
+  await chooseOwnPassword(page, "laererens-kode");
+  return { page, instructorId };
 }

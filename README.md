@@ -60,6 +60,7 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - En ydelse kan dække flere kategorier (`service_categories`); prisen er én pr. ydelse, og lektionen gemmer kun ydelsen.
 - Planlægning: databasen afviser overlap for en lærer (lektion/lektion, lektion/fravær, fravær/fravær, lektion i godkendt ferie) med en lås pr. lærer (`private.instructor_conflict`). Kun ydelser, læreren har kompetence til (type + kategori). Lektionen gemmer kategorien. Ferie kan ikke godkendes med lektioner i perioden. Samme regler i `src/lib/schedule.ts` til visning.
 - Registreringer: en planlagt lektion kan kun registreres én gang; registreringer (ikke afviste) kan ikke overlappe; intet kan oprettes, rettes eller slettes i en låst lønperiode (gælder appens brugere).
+- Godkendelse: databasen låser prisen (lærerens egen → ydelsens pris på datoen) og gemmer hvem/hvornår; klienten kan ikke sende en pris. En afvisning kræver kommentar. Kontorets rettelser markeres, og læreren får besked i appen.
 - En brugt ydelse kan få flere kategorier, men ikke miste nogen, skifte type eller slettes; en sats med ydelser kan ikke slettes. En ydelse har altid mindst én pris og én kategori.
 - RLS er slået til på alle tabeller. Hjælpefunktioner ligger i skemaet `private`.
 - Alle ændringer logges automatisk i `audit_log` uden følsomme værdier.
@@ -69,6 +70,7 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - `/` – login
 - `/kontor` – kalender (dag/uge/måned, `?vis=&dato=&laerer=`)
 - `/kontor/planlaeg`, `/kontor/fravaer`, `/kontor/find`, `/kontor/ferie` – planlæg/ret lektion, fravær, find ledig underviser, godkend ferie
+- `/kontor/godkendelser` – godkend, godkend alle der matcher, afvis, ret (`/ret?id=`)
 - `/kontor/undervisere` – undervisere og brugere; `/ny` opretter, `/<bruger-id>` er personens side
 - `/kontor/ydelser` – satser, ydelser og priser (kun admin retter)
 - `/kontor/indstillinger` – typer

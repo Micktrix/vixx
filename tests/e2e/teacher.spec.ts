@@ -1,6 +1,6 @@
-import { expect, test, type Browser } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { OFFICE, PASSWORD, chooseOwnPassword, createMember, loginOk } from "./helpers";
+import { PASSWORD, loginOk, newTeacher } from "./helpers";
 
 const SCHOOL = "00000000-0000-4000-a000-000000000001";
 const B_PRIVAT = "00000000-0000-4000-a500-000000000006";
@@ -13,27 +13,6 @@ function daysFromToday(n: number) {
   const d = new Date();
   d.setDate(d.getDate() + n);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// En ny lærer (kategori B, alle typer), logget ind på sin egen side. Returnerer også lærerkortets id.
-async function newTeacher(browser: Browser, name: string) {
-  const office = await browser.newPage();
-  await loginOk(office, OFFICE, PASSWORD);
-  const { phone, temp } = await createMember(office, name, { categories: ["B"] });
-  await office.close();
-
-  const { data } = await localAdmin()
-    .from("profiles")
-    .select("id, instructors:school_members(instructors(id))")
-    .eq("phone", `+45${phone}`)
-    .single();
-  const instructorId = (data as unknown as { instructors: { instructors: { id: string } | { id: string }[] }[] }).instructors
-    .map((m) => (Array.isArray(m.instructors) ? m.instructors[0] : m.instructors))[0].id;
-
-  const page = await browser.newPage();
-  await loginOk(page, phone, temp);
-  await chooseOwnPassword(page, "laererens-kode");
-  return { page, instructorId };
 }
 
 test("en lærer klarer dagen fra telefonen: udført, uplanlagt, egen planlægning og ferie", async ({ browser }) => {
