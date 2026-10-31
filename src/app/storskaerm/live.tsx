@@ -42,13 +42,3 @@ export function NowLine({ from, to }: { from: number; to: number }) {
     />
   );
 }
-
-// Skift automatisk mellem visningerne (fx til en tv-skærm): ?skift=30 skifter hvert 30. sekund.
-export function AutoSwitch({ href, seconds }: { href: string; seconds: number }) {
-  const router = useRouter();
-  useEffect(() => {
-    const id = setTimeout(() => router.replace(href), seconds * 1000);
-    return () => clearTimeout(id);
-  }, [router, href, seconds]);
-  return null;
-}

@@ -103,20 +103,17 @@ test("storskærmen viser hvem og hvad der er optaget og ledigt lige nu, uden ele
   await loginOk(page, OFFICE, PASSWORD);
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/storskaerm");
-  const teacherTile = page.getByTestId("teacher-tiles").getByTestId("tile").filter({ hasText: name });
-  await expect(teacherTile).toHaveAttribute("data-tone", "busy");
-  await expect(teacherTile).toContainText("Optaget til");
-  await expect(teacherTile).toContainText("B privat");
-  await expect(page.getByTestId("teacher-tiles").getByTestId("tile").filter({ hasText: free })).toHaveAttribute("data-tone", "free");
-  const roomTile = page.getByTestId("resource-tiles").getByTestId("tile").filter({ hasText: room });
-  await expect(roomTile).toHaveAttribute("data-tone", "busy");
-  await expect(roomTile).toContainText(name);
+  const teacherRow = page.getByTestId("teacher-board").getByTestId("board-row").filter({ hasText: name });
+  await expect(teacherRow).toHaveAttribute("data-tone", "busy");
+  await expect(teacherRow).toContainText("Optaget til");
+  await expect(teacherRow).toContainText("B privat"); // lektionen på tidslinjen
+  await expect(page.getByTestId("teacher-board").getByTestId("board-row").filter({ hasText: free })).toHaveAttribute("data-tone", "free");
+  const roomRow = page.getByTestId("resource-board").getByTestId("board-row").filter({ hasText: room });
+  await expect(roomRow).toHaveAttribute("data-tone", "busy");
+  await expect(roomRow).toContainText(name);
+  await expect(page.getByTestId("kpis")).toContainText("Lokaler ledige nu");
   // Alt kan ses på én skærm: siden ruller ikke.
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
-  await expect(page.locator("body")).not.toContainText("Hemmelig Elevsen");
-
-  await page.getByRole("link", { name: "Tidslinje" }).click();
-  await expect(page.getByTestId("dashboard-row").filter({ hasText: name })).toContainText("B privat");
   await expect(page.locator("body")).not.toContainText("Hemmelig Elevsen");
 
   // Ryd op, så testlokaler ikke hober sig op (bookingen slettes først; ellers må lokalet ikke slettes).
