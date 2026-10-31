@@ -22,7 +22,7 @@ test("en køretime får en bil, og bilen følger lektionen, når den flyttes", a
   await page.goto(`/kontor/planlaeg?laerer=${instructorId}&dato=${date}`);
   await page.getByLabel("Start").selectOption("09:00");
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
-  await page.getByLabel("Lokale eller køretøj (valgfri)").selectOption({ label: "Personbil 1 (B)" });
+  await page.getByLabel("Lokale eller køretøj (valgfri)").selectOption({ label: "Personbil 1 (B, BE)" });
   await page.getByRole("button", { name: "Planlæg lektion" }).click();
   await page.waitForURL(/\/kontor\?vis=dag/);
 
@@ -112,18 +112,47 @@ test("storskærmen viser hvem og hvad der er optaget og ledigt lige nu, uden ele
   await expect(page.locator("body")).not.toContainText("Hemmelig Elevsen");
 });
 
-test("kontoret opretter et køretøj under Indstillinger", async ({ page }) => {
+test("et køretøj kan dække flere kategorier og kan slettes, når det ikke er brugt", async ({ page }) => {
   const name = `E2E Bil ${Date.now() % 100000}`;
   await loginOk(page, OFFICE, PASSWORD);
   await page.goto("/kontor/indstillinger");
-  await page.getByLabel("Type").selectOption("vehicle");
-  await page.getByLabel("Navn", { exact: true }).last().fill(name);
-  await page.getByLabel("Kategori (køretøj)").selectOption("B");
-  await page.getByRole("button", { name: "Tilføj" }).last().click();
+  const add = page.locator("form").filter({ has: page.getByRole("button", { name: "Tilføj", exact: true }) }).last();
+  await add.getByRole("radio", { name: "Køretøj" }).locator("..").click();
+  await add.getByLabel("Navn").fill(name);
+  await add.getByRole("checkbox", { name: "B", exact: true }).locator("..").click();
+  await add.getByRole("checkbox", { name: "BE", exact: true }).locator("..").click();
+  await add.getByRole("button", { name: "Tilføj", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: `${name} er oprettet` })).toBeVisible();
 
   await page.goto("/kontor/koeretoejer");
-  await expect(page.getByTestId("resource-row").filter({ hasText: name })).toContainText("Kategori B");
+  await expect(page.getByTestId("resource-row").filter({ hasText: name })).toContainText("B, BE");
+
+  // Ubrugt: kan slettes.
+  await page.goto("/kontor/indstillinger");
+  page.once("dialog", (d) => d.accept());
+  await page.getByTestId("resource-setting").filter({ has: page.locator(`input[value="${name}"]`) }).getByRole("button", { name: "Slet" }).click();
+  await expect(page.getByTestId("resource-setting").filter({ has: page.locator(`input[value="${name}"]`) })).toHaveCount(0);
+
+  // Brugt (Lokale 1 har bookinger): kan kun slås fra.
+  page.once("dialog", (d) => d.accept());
+  const used = page.getByTestId("resource-setting").filter({ has: page.locator('input[value="Lokale 1"]') });
+  await used.getByRole("button", { name: "Slet" }).click();
+  await expect(used.getByRole("alert")).toContainText("har bookinger og kan kun slås fra");
+});
+
+test("et teorilokale tilbydes til teori, ikke til køretimer", async ({ browser, page }) => {
+  const { instructorId } = await newTeacher(browser, `E2E Teori ${Date.now() % 100000}`);
+  await loginOk(page, OFFICE, PASSWORD);
+  await page.goto(`/kontor/planlaeg?laerer=${instructorId}&dato=${freeDay()}`);
+
+  await page.getByLabel("Ydelse").selectOption({ label: "B teori" });
+  const choice = page.getByLabel("Lokale eller køretøj (valgfri)");
+  await expect(choice.locator("option", { hasText: "Lokale 1" })).toHaveCount(1);
+  await expect(choice.locator("option", { hasText: "Personbil 1" })).toHaveCount(0);
+
+  await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
+  await expect(choice.locator("option", { hasText: "Personbil 1" })).toHaveCount(1);
+  await expect(choice.locator("option", { hasText: "Lokale 1" })).toHaveCount(0);
 });
 
 test("en lærer planlægger sin egen køretime med bil, og bilen flytter med", async ({ browser, page }) => {
@@ -134,7 +163,7 @@ test("en lærer planlægger sin egen køretime med bil, og bilen flytter med", a
   await teacher.getByRole("link", { name: "+ Planlæg lektion" }).click();
   await teacher.getByLabel("Ydelse").selectOption({ label: "B privat" });
   await teacher.getByLabel("Starttidspunkt").selectOption("09:00");
-  await teacher.getByLabel("Bil eller lokale (valgfri)").selectOption({ label: "Personbil 1 (B)" });
+  await teacher.getByLabel("Bil eller lokale (valgfri)").selectOption({ label: "Personbil 1 (B, BE)" });
   await teacher.getByRole("button", { name: "Planlæg", exact: true }).click();
   await teacher.waitForURL(/\/laerer\?dag=/);
   await expect(teacher.getByTestId("planned")).toContainText("Personbil 1");

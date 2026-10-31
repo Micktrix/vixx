@@ -63,6 +63,7 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - Godkendelse: databasen låser prisen (lærerens egen → ydelsens pris på datoen) og gemmer hvem/hvornår; klienten kan ikke sende en pris. En afvisning kræver kommentar. Kontorets rettelser markeres, og læreren får besked i appen.
 - Lønperioder: kontor og admin kan låse; kun admin kan låse op (logges). Lønberegning og Dataløn-CSV i `src/lib/payroll.ts` (kolonner i `DATALON_COLUMNS`, tilpasses skolens importfil). Gæster er ikke med i eksporten.
 - Ændringslog: `public.search_audit` søger i ændringer, i hvem der ændrede og på lærerens navn; `src/lib/audit.ts` oversætter til dansk.
+- Lokaler og køretøjer: et køretøj dækker en eller flere kategorier (`resource_categories`), et lokale bruges til en eller flere typer (`resource_lesson_types`, fx Teori). Ved planlægning tilbydes lokaler til typer, et lokale bruges til, ellers køretøjer i lektionens kategori (`src/lib/resources.ts`). Ubrugte lokaler, køretøjer og typer kan slettes; brugte kun slås fra.
 - Booking: et lokale/køretøj kan ikke dobbeltbookes (lås pr. ressource). En lektions booking følger lektionen (`private.follow_lesson_bookings`) og kan kun ændres af kontoret. Lærere booker kun til sig selv, fra i dag og frem.
 - En brugt ydelse kan få flere kategorier, men ikke miste nogen, skifte type eller slettes; en sats med ydelser kan ikke slettes. En ydelse har altid mindst én pris og én kategori.
 - RLS er slået til på alle tabeller. Hjælpefunktioner ligger i skemaet `private`.

@@ -3,12 +3,13 @@
 import { useMemo, useState, useTransition } from "react";
 import { CheckChip, Fieldset, ResultBox, TextField, useFormAction } from "@/components/form";
 import { inputClass, primaryButtonClass } from "@/components/styles";
+import { resourceDetail, resourcesForLesson, type ResourceInfo } from "@/lib/resources";
 import { availability, formatDuration, lessonSpan, overlaps, slotIsFree, suggestStart, TIME_SLOTS, type DayInfo, type Span } from "@/lib/schedule";
 import { getDay, getResourceBusy, saveLesson } from "./actions";
 
 export type FormInstructor = { id: string; name: string; categories: string[]; lessonTypeIds: string[]; onRequest: boolean };
 export type FormService = { id: string; name: string; lessonTypeId: string; categories: string[]; groupName: string };
-export type FormResource = { id: string; kind: "room" | "vehicle"; name: string; category: string | null };
+export type FormResource = ResourceInfo;
 
 type Initial = {
   id?: string;
@@ -87,10 +88,10 @@ export function LessonForm({
 
   const check = day && shownStart ? availability(day, lessonSpan(shownStart, count, lessonMinutes)) : null;
 
-  // Lokale eller køretøj, der er ledigt i lektionens tidsrum. Køretøjer kun i ydelsens kategorier.
+  // Lokale eller køretøj, der er ledigt i lektionens tidsrum og passer til ydelsen (kategori for biler, type for lokaler).
   const span = shownStart ? lessonSpan(shownStart, count, lessonMinutes) : null;
   const resourceFree = (id: string) => !span || !(resourceBusy[id] ?? []).some((b) => overlaps(b, span));
-  const fitsService = (r: FormResource) => r.kind === "room" || !r.category || !service || service.categories.includes(r.category);
+  const offered = resourcesForLesson(resources ?? [], service ? { categories: service.categories, lessonTypeId: service.lessonTypeId } : null);
   const shownResourceId = resourceId && resourceFree(resourceId) ? resourceId : "";
   const blocked = day?.holiday === "approved";
 
@@ -221,13 +222,13 @@ export function LessonForm({
             {(["vehicle", "room"] as const).map((kind) => (
               <optgroup key={kind} label={kind === "vehicle" ? "Køretøjer" : "Lokaler"}>
                 {resources
-                  .filter((r) => r.kind === kind && fitsService(r))
+                  .filter((r) => r.kind === kind && offered.includes(r))
                   .map((r) => {
                     const free = resourceFree(r.id);
                     return (
                       <option key={r.id} value={r.id} disabled={!free}>
                         {r.name}
-                        {r.category ? ` (${r.category})` : ""}
+                        {resourceDetail(r) ? ` (${resourceDetail(r)})` : ""}
                         {free ? "" : " – optaget"}
                       </option>
                     );

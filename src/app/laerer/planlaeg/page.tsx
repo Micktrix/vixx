@@ -36,7 +36,9 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
     loadBookings(teacher.membership.schoolId, date, date),
   ]);
   // Køretøjer i lærerens kategorier (eller uden kategori); alle lokaler.
-  const myResources = resources.filter((r) => r.kind === "room" || !r.category || teacher.categories.includes(r.category));
+  const myResources = resources.filter(
+    (r) => r.kind === "room" || !r.categories.length || r.categories.some((c) => teacher.categories.includes(c)),
+  );
   const lessonBooking = lesson ? bookings.find((b) => b.lessonId === lesson.id) : undefined;
   const back = `/laerer?dag=${date}`;
   if (period.holidays.some((h) => h.status === "approved")) redirect(back);

@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth/session";
 import { loadBookings, loadResources } from "@/lib/booking-data";
 import { formatLongDate, todayDk } from "@/lib/dates";
 import { nowMinutesDk, resourceNow, teacherNow } from "@/lib/now-status";
+import { resourceDetail } from "@/lib/resources";
 import { formatSpan, fromMinutes, type Span } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { dayInfo, loadSchedule } from "../kontor/schedule-data";
@@ -142,7 +143,8 @@ export default async function DashboardPage() {
           <Group title="Ledige" tone="free" count={freeResources.length} testId="resources-free">
             {freeResources.map((r) => (
               <Item key={r.resource.id} name={r.resource.name}>
-                {r.resource.kind === "room" ? "Lokale" : `Køretøj${r.resource.category ? ` ${r.resource.category}` : ""}`} ·{" "}
+                {r.resource.kind === "room" ? "Lokale" : "Køretøj"}
+                {resourceDetail(r.resource) ? ` ${resourceDetail(r.resource)}` : ""} ·{" "}
                 {r.status.state === "free" && `ledig ${until(r.status.until)}`}
               </Item>
             ))}

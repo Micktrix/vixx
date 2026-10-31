@@ -1,11 +1,12 @@
 import { Box } from "@/components/box";
-import { ActionForm, TextField } from "@/components/form";
+import { ActionForm, CheckChip, Fieldset, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { Pill } from "@/components/pill";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { loadResources } from "@/lib/booking-data";
-import { addLessonType, addResource, updateLessonType, updateResource } from "./actions";
+import { AddResourceForm } from "./add-resource-form";
+import { addLessonType, deleteLessonType, deleteResource, updateLessonType, updateResource } from "./actions";
 
 export default async function OfficeSettingsPage() {
   const { membership } = await requireRole(["admin", "office"]);
@@ -17,16 +18,7 @@ export default async function OfficeSettingsPage() {
     loadResources(membership.schoolId, true),
     supabase.from("license_categories").select("code").order("sort_order"),
   ]);
-  const categoryOptions = (
-    <>
-      <option value="">Ingen kategori</option>
-      {(categories ?? []).map((c) => (
-        <option key={c.code} value={c.code}>
-          {c.code}
-        </option>
-      ))}
-    </>
-  );
+  const activeTypes = (types ?? []).filter((t) => t.active);
 
   return (
     <>
@@ -40,7 +32,7 @@ export default async function OfficeSettingsPage() {
           <>
             <ul className="flex flex-col gap-2">
               {(types ?? []).map((t) => (
-                <li key={t.id} className="rounded-xl border border-line bg-bg px-3 py-2.5">
+                <li key={t.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line bg-bg px-3 py-2.5" data-testid="type-setting">
                   <ActionForm
                     action={updateLessonType}
                     submitLabel="Gem"
@@ -60,6 +52,16 @@ export default async function OfficeSettingsPage() {
                       I brug
                     </label>
                   </ActionForm>
+                  <ActionForm
+                    action={deleteLessonType}
+                    submitLabel="Slet"
+                    pendingLabel="…"
+                    primary={false}
+                    confirmText={`Slet typen ${t.name}?`}
+                    className="flex flex-col items-end gap-1"
+                  >
+                    <input type="hidden" name="id" value={t.id} />
+                  </ActionForm>
                 </li>
               ))}
             </ul>
@@ -67,7 +69,7 @@ export default async function OfficeSettingsPage() {
               <TextField label="Ny type" name="name" required className="max-w-[240px] flex-1" />
             </ActionForm>
             <p className="text-[13px] text-muted">
-              En type, der ikke er i brug, kan ikke vælges på nye ydelser eller kompetencer. Den slettes ikke, så historikken bevares.
+              En type, der ikke er i brug, kan ikke vælges på nye ydelser eller kompetencer. En type kan slettes, hvis ingen ydelser bruger den.
             </p>
           </>
         ) : (
@@ -83,44 +85,51 @@ export default async function OfficeSettingsPage() {
           </>
         )}
       </Box>
-      <Box title="Lokaler og køretøjer" hint="Kan bookes af kontoret og lærerne. Et køretøj kan have en kategori.">
+      <Box title="Lokaler og køretøjer" hint="Kan bookes af kontoret og lærerne. Ubrugte kan slettes; brugte kan slås fra.">
         <ul className="flex flex-col gap-2">
           {resources.map((r) => (
-            <li key={r.id} className="rounded-xl border border-line bg-bg px-3 py-2.5" data-testid="resource-setting">
-              <ActionForm action={updateResource} submitLabel="Gem" primary={false} className="flex flex-wrap items-center gap-3">
+            <li key={r.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line bg-bg px-3 py-2.5" data-testid="resource-setting">
+              <ActionForm action={updateResource} submitLabel="Gem" primary={false} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={r.id} />
                 <input type="hidden" name="kind" value={r.kind} />
-                <span className="w-20 text-sm text-muted">{r.kind === "room" ? "Lokale" : "Køretøj"}</span>
-                <input name="name" aria-label="Navn" defaultValue={r.name} required className={`${inputClass} max-w-[220px]`} />
-                {r.kind === "vehicle" && (
-                  <select name="category" aria-label="Kategori" defaultValue={r.category ?? ""} className={`${inputClass} w-auto`}>
-                    {categoryOptions}
-                  </select>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="w-16 text-sm text-muted">{r.kind === "room" ? "Lokale" : "Køretøj"}</span>
+                  <input name="name" aria-label="Navn" defaultValue={r.name} required className={`${inputClass} max-w-[220px]`} />
+                  <label className="flex items-center gap-2 text-[15px]">
+                    <input type="checkbox" name="active" defaultChecked={r.active} className="size-[18px] accent-accent" />
+                    I brug
+                  </label>
+                </div>
+                {r.kind === "vehicle" ? (
+                  <Fieldset legend="Kategorier">
+                    {(categories ?? []).map((c) => (
+                      <CheckChip key={c.code} name="categories" value={c.code} label={c.code} defaultChecked={r.categories.includes(c.code)} />
+                    ))}
+                  </Fieldset>
+                ) : (
+                  <Fieldset legend="Bruges til">
+                    {(types ?? [])
+                      .filter((t) => t.active || r.lessonTypeIds.includes(t.id))
+                      .map((t) => (
+                        <CheckChip key={t.id} name="lessonTypes" value={t.id} label={t.name} defaultChecked={r.lessonTypeIds.includes(t.id)} />
+                      ))}
+                  </Fieldset>
                 )}
-                <label className="flex items-center gap-2 text-[15px]">
-                  <input type="checkbox" name="active" defaultChecked={r.active} className="size-[18px] accent-accent" />
-                  I brug
-                </label>
+              </ActionForm>
+              <ActionForm
+                action={deleteResource}
+                submitLabel="Slet"
+                pendingLabel="…"
+                primary={false}
+                confirmText={`Slet ${r.name}?`}
+                className="flex flex-col items-end gap-1"
+              >
+                <input type="hidden" name="id" value={r.id} />
               </ActionForm>
             </li>
           ))}
         </ul>
-        <ActionForm action={addResource} submitLabel="Tilføj" className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1.5 text-sm font-bold">
-            Type
-            <select name="kind" defaultValue="room" className={`${inputClass} w-auto`}>
-              <option value="room">Lokale</option>
-              <option value="vehicle">Køretøj</option>
-            </select>
-          </label>
-          <TextField label="Navn" name="name" required className="max-w-[220px] flex-1" placeholder="Fx Personbil 2" />
-          <label className="flex flex-col gap-1.5 text-sm font-bold">
-            Kategori (køretøj)
-            <select name="category" defaultValue="" className={`${inputClass} w-auto`}>
-              {categoryOptions}
-            </select>
-          </label>
-        </ActionForm>
+        <AddResourceForm categories={(categories ?? []).map((c) => c.code)} types={activeTypes} />
       </Box>
     </>
   );

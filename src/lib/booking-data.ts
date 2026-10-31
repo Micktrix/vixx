@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 
 // Lokaler og køretøjer med bookinger. Alle på skolen kan se dem (RLS), så både kontoret og lærerne bruger dette.
 
-export type ResourceKind = "room" | "vehicle";
-export type Resource = { id: string; kind: ResourceKind; name: string; category: string | null; active: boolean };
+import type { ResourceInfo, ResourceKind } from "@/lib/resources";
+
+export type { ResourceKind };
+export type Resource = ResourceInfo & { active: boolean };
 
 export type Booking = Span & {
   id: string;
@@ -22,10 +24,29 @@ export type Booking = Span & {
 
 export async function loadResources(schoolId: string, includeInactive = false): Promise<Resource[]> {
   const supabase = await createClient();
-  let q = supabase.from("resources").select("id, kind, name, vehicle_category_code, active").eq("school_id", schoolId);
+  let q = supabase
+    .from("resources")
+    .select("id, kind, name, active, resource_categories(category_code), resource_lesson_types(lesson_type_id, lesson_types(name))")
+    .eq("school_id", schoolId);
   if (!includeInactive) q = q.eq("active", true);
   const { data } = await q.order("name");
-  return (data ?? []).map((r) => ({ id: r.id, kind: r.kind, name: r.name, category: r.vehicle_category_code, active: r.active }));
+  type Row = {
+    id: string;
+    kind: ResourceKind;
+    name: string;
+    active: boolean;
+    resource_categories: { category_code: string }[];
+    resource_lesson_types: { lesson_type_id: string; lesson_types: { name: string } | null }[];
+  };
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    name: r.name,
+    active: r.active,
+    categories: r.resource_categories.map((c) => c.category_code).sort(),
+    lessonTypeIds: r.resource_lesson_types.map((t) => t.lesson_type_id),
+    typeNames: r.resource_lesson_types.map((t) => t.lesson_types?.name ?? ""),
+  }));
 }
 
 type Row = {

@@ -197,6 +197,7 @@ export async function allowedServices(teacher: Teacher) {
     .map((s) => ({
       id: s.id,
       name: s.name,
+      lessonTypeId: s.lesson_type_id,
       groupName: s.rate_groups?.name ?? "",
       categories: s.service_categories.map((c) => c.category_code).filter((c) => teacher.categories.includes(c)),
     }))
