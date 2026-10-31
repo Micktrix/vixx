@@ -126,7 +126,9 @@ export default async function ServicesPage() {
                 {list.map((s) => {
                   const ps = pricesBy.get(s.id) ?? [];
                   const current = priceOn(ps, today);
-                  const next = nextPriceAfter(ps, today);
+                  const upcoming = nextPriceAfter(ps, today);
+                  // Har ydelsen kun en kommende pris, er den også "nu" (første pris gælder bagud).
+                  const next = upcoming && upcoming.valid_from !== current?.valid_from ? upcoming : null;
                   const live = s.active && g.active;
                   return (
                     <tr key={s.id} className={`border-t border-line ${live ? "" : "text-muted"}`}>

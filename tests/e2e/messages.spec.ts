@@ -35,7 +35,7 @@ test("kontoret sender en besked til én lærer, som læser den", async ({ browse
 });
 
 test("ændringsloggen kan søges på en note og viser hvem og hvad", async ({ page }) => {
-  const note = `Tandlæge ${Date.now() % 100000}`;
+  const note = `Tandlæge ${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   await loginOk(page, OFFICE, PASSWORD);
   await page.goto(`/kontor/fravaer?laerer=00000000-0000-4000-a200-000000000013&dato=${dayFromToday(400 + Math.floor(Math.random() * 2000))}`);
   await page.getByLabel("Antal timer").fill("1");

@@ -147,12 +147,12 @@ test("et teorilokale tilbydes til teori, ikke til køretimer", async ({ browser,
 
   await page.getByLabel("Ydelse").selectOption({ label: "B teori" });
   const choice = page.getByLabel("Lokale eller køretøj (valgfri)");
-  await expect(choice.locator("option", { hasText: "Lokale 1" })).toHaveCount(1);
+  await expect(choice.locator("option", { hasText: /^Lokale 1 / })).toHaveCount(1);
   await expect(choice.locator("option", { hasText: "Personbil 1" })).toHaveCount(0);
 
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
   await expect(choice.locator("option", { hasText: "Personbil 1" })).toHaveCount(1);
-  await expect(choice.locator("option", { hasText: "Lokale 1" })).toHaveCount(0);
+  await expect(choice.locator("option", { hasText: /^Lokale 1 / })).toHaveCount(0);
 });
 
 test("en lærer planlægger sin egen køretime med bil, og bilen flytter med", async ({ browser, page }) => {

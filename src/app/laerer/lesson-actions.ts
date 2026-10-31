@@ -65,9 +65,10 @@ export async function saveRegistration(_prev: ActionState, formData: FormData): 
   if (read.values.lesson_date > todayDk()) return { error: "Du kan kun registrere lektioner for i dag eller tidligere." };
   const { user, membership, supabase, instructorId } = await ownInstructor();
 
-  // En rettet registrering sendes altid til godkendelse igen (sikres af databasen).
+  // En rettet registrering sendes altid til godkendelse igen. Databasen sikrer det for lærere; status
+  // sættes også her, så det gælder for en admin, der underviser og retter sin egen lektion.
   const { error } = read.id
-    ? await supabase.from("registrations").update(read.values).eq("id", read.id)
+    ? await supabase.from("registrations").update({ ...read.values, status: "pending" }).eq("id", read.id).neq("status", "approved")
     : await supabase.from("registrations").insert({
         ...read.values,
         school_id: membership.schoolId,

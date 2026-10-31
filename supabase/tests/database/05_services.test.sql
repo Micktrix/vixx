@@ -13,8 +13,8 @@ select is(public.service_price_on('00000000-0000-4000-a500-000000000006', curren
 select is(public.service_price_on('00000000-0000-4000-a500-000000000006',
   (date_trunc('month', current_date) + interval '1 month')::date), 23500,
   'Fra datoen for prisændringen gælder den nye pris');
-select is(public.service_price_on('00000000-0000-4000-a500-000000000006', '1999-01-01'), null,
-  'Før første pris findes ingen pris');
+select is(public.service_price_on('00000000-0000-4000-a500-000000000006', '1999-01-01'), 22000,
+  'Før første pris gælder den første pris');
 
 -- Færdig-kriteriet: en prisændring fra en fremtidig dato påvirker ikke lektioner før datoen.
 insert into public.registrations (id, school_id, instructor_id, service_id, lesson_date, start_time, lesson_count)

@@ -4,6 +4,7 @@ import { inputClass } from "@/components/styles";
 import { todayDk } from "@/lib/dates";
 import { CONTACT_FIELDS, EMPLOYMENT_FIELDS, KIN_FIELDS, type FieldDef } from "@/lib/instructor-fields";
 import { formatKroner } from "@/lib/money";
+import { priceOn } from "@/lib/prices";
 import { createClient } from "@/lib/supabase/server";
 import {
   setAvailability,
@@ -188,16 +189,20 @@ async function PriceBox({
       .select("id, name, lesson_type_id, active, rate_groups(name), service_categories(category_code)")
       .eq("school_id", schoolId)
       .order("name"),
-    supabase.from("service_prices").select("service_id, valid_from, amount_ore").eq("school_id", schoolId).lte("valid_from", today),
+    supabase.from("service_prices").select("service_id, valid_from, amount_ore").eq("school_id", schoolId),
     supabase.from("instructor_prices").select("service_id, amount_ore").eq("instructor_id", instructorId),
   ]);
 
   const ownPrice = new Map((own ?? []).map((p) => [p.service_id, p.amount_ore]));
-  const standard = new Map<string, { from: string; ore: number }>();
-  for (const p of prices ?? []) {
-    const cur = standard.get(p.service_id);
-    if (!cur || p.valid_from > cur.from) standard.set(p.service_id, { from: p.valid_from, ore: p.amount_ore });
-  }
+  // Standardprisen i dag (samme regel som i databasen: første pris gælder også bagud).
+  const byService = new Map<string, { valid_from: string; amount_ore: number }[]>();
+  for (const p of prices ?? []) byService.set(p.service_id, [...(byService.get(p.service_id) ?? []), p]);
+  const standard = new Map(
+    [...byService].map(([id, list]) => {
+      const p = priceOn(list, today);
+      return [id, p ? { from: p.valid_from, ore: p.amount_ore } : null] as const;
+    }),
+  );
 
   const rows = (services ?? []).filter(
     (s) =>

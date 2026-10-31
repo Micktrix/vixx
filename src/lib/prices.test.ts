@@ -14,8 +14,11 @@ describe("priceOn", () => {
   it("en ny pris gælder fra og med sin dato", () => {
     expect(priceOn(prices, "2026-11-01")?.amount_ore).toBe(23500);
   });
-  it("før første pris findes ingen pris", () => {
-    expect(priceOn(prices, "2025-12-31")).toBeNull();
+  it("før første pris gælder den første pris", () => {
+    expect(priceOn(prices, "2025-12-31")?.amount_ore).toBe(22000);
+  });
+  it("uden priser findes ingen pris", () => {
+    expect(priceOn([], "2026-01-01")).toBeNull();
   });
 });
 

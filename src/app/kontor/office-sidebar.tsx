@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { icons } from "@/components/icons";
 import { LogoMark } from "@/components/logo-mark";
 import { PartSwitch } from "@/components/part-switch";
 import { signOut } from "@/lib/auth/actions";
-import { officeHref, officeSections } from "./sections";
+import { officeHref, officeSections, type OfficeSection } from "./sections";
 
 type Props = {
   schoolName: string;
@@ -16,8 +17,32 @@ type Props = {
   badges: Record<string, number>; // antal der venter pr. menupunkt (slug)
 };
 
+const itemClass = (current: boolean) =>
+  `flex w-full items-center gap-2 rounded-[10px] px-3 py-2.5 text-[15px] whitespace-nowrap min-[860px]:gap-3.5 ${
+    current ? "bg-accent-bg font-bold text-accent-ink" : "font-medium text-muted hover:bg-soft"
+  }`;
+
+function Badge({ count }: { count: number }) {
+  if (!count) return null;
+  return (
+    <span
+      aria-label={`${count} venter`}
+      className="ml-auto min-w-[22px] rounded-full bg-accent px-1.5 text-center text-[12px] leading-[22px] font-bold text-ink"
+    >
+      {count}
+    </span>
+  );
+}
+
 export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, badges }: Props) {
   const pathname = usePathname();
+  const isCurrent = (s: OfficeSection) => {
+    const href = officeHref(s);
+    return s.slug ? pathname === href || pathname.startsWith(`${href}/`) : pathname === href;
+  };
+  // Undermenuen er åben, når man er på en af dens sider, og kan åbnes/lukkes med et klik.
+  const inGroup = (s: OfficeSection) => !!s.children?.some(isCurrent);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
 
   return (
     <nav
@@ -34,30 +59,50 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, 
         </div>
         {teaches && <PartSwitch current="kontor" className="w-full min-[860px]:mb-3" />}
         {officeSections.map((s) => {
-          const href = officeHref(s);
-          const current = s.slug ? pathname.startsWith(href) : pathname === href;
+          if (!s.children) {
+            const current = isCurrent(s);
+            return (
+              <Link key={s.label} href={officeHref(s)} aria-current={current ? "page" : undefined} className={`${itemClass(current)} w-auto min-[860px]:w-full`}>
+                <span className="hidden min-[860px]:inline-flex">{icons[s.icon]}</span>
+                {s.label}
+                {s.slug && <Badge count={badges[s.slug] ?? 0} />}
+              </Link>
+            );
+          }
+
+          const expanded = open[s.label] ?? inGroup(s);
+          const groupBadge = s.children.reduce((n, c) => n + (c.slug ? (badges[c.slug] ?? 0) : 0), 0);
           return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={current ? "page" : undefined}
-              className={`flex items-center gap-2 rounded-[10px] px-3 py-2.5 text-[15px] whitespace-nowrap min-[860px]:gap-3.5 ${
-                current
-                  ? "bg-accent-bg font-bold text-accent-ink"
-                  : "font-medium text-muted hover:bg-soft"
-              }`}
-            >
-              <span className="hidden min-[860px]:inline-flex">{icons[s.icon]}</span>
-              {s.label}
-              {s.slug && badges[s.slug] > 0 && (
-                <span
-                  aria-label={`${badges[s.slug]} venter`}
-                  className="ml-auto min-w-[22px] rounded-full bg-accent px-1.5 text-center text-[12px] leading-[22px] font-bold text-ink"
-                >
-                  {badges[s.slug]}
+            <div key={s.label} className="flex flex-col gap-1 max-[859px]:contents">
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => setOpen((o) => ({ ...o, [s.label]: !expanded }))}
+                className={`${itemClass(false)} w-auto min-[860px]:w-full ${inGroup(s) ? "text-ink" : ""}`}
+              >
+                <span className="hidden min-[860px]:inline-flex">{icons[s.icon]}</span>
+                {s.label}
+                {!expanded && <Badge count={groupBadge} />}
+                <span aria-hidden="true" className={`ml-auto text-[12px] transition-transform ${expanded ? "rotate-90" : ""} ${!expanded && groupBadge ? "ml-1" : ""}`}>
+                  ›
                 </span>
-              )}
-            </Link>
+              </button>
+              {expanded &&
+                s.children.map((c) => {
+                  const current = isCurrent(c);
+                  return (
+                    <Link
+                      key={c.label}
+                      href={officeHref(c)}
+                      aria-current={current ? "page" : undefined}
+                      className={`${itemClass(current)} w-auto min-[860px]:w-full min-[860px]:pl-11`}
+                    >
+                      {c.label}
+                      {c.slug && <Badge count={badges[c.slug] ?? 0} />}
+                    </Link>
+                  );
+                })}
+            </div>
           );
         })}
         <div className="flex items-center gap-2 px-3 py-2.5 text-[15px] min-[860px]:mt-auto min-[860px]:flex-col min-[860px]:items-start min-[860px]:gap-1 min-[860px]:border-t min-[860px]:border-line min-[860px]:pt-4">

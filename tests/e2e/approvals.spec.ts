@@ -104,3 +104,20 @@ test("kontoret kan rette og godkende direkte, og læreren får besked", async ({
   await expect(teacher.getByTestId("message").first()).toContainText("fra 2 til 1 lek.");
   await expect(teacher.getByTestId("message").first()).toContainText("Kun én lektion ifølge eleven.");
 });
+
+test("en admin, der også underviser, kan rette og sende en afvist lektion igen", async ({ page }) => {
+  const ANNE = "00000000-0000-4000-a200-000000000001";
+  // Ryd Annes egne registreringer i dag, så testen kan køres igen.
+  await localAdmin().from("registrations").delete().eq("instructor_id", ANNE).eq("lesson_date", today());
+  await pendingRegistration(ANNE, "10:00", { status: "rejected", decision_comment: "Forkert antal" });
+
+  await loginOk(page, "20000001", PASSWORD);
+  await page.goto("/laerer");
+  const reg = page.getByTestId("registration").filter({ hasText: "Afvist" });
+  await reg.click();
+  await page.getByRole("button", { name: "Færre" }).click();
+  await page.getByRole("button", { name: "Send igen" }).click();
+  await page.waitForURL(/\/laerer\?dag=/);
+  await expect(page.getByTestId("registration")).toContainText("Afventer");
+  await expect(page.getByTestId("registration")).not.toContainText("Rettet af kontoret");
+});

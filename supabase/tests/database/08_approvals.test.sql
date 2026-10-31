@@ -87,11 +87,10 @@ select is(
    where instructor_id = '00000000-0000-4000-a200-000000000011' and lesson_date = current_date - 2),
   null, 'En afvist registrering har ingen låst pris');
 
--- Ingen pris på datoen: kan ikke godkendes.
-select throws_ok(
-  $$update public.registrations set status = 'approved' where id = '00000000-0000-4000-a700-000000000088'$$,
-  '23514', 'Ydelsen har ingen pris på lektionens dato, så lektionen kan ikke godkendes.',
-  'Uden pris på datoen kan der ikke godkendes');
+-- Før ydelsens første pris: den første pris låses (fx en ny ydelse med "gælder fra i dag").
+update public.registrations set status = 'approved' where id = '00000000-0000-4000-a700-000000000088';
+select is((select locked_unit_price_ore from public.registrations where id = '00000000-0000-4000-a700-000000000088'),
+  18000, 'En lektion fra før ydelsens første pris godkendes med den første pris');
 reset role;
 
 select * from finish();
