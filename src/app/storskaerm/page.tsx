@@ -4,21 +4,41 @@ import { LogoMark } from "@/components/logo-mark";
 import { requireRole } from "@/lib/auth/session";
 import { loadBookings, loadResources } from "@/lib/booking-data";
 import { formatLongDate, todayDk } from "@/lib/dates";
-import { nowMinutesDk, resourceNow, teacherNow } from "@/lib/now-status";
+import { nowMinutesDk, resourceNow, teacherNow, type TeacherNow } from "@/lib/now-status";
 import { resourceDetail } from "@/lib/resources";
 import { formatSpan, fromMinutes, type Span } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { dayInfo, loadSchedule } from "../kontor/schedule-data";
-import { LiveClock, NowLine } from "./live";
+import { AutoSwitch, LiveClock, NowLine } from "./live";
+import { Legend, Panel, TileWall, type TileData, type Tone } from "./tiles";
 
 export const metadata = { title: "Storskærm · Vixx" };
 
 const until = (m: number | null) => (m === null ? "resten af dagen" : `til ${fromMinutes(m)}`);
+const ORDER: Record<Tone, number> = { busy: 0, free: 1, away: 2, off: 3 };
+const byStatus = (a: TileData, b: TileData) => ORDER[a.tone] - ORDER[b.tone] || a.name.localeCompare(b.name, "da");
 
-// Dagens overblik til en skærm på kontoret: hvem og hvad er optaget og ledigt lige nu.
-// Siden henter nye data hvert minut (LiveClock). Viser aldrig elevnavne.
-export default async function DashboardPage() {
+function teacherTile(id: string, name: string, s: TeacherNow, lessonName?: string): TileData {
+  switch (s.state) {
+    case "busy":
+      return { id, name, tone: "busy", line1: `Optaget ${until(s.until)}`, line2: lessonName };
+    case "free":
+      return { id, name, tone: "free", line1: `Ledig ${until(s.until)}` };
+    case "away":
+      return { id, name, tone: "away", line1: `${s.reason} ${until(s.until)}` };
+    default:
+      return { id, name, tone: "off", line1: "Ikke meldt klar" };
+  }
+}
+
+// Dagens overblik til en skærm på kontoret. Alt skal kunne ses på én skærm uden at rulle:
+// "Lige nu" viser fliser, der bliver mindre, jo flere der er; "Tidslinje" viser dagen.
+// ?vis=tidslinje vælger visning, ?skift=30 skifter automatisk hvert 30. sekund. Viser aldrig elevnavne.
+export default async function DashboardPage({ searchParams }: PageProps<"/storskaerm">) {
   const { membership } = await requireRole(["admin", "office"]);
+  const sp = await searchParams;
+  const view = sp.vis === "tidslinje" ? "tidslinje" : "nu";
+  const rotate = Math.max(0, Math.min(600, Number(sp.skift) || 0));
   const today = todayDk();
   const now = nowMinutesDk();
   const supabase = await createClient();
@@ -31,65 +51,70 @@ export default async function DashboardPage() {
   ]);
   const lessons = schedule.lessons;
 
-  // Lige nu: lærere.
-  const teachers = schedule.instructors.map((i) => {
-    const day = dayInfo(schedule, i, today);
-    const lessonNow = lessons.find((l) => l.instructorId === i.id && l.from <= now && now < l.to);
-    return { instructor: i, day, status: teacherNow(day, now), lessonNow };
-  });
-  const busyTeachers = teachers.filter((t) => t.status.state === "busy");
-  const freeTeachers = teachers.filter((t) => t.status.state === "free");
-  const awayTeachers = teachers.filter((t) => t.status.state === "away");
+  const teacherTiles = schedule.instructors
+    .map((i) => {
+      const day = dayInfo(schedule, i, today);
+      const lessonNow = lessons.find((l) => l.instructorId === i.id && l.from <= now && now < l.to);
+      return teacherTile(i.id, i.name, teacherNow(day, now), lessonNow?.serviceName);
+    })
+    .sort(byStatus);
 
-  // Lige nu: lokaler og køretøjer.
-  const resourceStatus = resources.map((r) => {
-    const own = bookings.filter((b) => b.resourceId === r.id);
-    return { resource: r, own, status: resourceNow(own, now), bookingNow: own.find((b) => b.from <= now && now < b.to) };
-  });
-  const busyResources = resourceStatus.filter((r) => r.status.state === "busy");
-  const freeResources = resourceStatus.filter((r) => r.status.state === "free");
+  const resourceTiles = resources
+    .map((r): TileData => {
+      const own = bookings.filter((b) => b.resourceId === r.id);
+      const status = resourceNow(own, now);
+      const current = own.find((b) => b.from <= now && now < b.to);
+      const detail = resourceDetail(r);
+      return status.state === "busy"
+        ? { id: r.id, name: r.name, tone: "busy", line1: `Optaget ${until(status.until)}`, line2: current?.instructorName ?? current?.title ?? "Kontoret" }
+        : { id: r.id, name: r.name, tone: "free", line1: `Ledig ${until(status.until)}`, line2: detail || undefined };
+    })
+    .sort(byStatus);
 
-  // Fælles tidslinje 07–18, udvidet hvis noget ligger uden for.
-  const items: Span[] = [...lessons, ...schedule.absences, ...bookings];
-  const from = Math.min(7 * 60, ...items.map((i) => Math.floor(i.from / 60) * 60));
-  const to = Math.max(18 * 60, ...items.map((i) => Math.ceil(i.to / 60) * 60));
-  const pos = (s: Span) => ({ left: `${((s.from - from) / (to - from)) * 100}%`, width: `${((s.to - s.from) / (to - from)) * 100}%` });
-  const hours = Array.from({ length: (to - from) / 60 }, (_, i) => from + i * 60);
-  const teacherRows = teachers.filter((t) => lessons.some((l) => l.instructorId === t.instructor.id) || t.status.state === "away");
-
-  const timelineHeader = (title: string) => (
-    <div className="flex border-b border-line text-[13px] text-muted">
-      <div className="w-[200px] shrink-0 px-5 py-2.5 font-semibold">{title}</div>
-      <div className="relative flex-1">
-        {hours.map((h) => (
-          <span key={h} className="absolute top-2.5 -translate-x-1/2" style={{ left: pos({ from: h, to: h }).left }}>
-            {fromMinutes(h)}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-  const gridLines = (
-    <>
-      {hours.map((h) => (
-        <span key={h} className="absolute inset-y-0 border-l border-line" style={{ left: pos({ from: h, to: h }).left }} />
-      ))}
-      <NowLine from={from} to={to} />
-    </>
-  );
+  const countTone = (tiles: TileData[], tone: Tone) => tiles.filter((t) => t.tone === tone).length;
+  const lessonCount = lessons.reduce((n, l) => n + l.count, 0);
+  const working = new Set(lessons.map((l) => l.instructorId)).size;
+  const qs = (v: string) => `/storskaerm?vis=${v}${rotate ? `&skift=${rotate}` : ""}`;
 
   return (
-    <main className="flex min-h-dvh flex-col gap-5 bg-bg p-[clamp(16px,2.5vw,36px)]">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+    <main className="flex h-dvh flex-col gap-[clamp(8px,1vw,16px)] overflow-hidden bg-bg p-[clamp(10px,1.5vw,28px)]">
+      {rotate > 0 && <AutoSwitch href={qs(view === "nu" ? "tidslinje" : "nu")} seconds={rotate} />}
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <div className="flex items-center gap-3">
           <LogoMark />
           <div>
-            <p className="text-muted">{membership.schoolName}</p>
-            <h1 className="text-[clamp(24px,2.6vw,40px)] font-bold">{formatLongDate(today)}</h1>
+            <p className="text-[clamp(12px,1vw,16px)] text-muted">{membership.schoolName}</p>
+            <h1 className="text-[clamp(20px,2vw,34px)] leading-tight font-bold">{formatLongDate(today)}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-5">
-          <b className="text-[clamp(28px,3.4vw,52px)]">
+        <p className="flex flex-wrap gap-x-5 gap-y-1 text-[clamp(13px,1.2vw,20px)]" data-testid="kpis">
+          <span>
+            <b>{lessonCount}</b> lektioner i dag
+          </span>
+          <span>
+            <b>{working}</b> undervisere i dag
+          </span>
+          <span>
+            <b>{countTone(teacherTiles, "away")}</b> fravær/ferie
+          </span>
+          <span className={pending ? "font-semibold text-accent-ink" : ""}>
+            <b>{pending ?? 0}</b> afventer godkendelse
+          </span>
+        </p>
+        <div className="flex items-center gap-4">
+          <nav aria-label="Visning" className="flex rounded-[10px] border border-line2 bg-surface p-0.5 text-sm">
+            {(["nu", "tidslinje"] as const).map((v) => (
+              <Link
+                key={v}
+                href={qs(v)}
+                aria-current={v === view ? "page" : undefined}
+                className={`rounded-lg px-3 py-1 font-semibold ${v === view ? "bg-accent-bg text-accent-ink" : "text-muted"}`}
+              >
+                {v === "nu" ? "Lige nu" : "Tidslinje"}
+              </Link>
+            ))}
+          </nav>
+          <b className="text-[clamp(26px,3vw,50px)] leading-none">
             <LiveClock />
           </b>
           <Link href="/kontor" className="text-sm font-semibold text-muted hover:text-ink">
@@ -98,169 +123,151 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="lektioner i dag" value={lessons.reduce((n, l) => n + l.count, 0)} />
-        <Kpi label="undervisere i dag" value={teachers.filter((t) => lessons.some((l) => l.instructorId === t.instructor.id)).length} />
-        <Kpi label="fravær / ferie" value={awayTeachers.length} />
-        <Kpi label="afventer godkendelse" value={pending ?? 0} warn={(pending ?? 0) > 0} />
-      </section>
-
-      <section className="grid gap-5 xl:grid-cols-2" aria-label="Lige nu">
-        <Panel title="Undervisere lige nu">
-          <Group title="Optaget" tone="busy" count={busyTeachers.length} testId="teachers-busy">
-            {busyTeachers.map((t) => (
-              <Item key={t.instructor.id} name={t.instructor.name}>
-                {t.lessonNow?.serviceName} · {t.status.state === "busy" && until(t.status.until)}
-              </Item>
-            ))}
-          </Group>
-          <Group title="Ledige" tone="free" count={freeTeachers.length} testId="teachers-free">
-            {freeTeachers.map((t) => (
-              <Item key={t.instructor.id} name={t.instructor.name}>
-                {t.status.state === "free" && `ledig ${until(t.status.until)}`}
-              </Item>
-            ))}
-          </Group>
-          {awayTeachers.length > 0 && (
-            <Group title="Fravær og ferie" tone="away" count={awayTeachers.length} testId="teachers-away">
-              {awayTeachers.map((t) => (
-                <Item key={t.instructor.id} name={t.instructor.name}>
-                  {t.status.state === "away" && `${t.status.reason} ${until(t.status.until)}`}
-                </Item>
-              ))}
-            </Group>
-          )}
-        </Panel>
-
-        <Panel title="Lokaler og køretøjer lige nu">
-          <Group title="Optaget" tone="busy" count={busyResources.length} testId="resources-busy">
-            {busyResources.map((r) => (
-              <Item key={r.resource.id} name={r.resource.name}>
-                {r.bookingNow?.instructorName ?? r.bookingNow?.title ?? "Kontoret"} · {r.status.state === "busy" && until(r.status.until)}
-              </Item>
-            ))}
-          </Group>
-          <Group title="Ledige" tone="free" count={freeResources.length} testId="resources-free">
-            {freeResources.map((r) => (
-              <Item key={r.resource.id} name={r.resource.name}>
-                {r.resource.kind === "room" ? "Lokale" : "Køretøj"}
-                {resourceDetail(r.resource) ? ` ${resourceDetail(r.resource)}` : ""} ·{" "}
-                {r.status.state === "free" && `ledig ${until(r.status.until)}`}
-              </Item>
-            ))}
-          </Group>
-        </Panel>
-      </section>
-
-      <section className="overflow-hidden rounded-[20px] border border-line bg-surface">
-        {timelineHeader("Underviser")}
-        {teacherRows.map(({ instructor, day }) => {
-          const own = lessons.filter((l) => l.instructorId === instructor.id);
-          return (
-            <div key={instructor.id} className="flex border-b border-line last:border-b-0" data-testid="dashboard-row">
-              <div className="flex w-[200px] shrink-0 flex-col justify-center px-5 py-3">
-                <b className="truncate text-[17px]">{instructor.name}</b>
-                <span className="text-[13px] text-muted">
-                  {own.length ? `${own.reduce((n, l) => n + l.count, 0)} lek.` : day.holiday === "approved" ? "Ferie" : "Fravær"}
-                </span>
-              </div>
-              <div className="relative min-h-[60px] flex-1">
-                {gridLines}
-                {day.absences.map((a, k) => (
-                  <span key={k} className="absolute inset-y-2 rounded-lg bg-bad-bg px-2 py-1 text-[13px] text-bad" style={pos(a)}>
-                    Fravær {formatSpan(a)}
-                  </span>
-                ))}
-                {own.map((l) => (
-                  <span
-                    key={l.id}
-                    className="absolute inset-y-2 overflow-hidden rounded-lg border border-accent-line bg-accent-bg px-2 py-1 text-[13px] leading-tight"
-                    style={pos(l)}
-                  >
-                    <b className="block truncate">{l.serviceName}</b>
-                    <span className="block truncate text-muted">
-                      {formatSpan(l)} · {l.category}
-                    </span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-        {!teacherRows.length && <p className="px-5 py-5 text-lg text-muted">Ingen lektioner i dag.</p>}
-      </section>
-
-      {resources.length > 0 && (
-        <section className="overflow-hidden rounded-[20px] border border-line bg-surface">
-          {timelineHeader("Lokale / køretøj")}
-          {resourceStatus.map(({ resource, own }) => (
-            <div key={resource.id} className="flex border-b border-line last:border-b-0" data-testid="dashboard-resource-row">
-              <div className="flex w-[200px] shrink-0 flex-col justify-center px-5 py-2.5">
-                <b className="truncate">{resource.name}</b>
-                <span className="text-[13px] text-muted">{own.length ? `${own.length} booking${own.length === 1 ? "" : "er"}` : "Ledig hele dagen"}</span>
-              </div>
-              <div className="relative min-h-[48px] flex-1">
-                {gridLines}
-                {own.map((b) => (
-                  <span
-                    key={b.id}
-                    className="absolute inset-y-1.5 overflow-hidden rounded-lg border border-line2 bg-soft px-2 py-1 text-[12px] leading-tight"
-                    style={pos(b)}
-                  >
-                    <b className="block truncate">{formatSpan(b)}</b>
-                    <span className="block truncate text-muted">{b.instructorName ?? b.title ?? "Kontoret"}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
+      {view === "nu" ? (
+        <div className="grid min-h-0 flex-1 gap-[clamp(8px,1vw,16px)] lg:grid-cols-2">
+          <Panel
+            title="Undervisere"
+            legend={
+              <Legend
+                items={[
+                  { tone: "busy", label: "optaget", count: countTone(teacherTiles, "busy") },
+                  { tone: "free", label: "ledige", count: countTone(teacherTiles, "free") },
+                  { tone: "away", label: "fravær", count: countTone(teacherTiles, "away") },
+                ]}
+              />
+            }
+          >
+            <TileWall tiles={teacherTiles} aspect={1.25} testId="teacher-tiles" />
+          </Panel>
+          <Panel
+            title="Lokaler og køretøjer"
+            legend={
+              <Legend
+                items={[
+                  { tone: "busy", label: "optaget", count: countTone(resourceTiles, "busy") },
+                  { tone: "free", label: "ledige", count: countTone(resourceTiles, "free") },
+                ]}
+              />
+            }
+          >
+            <TileWall tiles={resourceTiles} aspect={1.25} testId="resource-tiles" />
+          </Panel>
+        </div>
+      ) : (
+        <Timelines schedule={schedule} resources={resources} bookings={bookings} />
       )}
     </main>
   );
 }
 
-function Kpi({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
-  return (
-    <div className={`rounded-[20px] border p-5 ${warn ? "border-accent-line bg-accent-bg" : "border-line bg-surface"}`} data-testid="kpi">
-      <b className="block text-[clamp(32px,4vw,56px)] leading-none">{value}</b>
-      <span className="text-muted">{label}</span>
+// Dagens tidslinjer. Rækkerne deler højden, så alt kan ses på én skærm.
+function Timelines({
+  schedule,
+  resources,
+  bookings,
+}: {
+  schedule: Awaited<ReturnType<typeof loadSchedule>>;
+  resources: Awaited<ReturnType<typeof loadResources>>;
+  bookings: Awaited<ReturnType<typeof loadBookings>>;
+}) {
+  const today = todayDk();
+  const lessons = schedule.lessons;
+  const items: Span[] = [...lessons, ...schedule.absences, ...bookings];
+  const from = Math.min(7 * 60, ...items.map((i) => Math.floor(i.from / 60) * 60));
+  const to = Math.max(18 * 60, ...items.map((i) => Math.ceil(i.to / 60) * 60));
+  const pos = (s: Span) => ({ left: `${((s.from - from) / (to - from)) * 100}%`, width: `${((s.to - s.from) / (to - from)) * 100}%` });
+  const hours = Array.from({ length: (to - from) / 60 }, (_, i) => from + i * 60);
+  const teachers = schedule.instructors.filter((i) => {
+    const day = dayInfo(schedule, i, today);
+    return lessons.some((l) => l.instructorId === i.id) || day.absences.length > 0 || day.holiday === "approved";
+  });
+
+  const grid = (
+    <>
+      {hours.map((h) => (
+        <span key={h} className="absolute inset-y-0 border-l border-line" style={{ left: pos({ from: h, to: h }).left }} />
+      ))}
+      <NowLine from={from} to={to} />
+    </>
+  );
+  const header = (title: string) => (
+    <div className="flex shrink-0 border-b border-line text-[clamp(11px,0.9vw,14px)] text-muted">
+      <div className="w-[clamp(120px,13vw,220px)] shrink-0 px-4 py-1.5 font-semibold">{title}</div>
+      <div className="relative flex-1">
+        {hours.map((h) => (
+          <span key={h} className="absolute top-1.5 -translate-x-1/2" style={{ left: pos({ from: h, to: h }).left }}>
+            {fromMinutes(h)}
+          </span>
+        ))}
+      </div>
     </div>
   );
-}
-
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-4 rounded-[20px] border border-line bg-surface p-5">
-      <h2 className="text-xl font-bold">{title}</h2>
-      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+  const row = (key: string, name: string, children: ReactNode, testId: string) => (
+    <div key={key} className="flex min-h-[18px] flex-1 border-b border-line last:border-b-0" data-testid={testId}>
+      <div className="flex w-[clamp(120px,13vw,220px)] shrink-0 items-center truncate px-4 text-[clamp(11px,1vw,17px)] font-bold">{name}</div>
+      <div className="relative flex-1">
+        {grid}
+        {children}
+      </div>
     </div>
   );
-}
+  const block = (cls: string) =>
+    `absolute inset-y-[12%] flex items-center overflow-hidden rounded-md px-1.5 text-[clamp(9px,0.85vw,14px)] leading-tight whitespace-nowrap ${cls}`;
 
-const TONE = {
-  busy: "bg-accent text-ink",
-  free: "bg-ok text-surface",
-  away: "bg-bad text-surface",
-};
-
-function Group({ title, tone, count, testId, children }: { title: string; tone: keyof typeof TONE; count: number; testId: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2" data-testid={testId}>
-      <h3 className="flex items-center gap-2 font-bold">
-        <span className={`min-w-7 rounded-full px-2 text-center text-[15px] ${TONE[tone]}`}>{count}</span>
-        {title}
-      </h3>
-      {count ? <ul className="flex flex-col gap-1.5">{children}</ul> : <p className="text-muted">Ingen</p>}
+    <div
+      className="grid min-h-0 flex-1 gap-[clamp(8px,1vw,16px)]"
+      style={{ gridTemplateRows: `${Math.max(teachers.length, 1) + 1}fr ${Math.max(resources.length, 1) + 1}fr` }}
+    >
+      <section className="flex min-h-0 flex-col overflow-hidden rounded-[20px] border border-line bg-surface">
+        {header("Underviser")}
+        {teachers.map((i) => {
+          const day = dayInfo(schedule, i, today);
+          return row(
+            i.id,
+            i.name,
+            <>
+              {day.holiday === "approved" && (
+                <span className={block("bg-soft text-muted")} style={pos({ from, to })}>
+                  Ferie
+                </span>
+              )}
+              {day.absences.map((a, k) => (
+                <span key={k} className={block("bg-bad-bg text-bad")} style={pos(a)}>
+                  Fravær {formatSpan(a)}
+                </span>
+              ))}
+              {lessons
+                .filter((l) => l.instructorId === i.id)
+                .map((l) => (
+                  <span key={l.id} className={block("border border-accent-line bg-accent-bg")} style={pos(l)}>
+                    <b>{l.serviceName}</b>&nbsp;{formatSpan(l)}
+                  </span>
+                ))}
+            </>,
+            "dashboard-row",
+          );
+        })}
+        {!teachers.length && <p className="px-4 py-3 text-muted">Ingen lektioner i dag.</p>}
+      </section>
+      <section className="flex min-h-0 flex-col overflow-hidden rounded-[20px] border border-line bg-surface">
+        {header("Lokale / køretøj")}
+        {resources.map((r) =>
+          row(
+            r.id,
+            r.name,
+            bookings
+              .filter((b) => b.resourceId === r.id)
+              .map((b) => (
+                <span key={b.id} className={block("border border-line2 bg-soft")} style={pos(b)}>
+                  <b>{formatSpan(b)}</b>&nbsp;{b.instructorName ?? b.title ?? "Kontoret"}
+                </span>
+              )),
+            "dashboard-resource-row",
+          ),
+        )}
+        {!resources.length && <p className="px-4 py-3 text-muted">Ingen lokaler eller køretøjer.</p>}
+      </section>
     </div>
-  );
-}
-
-function Item({ name, children }: { name: string; children: ReactNode }) {
-  return (
-    <li className="leading-tight">
-      <b className="text-[17px]">{name}</b>
-      <span className="block text-[14px] text-muted">{children}</span>
-    </li>
   );
 }

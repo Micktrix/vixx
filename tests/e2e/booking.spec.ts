@@ -101,13 +101,21 @@ test("storskærmen viser hvem og hvad der er optaget og ledigt lige nu, uden ele
   });
 
   await loginOk(page, OFFICE, PASSWORD);
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/storskaerm");
-  await expect(page.getByTestId("teachers-busy")).toContainText(name);
-  await expect(page.getByTestId("teachers-busy")).toContainText("B privat · til");
-  await expect(page.getByTestId("teachers-free")).toContainText(free);
-  await expect(page.getByTestId("resources-busy")).toContainText(room);
-  await expect(page.getByTestId("resources-busy")).toContainText(name);
-  await expect(page.getByTestId("resources-free")).not.toContainText(room);
+  const teacherTile = page.getByTestId("teacher-tiles").getByTestId("tile").filter({ hasText: name });
+  await expect(teacherTile).toHaveAttribute("data-tone", "busy");
+  await expect(teacherTile).toContainText("Optaget til");
+  await expect(teacherTile).toContainText("B privat");
+  await expect(page.getByTestId("teacher-tiles").getByTestId("tile").filter({ hasText: free })).toHaveAttribute("data-tone", "free");
+  const roomTile = page.getByTestId("resource-tiles").getByTestId("tile").filter({ hasText: room });
+  await expect(roomTile).toHaveAttribute("data-tone", "busy");
+  await expect(roomTile).toContainText(name);
+  // Alt kan ses på én skærm: siden ruller ikke.
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
+  await expect(page.locator("body")).not.toContainText("Hemmelig Elevsen");
+
+  await page.getByRole("link", { name: "Tidslinje" }).click();
   await expect(page.getByTestId("dashboard-row").filter({ hasText: name })).toContainText("B privat");
   await expect(page.locator("body")).not.toContainText("Hemmelig Elevsen");
 
