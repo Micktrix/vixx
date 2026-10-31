@@ -15,6 +15,7 @@ type Props = {
   canSwitchSchool: boolean;
   teaches: boolean;
   badges: Record<string, number>; // antal der venter pr. menupunkt (slug)
+  isPlatformOwner: boolean;
 };
 
 const itemClass = (current: boolean) =>
@@ -34,7 +35,7 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, badges }: Props) {
+export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, badges, isPlatformOwner }: Props) {
   const pathname = usePathname();
   const isCurrent = (s: OfficeSection) => {
     const href = officeHref(s);
@@ -107,6 +108,11 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, 
         })}
         <div className="flex items-center gap-2 px-3 py-2.5 text-[15px] min-[860px]:mt-auto min-[860px]:flex-col min-[860px]:items-start min-[860px]:gap-1 min-[860px]:border-t min-[860px]:border-line min-[860px]:pt-4">
           <span className="hidden text-[13px] text-muted min-[860px]:block">Logget ind som {userName}</span>
+          {isPlatformOwner && (
+            <Link href="/platform" className="font-medium text-muted hover:text-ink">
+              Platform (alle skoler)
+            </Link>
+          )}
           {canSwitchSchool && (
             <Link href="/vaelg-skole" className="font-medium text-muted hover:text-ink">
               Skift skole

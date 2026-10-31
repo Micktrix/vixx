@@ -6,7 +6,7 @@
 --   skole            00000000-0000-4000-a000-000000000001
 --   brugere          00000000-0000-4000-a100-0000000000NN  (01 admin, 02 kontor, 11–19 lærere)
 --   lærere           00000000-0000-4000-a200-0000000000NN  (01 og 11–19, samme NN som brugeren;
---                    Anne Admin er både admin og lærer)
+--                    Anne Admin er både admin og lærer, og platform-ejer)
 
 -- ---------------------------------------------------------------------------
 -- Brugere (auth) og profiler
@@ -290,6 +290,9 @@ values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-0000000
 insert into public.messages (school_id, recipient_instructor_id, body, sent_by) values
   ('00000000-0000-4000-a000-000000000001', null, 'Velkommen til Vixx. Husk at registrere dine lektioner samme dag.', '00000000-0000-4000-a100-000000000002'),
   ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000012', 'Din registrering fra i går er afvist – se kommentaren.', '00000000-0000-4000-a100-000000000002');
+
+-- Anne Admin er også platform-ejer (kan oprette nye skoler under /platform).
+insert into public.platform_owners (user_id) values ('00000000-0000-4000-a100-000000000001');
 
 -- Seed skal ikke fremstå som ændringer i loggen.
 truncate public.audit_log;

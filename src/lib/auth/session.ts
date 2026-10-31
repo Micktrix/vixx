@@ -22,6 +22,7 @@ export type CurrentUser = {
   phone: string;
   mustChangePassword: boolean;
   memberships: Membership[];
+  isPlatformOwner: boolean; // kan oprette og se alle skoler (/platform)
 };
 
 export const SCHOOL_COOKIE = "vixx_school";
@@ -39,13 +40,14 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const { data: active } = await supabase.rpc("session_is_active");
   if (!active) return null;
 
-  const [{ data: profile }, { data: members }] = await Promise.all([
+  const [{ data: profile }, { data: members }, { data: owner }] = await Promise.all([
     supabase.from("profiles").select("full_name, phone, must_change_password").eq("id", userId).single(),
     supabase
       .from("school_members")
       .select("school_id, role, schools(name), instructors(active, active_until)")
       .eq("user_id", userId)
       .eq("active", true),
+    supabase.from("platform_owners").select("user_id").eq("user_id", userId).maybeSingle(),
   ]);
   if (!profile) return null;
 
@@ -69,6 +71,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     phone: profile.phone,
     mustChangePassword: profile.must_change_password,
     memberships,
+    isPlatformOwner: !!owner,
   };
 });
 
@@ -100,7 +103,7 @@ export const isPhone = (userAgent: string) => /Mobi|Android|iPhone|iPod/i.test(u
 // Hvor en indlogget bruger skal hen lige nu.
 export async function homePath(user: CurrentUser): Promise<string> {
   if (user.mustChangePassword) return "/ny-kode";
-  if (user.memberships.length === 0) return "/ingen-skole";
+  if (user.memberships.length === 0) return user.isPlatformOwner ? "/platform" : "/ingen-skole";
   const membership = await getActiveMembership(user);
   if (!membership) return "/vaelg-skole";
   return await homeFor(membership);
@@ -119,4 +122,13 @@ export async function requireRole(roles: Role[]): Promise<{ user: CurrentUser; m
   if (!allowed) redirect(await homeFor(membership));
 
   return { user, membership };
+}
+
+// Til platform-siden: kræver login, egen kode valgt og at brugeren er platform-ejer.
+export async function requirePlatformOwner(): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/");
+  if (user.mustChangePassword) redirect("/ny-kode");
+  if (!user.isPlatformOwner) redirect(await homePath(user));
+  return user;
 }

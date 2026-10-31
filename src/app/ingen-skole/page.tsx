@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 export default async function NoSchoolPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
-  if (user.memberships.length > 0) redirect("/");
+  if (user.memberships.length > 0 || user.isPlatformOwner) redirect("/");
 
   return (
     <AuthShell caption={`Hej ${user.fullName.split(" ")[0]}`} title="Ingen adgang">
