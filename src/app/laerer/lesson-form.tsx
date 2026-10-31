@@ -4,9 +4,10 @@ import { useState, type ReactNode } from "react";
 import { CheckChip, Fieldset, ResultBox, TextField, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import type { FormAction } from "@/lib/action-state";
-import { fromMinutes, slotIsFree, suggestStart, TIME_SLOTS, toMinutes, type Span } from "@/lib/schedule";
+import { fromMinutes, overlaps, slotIsFree, suggestStart, TIME_SLOTS, toMinutes, type Span } from "@/lib/schedule";
 
 type Service = { id: string; name: string; groupName: string; categories: string[] };
+type Resource = { id: string; kind: "room" | "vehicle"; name: string; category: string | null };
 
 // Formular til at registrere en kørt lektion eller planlægge en lektion frem i tiden.
 // Bruges af lærer-appen og af kontoret, når en registrering rettes.
@@ -18,6 +19,8 @@ export function TeacherLessonForm({
   busy,
   hiddenFields,
   initial,
+  resources,
+  resourceBusy = {},
   children,
 }: {
   action: FormAction;
@@ -26,17 +29,35 @@ export function TeacherLessonForm({
   lessonMinutes: number;
   busy: Span[];
   hiddenFields: Record<string, string>;
-  initial: { serviceId?: string; category?: string; count?: number; start?: string; studentName?: string; note?: string };
+  initial: {
+    serviceId?: string;
+    category?: string;
+    count?: number;
+    start?: string;
+    studentName?: string;
+    note?: string;
+    resourceId?: string;
+  };
+  // Lokaler og køretøjer, der kan bookes sammen med lektionen (kun ved planlægning).
+  resources?: Resource[];
+  resourceBusy?: Record<string, Span[]>; // bookinger på dagen pr. lokale/køretøj (uden denne lektions)
   children?: ReactNode; // ekstra felter før knappen
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
   const [serviceId, setServiceId] = useState(initial.serviceId ?? (services.length === 1 ? services[0].id : ""));
   const [count, setCount] = useState(initial.count ?? 2);
   const [start, setStart] = useState(initial.start ?? "");
+  const [resourceId, setResourceId] = useState(initial.resourceId ?? "");
 
   const duration = count * lessonMinutes;
   const shownStart = start && slotIsFree(start, duration, busy) ? start : (suggestStart(duration, busy) ?? "");
   const service = services.find((s) => s.id === serviceId);
+
+  // Kun ledige lokaler/køretøjer i lektionens tidsrum; køretøjer i ydelsens kategorier.
+  const span = shownStart ? { from: toMinutes(shownStart), to: toMinutes(shownStart) + duration } : null;
+  const resourceFree = (id: string) => !span || !(resourceBusy[id] ?? []).some((b) => overlaps(b, span));
+  const fitsService = (r: Resource) => r.kind === "room" || !r.category || !service || service.categories.includes(r.category);
+  const shownResourceId = resourceId && resourceFree(resourceId) ? resourceId : "";
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -129,6 +150,32 @@ export function TeacherLessonForm({
           )}
         </span>
       </label>
+
+      {resources && resources.length > 0 && (
+        <label className="flex flex-col gap-1.5 text-sm font-bold">
+          Bil eller lokale (valgfri)
+          <select name="resourceId" value={shownResourceId} onChange={(e) => setResourceId(e.target.value)} className={inputClass}>
+            <option value="">Intet</option>
+            {(["vehicle", "room"] as const).map((kind) => (
+              <optgroup key={kind} label={kind === "vehicle" ? "Køretøjer" : "Lokaler"}>
+                {resources
+                  .filter((r) => r.kind === kind && fitsService(r))
+                  .map((r) => {
+                    const free = resourceFree(r.id);
+                    return (
+                      <option key={r.id} value={r.id} disabled={!free}>
+                        {r.name}
+                        {r.category ? ` (${r.category})` : ""}
+                        {free ? "" : " – optaget"}
+                      </option>
+                    );
+                  })}
+              </optgroup>
+            ))}
+          </select>
+          <span className="text-[13px] font-normal text-muted">Bookes sammen med lektionen og flytter med, hvis du flytter den.</span>
+        </label>
+      )}
 
       <TextField label="Elev (valgfri)" name="studentName" defaultValue={initial.studentName} maxLength={80} placeholder="Navn eller elevnr." />
       <label className="flex flex-col gap-1.5 text-sm font-bold">

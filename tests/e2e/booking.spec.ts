@@ -125,3 +125,30 @@ test("kontoret opretter et køretøj under Indstillinger", async ({ page }) => {
   await page.goto("/kontor/koeretoejer");
   await expect(page.getByTestId("resource-row").filter({ hasText: name })).toContainText("Kategori B");
 });
+
+test("en lærer planlægger sin egen køretime med bil, og bilen flytter med", async ({ browser, page }) => {
+  const { page: teacher } = await newTeacher(browser, `E2E Egen bil ${Date.now() % 100000}`);
+  const date = freeDay();
+
+  await teacher.goto(`/laerer?dag=${date}`);
+  await teacher.getByRole("link", { name: "+ Planlæg lektion" }).click();
+  await teacher.getByLabel("Ydelse").selectOption({ label: "B privat" });
+  await teacher.getByLabel("Starttidspunkt").selectOption("09:00");
+  await teacher.getByLabel("Bil eller lokale (valgfri)").selectOption({ label: "Personbil 1 (B)" });
+  await teacher.getByRole("button", { name: "Planlæg", exact: true }).click();
+  await teacher.waitForURL(/\/laerer\?dag=/);
+  await expect(teacher.getByTestId("planned")).toContainText("Personbil 1");
+
+  // Flyt lektionen: bilen følger med.
+  await teacher.getByRole("link", { name: "Ret" }).click();
+  await expect(teacher.getByLabel("Bil eller lokale (valgfri)")).toHaveValue(/.+/);
+  await teacher.getByLabel("Starttidspunkt").selectOption("14:00");
+  await teacher.getByRole("button", { name: "Gem ændringer" }).click();
+  await teacher.waitForURL(/\/laerer\?dag=/);
+
+  await loginOk(page, OFFICE, PASSWORD);
+  await page.goto(`/kontor/koeretoejer?vis=dag&dato=${date}`);
+  await expect(page.getByTestId("resource-row").filter({ hasText: "Personbil 1" }).getByTestId("booking-block")).toContainText(
+    "14:00–15:30",
+  );
+});

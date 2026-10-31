@@ -99,16 +99,52 @@ export async function saveOwnLesson(_prev: ActionState, formData: FormData): Pro
   if (read.values.lesson_date <= todayDk()) return { error: "Egne lektioner kan kun planlægges frem i tiden." };
   const { user, membership, supabase, instructorId } = await ownInstructor();
 
-  const { error } = read.id
-    ? await supabase.from("scheduled_lessons").update(read.values).eq("id", read.id).eq("origin", "instructor")
-    : await supabase.from("scheduled_lessons").insert({
-        ...read.values,
-        school_id: membership.schoolId,
-        instructor_id: instructorId,
-        origin: "instructor",
-        created_by: user.id,
-      });
+  const { data, error } = read.id
+    ? await supabase
+        .from("scheduled_lessons")
+        .update(read.values)
+        .eq("id", read.id)
+        .eq("origin", "instructor")
+        .select("id, lesson_minutes")
+        .single()
+    : await supabase
+        .from("scheduled_lessons")
+        .insert({
+          ...read.values,
+          school_id: membership.schoolId,
+          instructor_id: instructorId,
+          origin: "instructor",
+          created_by: user.id,
+        })
+        .select("id, lesson_minutes")
+        .single();
   const failed = dbError(error, "Lektionen kunne ikke planlægges. Prøv igen.");
   if (failed) return failed;
+
+  // Bil eller lokale til lektionen. Bookingen følger lektionen, når den flyttes (databasen).
+  const resourceId = String(formData.get("resourceId") ?? "").trim() || null;
+  const { data: existing } = await supabase.from("bookings").select("id, resource_id").eq("scheduled_lesson_id", data!.id).maybeSingle();
+  let bookingError: { code?: string; message: string } | null = null;
+  if (existing && !resourceId) {
+    ({ error: bookingError } = await supabase.from("bookings").delete().eq("id", existing.id));
+  } else if (existing && existing.resource_id !== resourceId) {
+    ({ error: bookingError } = await supabase.from("bookings").update({ resource_id: resourceId }).eq("id", existing.id));
+  } else if (!existing && resourceId) {
+    ({ error: bookingError } = await supabase.from("bookings").insert({
+      school_id: membership.schoolId,
+      resource_id: resourceId,
+      booking_date: read.values.lesson_date,
+      start_time: read.values.start_time,
+      minutes: read.values.lesson_count * data!.lesson_minutes,
+      instructor_id: instructorId,
+      scheduled_lesson_id: data!.id,
+      created_by: user.id,
+    }));
+  }
+  if (bookingError) {
+    // En ny lektion uden den ønskede bil/lokale fortrydes, så intet halvt bliver liggende.
+    if (!read.id) await supabase.from("scheduled_lessons").delete().eq("id", data!.id);
+    return dbError(bookingError, "Bil eller lokale kunne ikke bookes. Prøv igen.");
+  }
   done(read.values.lesson_date);
 }

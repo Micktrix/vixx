@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { loadBookings, loadResources } from "@/lib/booking-data";
 import { formatDate, isWeekend, parseDateInput, todayDk, weekdayIndex } from "@/lib/dates";
 import { daysIn, nextPeriod, periodFor, previousPeriod } from "@/lib/pay-period";
 import { DayPanel } from "./day-panel";
@@ -27,7 +28,15 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
   const selected = parseDateInput(typeof sp.dag === "string" ? sp.dag : "") ?? today;
   const range = periodFor(selected, teacher.periodStartDay);
   const days = daysIn(range);
-  const period = await loadTeacherPeriod(teacher, range.start, range.end);
+  const [period, resources, dayBookings] = await Promise.all([
+    loadTeacherPeriod(teacher, range.start, range.end),
+    loadResources(teacher.membership.schoolId),
+    loadBookings(teacher.membership.schoolId, selected, selected),
+  ]);
+  // Bil eller lokale pr. lektion på den valgte dag.
+  const lessonResources = Object.fromEntries(
+    dayBookings.filter((b) => b.lessonId).map((b) => [b.lessonId!, resources.find((r) => r.id === b.resourceId)?.name ?? ""]),
+  );
   const missing = missingDays(period, days, today);
   const rejected = period.registrations.filter((r) => r.status === "rejected" && !isLocked(period, r.date));
 
@@ -136,7 +145,7 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
         </p>
       </section>
 
-      <DayPanel teacher={teacher} period={period} date={selected} today={today} />
+      <DayPanel teacher={teacher} period={period} date={selected} today={today} lessonResources={lessonResources} />
     </Screen>
   );
 }

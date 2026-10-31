@@ -3,7 +3,7 @@
 -- i morgen kl. 10:15 (2 × 45 min). Lokale 1 er booket i morgen 17:00–20:00.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 -- Kontoret (Ole).
 set local role authenticated;
@@ -30,6 +30,13 @@ from public.scheduled_lessons l
 where l.instructor_id = '00000000-0000-4000-a200-000000000011' and l.lesson_date = current_date + 1;
 insert into public.bookings (school_id, resource_id, booking_date, start_time, minutes, title)
 values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000003', current_date + 1, '15:00', 60, 'Service');
+-- Lokale 2 til Lars' lektion i dag, som kontoret har planlagt.
+insert into public.bookings (id, school_id, resource_id, booking_date, start_time, minutes, instructor_id, scheduled_lesson_id)
+select '00000000-0000-4000-a900-000000000002', l.school_id, '00000000-0000-4000-a600-000000000002', l.lesson_date, l.start_time,
+       l.lesson_count * l.lesson_minutes, l.instructor_id, l.id
+from public.scheduled_lessons l
+where l.instructor_id = '00000000-0000-4000-a200-000000000011' and l.lesson_date = current_date and l.origin = 'office'
+limit 1;
 reset role;
 
 -- Lars (lærer).
@@ -65,12 +72,15 @@ select throws_ok(
     where instructor_id = '00000000-0000-4000-a200-000000000011' and lesson_date = current_date + 1$$,
   '23P01', 'Personbil 1 er optaget kl. 15:00–16:00.', 'En lektion kan ikke flyttes, hvis bilen er optaget');
 
+select lives_ok(
+  $$update public.bookings set title = 'Min bil' where id = '00000000-0000-4000-a900-000000000001'$$,
+  'Læreren kan rette bilen på en lektion, læreren selv har planlagt');
 select throws_ok(
-  $$delete from public.bookings where id = '00000000-0000-4000-a900-000000000001'$$,
-  '42501', null, 'Læreren kan ikke fjerne bilen fra en lektion');
+  $$delete from public.bookings where id = '00000000-0000-4000-a900-000000000002'$$,
+  '42501', null, 'Læreren kan ikke fjerne lokalet fra en lektion, kontoret har planlagt');
 select throws_ok(
-  $$update public.bookings set title = 'Min' where id = '00000000-0000-4000-a900-000000000001'$$,
-  '42501', null, 'Læreren kan ikke rette en lektions booking');
+  $$update public.bookings set title = 'Min' where id = '00000000-0000-4000-a900-000000000002'$$,
+  '42501', null, 'Læreren kan ikke rette bookingen på en lektion, kontoret har planlagt');
 
 -- Slettes lektionen, forsvinder bookingen.
 select lives_ok(

@@ -11,7 +11,19 @@ const statusTone = { pending: "neutral", approved: "ok", rejected: "bad" } as co
 const bigButton = "flex h-12 w-full items-center justify-center rounded-[14px] text-[15px] font-bold";
 
 // Dagspanelet under lærerens kalender, som i prototypen.
-export function DayPanel({ teacher, period, date, today }: { teacher: Teacher; period: TeacherPeriod; date: string; today: string }) {
+export function DayPanel({
+  teacher,
+  period,
+  date,
+  today,
+  lessonResources,
+}: {
+  teacher: Teacher;
+  period: TeacherPeriod;
+  date: string;
+  today: string;
+  lessonResources: Record<string, string>; // lektions-id → bil/lokale
+}) {
   const locked = isLocked(period, date);
   const future = date > today;
   const regs = period.registrations.filter((r) => r.date === date);
@@ -117,6 +129,7 @@ export function DayPanel({ teacher, period, date, today }: { teacher: Teacher; p
             </span>
             <span>
               <b>{formatSpan(l)}</b> · {l.serviceName} · {l.count} lek.
+              {lessonResources[l.id] && ` · ${lessonResources[l.id]}`}
             </span>
             {l.studentName && <span className="text-[13px] text-muted">Elev: {l.studentName}</span>}
             {l.note && <span className="text-[13px] text-muted">Note: {l.note}</span>}

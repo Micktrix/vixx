@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { busyByResource, loadBookings, loadResources } from "@/lib/booking-data";
 import { addDays, formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { saveOwnLesson } from "../lesson-actions";
@@ -28,7 +29,15 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
   const date = lesson?.lesson_date ?? parseDateInput(typeof sp.dato === "string" ? sp.dato : "") ?? addDays(today, 1);
   if (date <= today) redirect(`/laerer/registrer?dato=${date}`);
 
-  const [period, services] = await Promise.all([loadTeacherPeriod(teacher, date, date), allowedServices(teacher)]);
+  const [period, services, resources, bookings] = await Promise.all([
+    loadTeacherPeriod(teacher, date, date),
+    allowedServices(teacher),
+    loadResources(teacher.membership.schoolId),
+    loadBookings(teacher.membership.schoolId, date, date),
+  ]);
+  // Køretøjer i lærerens kategorier (eller uden kategori); alle lokaler.
+  const myResources = resources.filter((r) => r.kind === "room" || !r.category || teacher.categories.includes(r.category));
+  const lessonBooking = lesson ? bookings.find((b) => b.lessonId === lesson.id) : undefined;
   const back = `/laerer?dag=${date}`;
   if (period.holidays.some((h) => h.status === "approved")) redirect(back);
   const busy = [...period.lessons.filter((l) => l.id !== lesson?.id), ...period.absences];
@@ -55,6 +64,8 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
           lessonMinutes={teacher.lessonMinutes}
           busy={busy}
           hiddenFields={{ date, ...(lesson ? { id: lesson.id } : {}) }}
+          resources={myResources}
+          resourceBusy={busyByResource(bookings, lesson?.id)}
           initial={{
             serviceId: lesson?.service_id,
             category: lesson?.category_code,
@@ -62,6 +73,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
             start: lesson?.start_time.slice(0, 5),
             studentName: lesson?.student_name ?? undefined,
             note: lesson?.note ?? undefined,
+            resourceId: lessonBooking?.resourceId,
           }}
         />
       </section>
