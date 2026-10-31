@@ -2,6 +2,8 @@
 
 Planlægning og timeregistrering for køreskoler. Læs [CLAUDE.md](CLAUDE.md) og [docs/BYGGEPLAN.md](docs/BYGGEPLAN.md) først.
 
+Drift: [docs/DRIFT.md](docs/DRIFT.md). Pilot: [docs/PILOT.md](docs/PILOT.md).
+
 ## Kom i gang lokalt
 
 Kræver Node 20+ og Docker Desktop (til lokal Supabase).

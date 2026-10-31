@@ -180,3 +180,26 @@ export async function deleteResource(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/kontor", "layout");
   return { message: `${data[0].name} er slettet.` };
 }
+
+// Skolens indstillinger. Kun admin (RLS: "Admin retter egen skole").
+// Lektionslængden gælder nye lektioner; eksisterende beholder deres længde.
+export async function updateSchool(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const name = String(formData.get("name") ?? "").trim();
+  const minutes = Number(formData.get("lessonMinutes"));
+  const startDay = Number(formData.get("payPeriodStartDay"));
+  if (!name) return { error: "Skriv skolens navn." };
+  if (name.length > 80) return { error: "Navnet er for langt." };
+  if (!Number.isInteger(minutes) || minutes < 15 || minutes > 240) return { error: "Lektionslængden skal være mellem 15 og 240 minutter." };
+  if (!Number.isInteger(startDay) || startDay < 1 || startDay > 28) return { error: "Lønperioden skal starte mellem den 1. og den 28." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("schools")
+    .update({ name, lesson_minutes: minutes, pay_period_start_day: startDay })
+    .eq("id", membership.schoolId)
+    .select("id");
+  if (error || !data?.length) return { error: "Indstillingerne kunne ikke gemmes. Prøv igen." };
+  revalidatePath("/", "layout");
+  return { message: "Skolens indstillinger er gemt." };
+}

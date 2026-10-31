@@ -65,19 +65,19 @@ test("en lærer booker et lokale i appen og kan slette sin booking", async ({ br
   const date = freeDay();
 
   await teacher.goto(`/laerer/book?dato=${date}&type=room`);
-  await teacher.getByTestId("resource-card").filter({ hasText: "Lokale 2" }).getByRole("link", { name: "Book" }).click();
+  await teacher.getByTestId("resource-card").filter({ has: teacher.locator(`a[href*="ressource=${LOKALE_2}"]`) }).getByRole("link", { name: "Book" }).click();
   await teacher.getByLabel("Fra kl.").selectOption("14:00");
   await teacher.getByLabel("Til kl.").selectOption("15:30");
   await teacher.getByLabel("Titel (valgfri)").fill("Forberedelse");
   await teacher.getByRole("button", { name: "Book" }).click();
   await teacher.waitForURL(/\/laerer\/book\?dato=/);
-  await expect(teacher.getByTestId("resource-card").filter({ hasText: "Lokale 2" })).toContainText("14:00–15:30 · Forberedelse · Dig");
+  await expect(teacher.getByTestId("resource-card").filter({ has: teacher.locator(`a[href*="ressource=${LOKALE_2}"]`) })).toContainText("14:00–15:30 · Forberedelse · Dig");
 
-  await teacher.getByTestId("resource-card").filter({ hasText: "Lokale 2" }).getByRole("link", { name: /Forberedelse/ }).click();
+  await teacher.getByTestId("resource-card").filter({ has: teacher.locator(`a[href*="ressource=${LOKALE_2}"]`) }).getByRole("link", { name: /Forberedelse/ }).click();
   teacher.once("dialog", (d) => d.accept());
   await teacher.getByRole("button", { name: "Slet booking" }).click();
   await teacher.waitForURL(/\/laerer\/book\?dato=/);
-  await expect(teacher.getByTestId("resource-card").filter({ hasText: "Lokale 2" })).not.toContainText("Forberedelse");
+  await expect(teacher.getByTestId("resource-card").filter({ has: teacher.locator(`a[href*="ressource=${LOKALE_2}"]`) })).not.toContainText("Forberedelse");
 });
 
 test("storskærmen viser hvem og hvad der er optaget og ledigt lige nu, uden elevnavne", async ({ browser, page }) => {
@@ -110,6 +110,10 @@ test("storskærmen viser hvem og hvad der er optaget og ledigt lige nu, uden ele
   await expect(page.getByTestId("resources-free")).not.toContainText(room);
   await expect(page.getByTestId("dashboard-row").filter({ hasText: name })).toContainText("B privat");
   await expect(page.locator("body")).not.toContainText("Hemmelig Elevsen");
+
+  // Ryd op, så testlokaler ikke hober sig op (bookingen slettes først; ellers må lokalet ikke slettes).
+  await localAdmin().from("bookings").delete().eq("resource_id", resource!.id);
+  await localAdmin().from("resources").delete().eq("id", resource!.id);
 });
 
 test("et køretøj kan dække flere kategorier og kan slettes, når det ikke er brugt", async ({ page }) => {

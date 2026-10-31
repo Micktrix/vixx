@@ -6,17 +6,18 @@ import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { loadResources } from "@/lib/booking-data";
 import { AddResourceForm } from "./add-resource-form";
-import { addLessonType, deleteLessonType, deleteResource, updateLessonType, updateResource } from "./actions";
+import { addLessonType, deleteLessonType, deleteResource, updateLessonType, updateResource, updateSchool } from "./actions";
 
 export default async function OfficeSettingsPage() {
   const { membership } = await requireRole(["admin", "office"]);
   const isAdmin = membership.role === "admin";
   const supabase = await createClient();
 
-  const [{ data: types }, resources, { data: categories }] = await Promise.all([
+  const [{ data: types }, resources, { data: categories }, { data: school }] = await Promise.all([
     supabase.from("lesson_types").select("id, name, active").eq("school_id", membership.schoolId).order("sort_order"),
     loadResources(membership.schoolId, true),
     supabase.from("license_categories").select("code").order("sort_order"),
+    supabase.from("schools").select("name, lesson_minutes, pay_period_start_day").eq("id", membership.schoolId).single(),
   ]);
   const activeTypes = (types ?? []).filter((t) => t.active);
 
@@ -26,6 +27,60 @@ export default async function OfficeSettingsPage() {
         <p className="text-sm text-muted">Kontor</p>
         <h1 className="text-[30px] font-bold">Indstillinger</h1>
       </header>
+
+      <Box title="Skolen" hint={isAdmin ? undefined : "Kun admin kan rette skolens indstillinger."}>
+        {isAdmin ? (
+          <ActionForm action={updateSchool} submitLabel="Gem" className="flex flex-col gap-3">
+            <fieldset disabled={!isAdmin} className="grid gap-3 sm:grid-cols-3">
+              <TextField label="Navn" name="name" defaultValue={school?.name} required maxLength={80} />
+              <TextField
+                label="Lektionslængde (min.)"
+                name="lessonMinutes"
+                type="number"
+                min={15}
+                max={240}
+                defaultValue={school?.lesson_minutes}
+                required
+                hint="Gælder nye lektioner. Planlagte og registrerede beholder deres længde."
+              />
+              <TextField
+                label="Lønperioden starter den"
+                name="payPeriodStartDay"
+                type="number"
+                min={1}
+                max={28}
+                defaultValue={school?.pay_period_start_day}
+                required
+                hint="Fx 21 for perioden 21.–20. Skift helst ikke midt i en periode."
+              />
+            </fieldset>
+          </ActionForm>
+        ) : (
+            <fieldset disabled={!isAdmin} className="grid gap-3 sm:grid-cols-3">
+              <TextField label="Navn" name="name" defaultValue={school?.name} required maxLength={80} />
+              <TextField
+                label="Lektionslængde (min.)"
+                name="lessonMinutes"
+                type="number"
+                min={15}
+                max={240}
+                defaultValue={school?.lesson_minutes}
+                required
+                hint="Gælder nye lektioner. Planlagte og registrerede beholder deres længde."
+              />
+              <TextField
+                label="Lønperioden starter den"
+                name="payPeriodStartDay"
+                type="number"
+                min={1}
+                max={28}
+                defaultValue={school?.pay_period_start_day}
+                required
+                hint="Fx 21 for perioden 21.–20. Skift helst ikke midt i en periode."
+              />
+            </fieldset>
+        )}
+      </Box>
 
       <Box title="Typer" hint="Fx Kørsel, Teori og Manøvre. Bruges på ydelser og som lærerens kompetencer.">
         {isAdmin ? (
