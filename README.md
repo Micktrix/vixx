@@ -27,7 +27,7 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 | `npm run db:new <navn>` | Ny migration i `supabase/migrations/` |
 | `npm run db:test` | RLS- og regeltests (pgTAP) i `supabase/tests/` |
 | `npm test` | Unit-tests (Vitest) |
-| `npm run test:e2e` | Browsertests af login og roller (Playwright). Kræver lokal Supabase med seed. Første gang: `npx playwright install chromium` |
+| `npm run test:e2e` | Browsertests (Playwright). Kræver lokal Supabase med seed og læser `.env.local` til opsætning. Første gang: `npx playwright install chromium` |
 
 ## Login
 
@@ -58,6 +58,7 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - Lærerrollen er `instructors.active`; rækken slettes aldrig, så historik bevares.
 - Priser: `public.unit_price_ore(registrering)` giver låst pris → lærerens egen pris → ydelsens pris på lektionens dato (`service_price_on`). Samme regel i `src/lib/prices.ts` til visning.
 - En ydelse kan dække flere kategorier (`service_categories`); prisen er én pr. ydelse, og lektionen gemmer kun ydelsen.
+- Planlægning: databasen afviser overlap for en lærer (lektion/lektion, lektion/fravær, fravær/fravær, lektion i godkendt ferie) med en lås pr. lærer (`private.instructor_conflict`). Kun ydelser, læreren har kompetence til (type + kategori). Lektionen gemmer kategorien. Ferie kan ikke godkendes med lektioner i perioden. Samme regler i `src/lib/schedule.ts` til visning.
 - En brugt ydelse kan få flere kategorier, men ikke miste nogen, skifte type eller slettes; en sats med ydelser kan ikke slettes. En ydelse har altid mindst én pris og én kategori.
 - RLS er slået til på alle tabeller. Hjælpefunktioner ligger i skemaet `private`.
 - Alle ændringer logges automatisk i `audit_log` uden følsomme værdier.
@@ -65,7 +66,8 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 ## Sider
 
 - `/` – login
-- `/kontor` – kontordelen med sidemenu
+- `/kontor` – kalender (dag/uge/måned, `?vis=&dato=&laerer=`)
+- `/kontor/planlaeg`, `/kontor/fravaer`, `/kontor/find`, `/kontor/ferie` – planlæg/ret lektion, fravær, find ledig underviser, godkend ferie
 - `/kontor/undervisere` – undervisere og brugere; `/ny` opretter, `/<bruger-id>` er personens side
 - `/kontor/ydelser` – satser, ydelser og priser (kun admin retter)
 - `/kontor/indstillinger` – typer

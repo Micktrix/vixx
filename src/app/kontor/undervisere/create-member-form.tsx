@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { CheckChip, Fieldset, ResultBox, TextField } from "@/components/form";
+import { useState } from "react";
+import { CheckChip, Fieldset, ResultBox, TextField, useFormAction } from "@/components/form";
 import { primaryButtonClass } from "@/components/styles";
 import { createMember } from "./actions";
 
@@ -18,7 +18,7 @@ export function CreateMemberForm({
   categories: Option[];
   lessonTypes: Option[];
 }) {
-  const [state, action, pending] = useActionState(createMember, undefined);
+  const { state, onSubmit, pending } = useFormAction(createMember);
   const [teaches, setTeaches] = useState(true);
   const [guest, setGuest] = useState(initialGuest);
 
@@ -28,7 +28,7 @@ export function CreateMemberForm({
   }
 
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="grid gap-3 sm:grid-cols-2">
         <TextField label="Navn" name="fullName" required autoComplete="off" />
         <TextField

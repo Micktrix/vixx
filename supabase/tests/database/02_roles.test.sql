@@ -109,7 +109,7 @@ select lives_ok(
     where id = '00000000-0000-4000-a200-000000000011'$$,
   'Lærer kan rette sine pårørendeoplysninger');
 
-update public.scheduled_lessons set lesson_count = 1
+update public.scheduled_lessons set note = 'kontorlektion ændret af lærer'
   where instructor_id = '00000000-0000-4000-a200-000000000011' and origin = 'office';
 
 select lives_ok(
@@ -141,7 +141,7 @@ select is(
 
 select is(
   (select count(*) from public.scheduled_lessons
-    where instructor_id = '00000000-0000-4000-a200-000000000011' and origin = 'office' and lesson_count = 1),
+    where note = 'kontorlektion ændret af lærer'),
   0::bigint, 'Lærer kan ikke ændre en lektion, kontoret har planlagt');
 
 select is(

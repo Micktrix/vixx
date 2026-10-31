@@ -1,9 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useTransition, type FormEvent, type ReactNode } from "react";
 import type { ActionState, FormAction } from "@/lib/action-state";
 import { buttonClass, inputClass, primaryButtonClass } from "./styles";
+
+// Kalder en serverhandling fra en formular. React nulstiller ellers formularen efter en
+// <form action>, så det, brugeren har skrevet, forsvinder ved en fejl. Det undgår vi her.
+export function useFormAction(action: FormAction, confirmText?: string) {
+  const [state, formAction, pending] = useActionState(action, undefined);
+  const [, startTransition] = useTransition();
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (confirmText && !confirm(confirmText)) return;
+    const data = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+    startTransition(() => formAction(data));
+  };
+  return { state, onSubmit, pending };
+}
 
 // Formular, der kalder en serverhandling og viser svaret under knappen.
 export function ActionForm({
@@ -23,16 +37,10 @@ export function ActionForm({
   className?: string;
   children?: ReactNode;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { state, onSubmit, pending } = useFormAction(action, confirmText);
 
   return (
-    <form
-      action={formAction}
-      className={className}
-      onSubmit={(e) => {
-        if (confirmText && !confirm(confirmText)) e.preventDefault();
-      }}
-    >
+    <form onSubmit={onSubmit} className={className}>
       {children}
       <div>
         <button type="submit" disabled={pending} className={primary ? primaryButtonClass : buttonClass}>
