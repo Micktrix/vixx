@@ -35,7 +35,7 @@ select lives_ok(
 
 select lives_ok(
   $$insert into public.absences (school_id, instructor_id, absence_date, start_time, hours, reason)
-    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000013', current_date, '08:00', 2, 'other')$$,
+    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000013', current_date + 1000, '08:00', 2, 'other')$$,
   'Kontoret kan registrere fravær');
 
 select throws_ok(

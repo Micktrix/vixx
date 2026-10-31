@@ -3,7 +3,7 @@ import { formatDate, isWeekend, parseDateInput, todayDk, weekdayIndex } from "@/
 import { daysIn, nextPeriod, periodFor, previousPeriod } from "@/lib/pay-period";
 import { DayPanel } from "./day-panel";
 import { Screen } from "./screen";
-import { getTeacher, loadTeacherPeriod, type TeacherPeriod } from "./teacher-data";
+import { getTeacher, isLocked, loadTeacherPeriod, type TeacherPeriod } from "./teacher-data";
 
 const WEEKDAYS = ["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"];
 const dot = { pending: "bg-pend", approved: "bg-ok", rejected: "bg-bad" } as const;
@@ -29,6 +29,7 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
   const days = daysIn(range);
   const period = await loadTeacherPeriod(teacher, range.start, range.end);
   const missing = missingDays(period, days, today);
+  const rejected = period.registrations.filter((r) => r.status === "rejected" && !isLocked(period, r.date));
 
   const pick = (p: { start: string; end: string }) => (p.start <= today && today <= p.end ? today : p.start);
   const nav = (
@@ -49,6 +50,21 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
           <b className="text-bad">Du mangler at registrere {missing.length === 1 ? "1 dag" : `${missing.length} dage`}</b>
           <span className="flex flex-wrap gap-1.5">
             {missing.map((d) => (
+              <Link key={d} href={`/laerer?dag=${d}`} className="rounded-full border border-bad/30 bg-surface px-2.5 py-1 text-[13px] font-semibold">
+                {formatDate(d)}
+              </Link>
+            ))}
+          </span>
+        </section>
+      )}
+
+      {rejected.length > 0 && (
+        <section className="flex flex-col gap-2 rounded-[16px] border border-bad/30 bg-bad-bg px-4 py-3" data-testid="rejected-note">
+          <b className="text-bad">
+            {rejected.length === 1 ? "1 afvist lektion venter" : `${rejected.length} afviste lektioner venter`} på at blive rettet
+          </b>
+          <span className="flex flex-wrap gap-1.5">
+            {[...new Set(rejected.map((r) => r.date))].map((d) => (
               <Link key={d} href={`/laerer?dag=${d}`} className="rounded-full border border-bad/30 bg-surface px-2.5 py-1 text-[13px] font-semibold">
                 {formatDate(d)}
               </Link>

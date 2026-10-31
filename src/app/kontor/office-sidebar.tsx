@@ -8,9 +8,15 @@ import { PartSwitch } from "@/components/part-switch";
 import { signOut } from "@/lib/auth/actions";
 import { officeHref, officeSections } from "./sections";
 
-type Props = { schoolName: string; userName: string; canSwitchSchool: boolean; teaches: boolean };
+type Props = {
+  schoolName: string;
+  userName: string;
+  canSwitchSchool: boolean;
+  teaches: boolean;
+  badges: Record<string, number>; // antal der venter pr. menupunkt (slug)
+};
 
-export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches }: Props) {
+export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, badges }: Props) {
   const pathname = usePathname();
 
   return (
@@ -43,6 +49,14 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches }
             >
               <span className="hidden min-[860px]:inline-flex">{icons[s.icon]}</span>
               {s.label}
+              {s.slug && badges[s.slug] > 0 && (
+                <span
+                  aria-label={`${badges[s.slug]} venter`}
+                  className="ml-auto min-w-[22px] rounded-full bg-accent px-1.5 text-center text-[12px] leading-[22px] font-bold text-ink"
+                >
+                  {badges[s.slug]}
+                </span>
+              )}
             </Link>
           );
         })}

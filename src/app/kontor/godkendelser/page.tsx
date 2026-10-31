@@ -10,6 +10,7 @@ import { formatSpan } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { InstructorFilter } from "../calendar/instructor-filter";
 import { loadSchedule } from "../schedule-data";
+import { sendReminder } from "../beskeder/actions";
 import { approveMatching, approveRegistration, rejectRegistration } from "./actions";
 import { loadApprovals, type ApprovalRow, type Status } from "./data";
 
@@ -70,6 +71,7 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/kontor
   const missing = schedule.instructors
     .filter((i) => !instructor || i.id === instructor)
     .map((i) => ({
+      id: i.id,
       name: i.name,
       days: [...new Set(schedule.lessons.filter((l) => l.instructorId === i.id && l.date < today).map((l) => l.date))]
         .filter((d) => !registered.has(`${i.id}|${d}`))
@@ -134,9 +136,15 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/kontor
         <section className="flex flex-col gap-1 rounded-[16px] border border-bad/30 bg-bad-bg px-[18px] py-3 text-sm">
           <b className="text-bad">Mangler registrering i lønperioden</b>
           {missing.map((m) => (
-            <span key={m.name}>
-              {m.name}: {m.days.map(formatDate).join(", ")}
-            </span>
+            <div key={m.id} className="flex flex-wrap items-center justify-between gap-2" data-testid="missing">
+              <span>
+                {m.name}: {m.days.map(formatDate).join(", ")}
+              </span>
+              <ActionForm action={sendReminder} submitLabel="Send påmindelse" pendingLabel="Sender …" primary={false} className="flex items-center gap-2">
+                <input type="hidden" name="instructorId" value={m.id} />
+                <input type="hidden" name="days" value={m.days.map(formatDate).join(", ")} />
+              </ActionForm>
+            </div>
           ))}
         </section>
       )}
