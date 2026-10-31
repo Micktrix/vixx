@@ -80,18 +80,35 @@ test("en lærer booker et lokale i appen og kan slette sin booking", async ({ br
   await expect(teacher.getByTestId("resource-card").filter({ hasText: "Lokale 2" })).not.toContainText("Forberedelse");
 });
 
-test("storskærmen viser dagens overblik uden elevnavne", async ({ browser, page }) => {
+test("storskærmen viser hvem og hvad der er optaget og ledigt lige nu, uden elevnavne", async ({ browser, page }) => {
+  const now = new Date();
+  test.skip(now.getHours() >= 22, "Lektionen ville gå over midnat.");
+  const start = `${String(now.getHours()).padStart(2, "0")}:${String(Math.floor(now.getMinutes() / 15) * 15).padStart(2, "0")}`;
+
   const name = `E2E Skærm ${Date.now() % 100000}`;
+  const free = `E2E Ledig ${Date.now() % 100000}`;
   const { instructorId } = await newTeacher(browser, name);
+  await newTeacher(browser, free);
   await localAdmin().from("scheduled_lessons").insert({
     school_id: SCHOOL, instructor_id: instructorId, service_id: B_PRIVAT, lesson_date: day(0),
-    start_time: "06:00", lesson_count: 1, student_name: "Hemmelig Elevsen", origin: "office",
+    start_time: start, lesson_count: 2, student_name: "Hemmelig Elevsen", origin: "office",
+  });
+  // Et nyt lokale, der er booket lige nu.
+  const room = `E2E Lokale ${Date.now() % 100000}`;
+  const { data: resource } = await localAdmin().from("resources").insert({ school_id: SCHOOL, kind: "room", name: room }).select("id").single();
+  await localAdmin().from("bookings").insert({
+    school_id: SCHOOL, resource_id: resource!.id, booking_date: day(0), start_time: start, minutes: 60, title: "Teori", instructor_id: instructorId,
   });
 
   await loginOk(page, OFFICE, PASSWORD);
   await page.goto("/storskaerm");
+  await expect(page.getByTestId("teachers-busy")).toContainText(name);
+  await expect(page.getByTestId("teachers-busy")).toContainText("B privat · til");
+  await expect(page.getByTestId("teachers-free")).toContainText(free);
+  await expect(page.getByTestId("resources-busy")).toContainText(room);
+  await expect(page.getByTestId("resources-busy")).toContainText(name);
+  await expect(page.getByTestId("resources-free")).not.toContainText(room);
   await expect(page.getByTestId("dashboard-row").filter({ hasText: name })).toContainText("B privat");
-  await expect(page.getByTestId("kpi").first()).toContainText("lektioner i dag");
   await expect(page.locator("body")).not.toContainText("Hemmelig Elevsen");
 });
 
