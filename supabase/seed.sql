@@ -90,29 +90,32 @@ insert into public.rate_groups (id, school_id, name, payroll_code) values
   ('00000000-0000-4000-a400-000000000004', '00000000-0000-4000-a000-000000000001', 'Privatkørsel', 'TEST-104'),
   ('00000000-0000-4000-a400-000000000005', '00000000-0000-4000-a000-000000000001', 'Diverse',      'TEST-105');
 
--- (id-endelse, navn, sats, kategori, type, testpris i kr.)
-create temporary table seed_services (nn text, name text, rate text, cat text, typ text, kr int);
+-- (id-endelse, navn, sats, kategorier, type, testpris i kr.) En ydelse kan dække flere kategorier.
+create temporary table seed_services (nn text, name text, rate text, cats text[], typ text, kr int);
 insert into seed_services values
-  ('01', 'Amu C',          '1', 'C',  '1', 260),
-  ('02', 'Amu CE',         '1', 'CE', '1', 280),
-  ('03', 'Aften Amu C/E',  '1', 'CE', '1', 310),
-  ('04', 'Amu teori C',    '2', 'C',  '2', 230),
-  ('05', 'B teori',        '3', 'B',  '2', 180),
-  ('06', 'B privat',       '4', 'B',  '1', 220),
-  ('07', 'C privat',       '4', 'C',  '1', 250),
-  ('08', 'Manøvre B',      '5', 'B',  '3', 200),
-  ('09', 'Glatbane B',     '5', 'B',  '4', 240),
-  ('10', 'Køreprøve B',    '5', 'B',  '5', 220),
-  ('11', 'Rybners C',      '5', 'C',  '6', 260);
+  ('01', 'Amu C',          '1', '{C}',  '1', 260),
+  ('02', 'Amu CE',         '1', '{CE}', '1', 280),
+  ('03', 'Aften Amu C/E',  '1', '{C,CE}', '1', 310),
+  ('04', 'Amu teori C',    '2', '{C}',  '2', 230),
+  ('05', 'B teori',        '3', '{B}',  '2', 180),
+  ('06', 'B privat',       '4', '{B}',  '1', 220),
+  ('07', 'C privat',       '4', '{C}',  '1', 250),
+  ('08', 'Manøvre B',      '5', '{B}',  '3', 200),
+  ('09', 'Glatbane B',     '5', '{B}',  '4', 240),
+  ('10', 'Køreprøve B',    '5', '{B}',  '5', 220),
+  ('11', 'Rybners C',      '5', '{C}',  '6', 260);
 
-insert into public.services (id, school_id, name, rate_group_id, category_code, lesson_type_id)
+insert into public.services (id, school_id, name, rate_group_id, lesson_type_id)
 select
   ('00000000-0000-4000-a500-0000000000' || nn)::uuid,
   '00000000-0000-4000-a000-000000000001',
   name,
   ('00000000-0000-4000-a400-00000000000' || rate)::uuid,
-  cat,
   ('00000000-0000-4000-a300-00000000000' || typ)::uuid
+from seed_services;
+
+insert into public.service_categories (school_id, service_id, category_code)
+select '00000000-0000-4000-a000-000000000001', ('00000000-0000-4000-a500-0000000000' || nn)::uuid, unnest(cats)
 from seed_services;
 
 -- Pris gældende fra 1. januar i år, og en prisstigning fra næste måned på B privat.

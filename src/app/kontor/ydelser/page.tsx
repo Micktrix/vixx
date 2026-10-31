@@ -22,7 +22,7 @@ export default async function ServicesPage() {
     supabase.from("rate_groups").select("id, name, payroll_code, active").eq("school_id", schoolId).order("name"),
     supabase
       .from("services")
-      .select("id, name, rate_group_id, category_code, active, lesson_types(name)")
+      .select("id, name, rate_group_id, active, lesson_types(name), service_categories(category_code, license_categories(sort_order))")
       .eq("school_id", schoolId)
       .order("name"),
     supabase.from("service_prices").select("service_id, valid_from, amount_ore").eq("school_id", schoolId),
@@ -139,7 +139,7 @@ export default async function ServicesPage() {
                           <b>{s.name}</b>
                         )}
                       </td>
-                      <td className={td}>{s.category_code}</td>
+                      <td className={td}>{categoryList(s.service_categories)}</td>
                       <td className={td}>{(s.lesson_types as unknown as { name: string } | null)?.name}</td>
                       <td className={`${td} text-right whitespace-nowrap`}>
                         <b>{current ? formatKroner(current.amount_ore) : "–"}</b>
@@ -175,6 +175,15 @@ export default async function ServicesPage() {
       </Box>
     </>
   );
+}
+
+type ServiceCategory = { category_code: string; license_categories: { sort_order: number } | null };
+
+function categoryList(rows: unknown) {
+  return (rows as ServiceCategory[])
+    .sort((a, b) => (a.license_categories?.sort_order ?? 0) - (b.license_categories?.sort_order ?? 0))
+    .map((c) => c.category_code)
+    .join(", ");
 }
 
 function EmptyRow({ cols, text }: { cols: number; text: string }) {

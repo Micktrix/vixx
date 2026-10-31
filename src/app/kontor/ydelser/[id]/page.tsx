@@ -23,7 +23,7 @@ export default async function ServicePage({ params }: PageProps<"/kontor/ydelser
   const [{ data: service }, { data: prices }, { data: usageData }] = await Promise.all([
     supabase
       .from("services")
-      .select("id, name, rate_group_id, category_code, lesson_type_id, active")
+      .select("id, name, rate_group_id, lesson_type_id, active, service_categories(category_code)")
       .eq("id", id)
       .eq("school_id", schoolId)
       .maybeSingle(),
@@ -32,6 +32,7 @@ export default async function ServicePage({ params }: PageProps<"/kontor/ydelser
   ]);
   if (!service) notFound();
 
+  const categories = (service.service_categories as { category_code: string }[]).map((c) => c.category_code);
   const uses = ((usageData ?? []) as ServiceUsage[]).find((u) => u.service_id === id)?.uses ?? 0;
   const current = priceOn(prices ?? [], today);
 
@@ -49,7 +50,7 @@ export default async function ServicePage({ params }: PageProps<"/kontor/ydelser
         <Box title="Ydelse">
           <ActionForm action={updateService} submitLabel="Gem" className="flex flex-col gap-5">
             <input type="hidden" name="id" value={service.id} />
-            <ServiceFields schoolId={schoolId} service={service} locked={uses > 0} />
+            <ServiceFields schoolId={schoolId} service={{ ...service, categories }} locked={uses > 0} />
             <label className="flex items-center gap-2.5 text-[15px]">
               <input type="checkbox" name="active" defaultChecked={service.active} className="size-[18px] accent-accent" />
               I brug

@@ -98,12 +98,12 @@ export async function createService(_prev: ActionState, formData: FormData): Pro
   const schoolId = membership.schoolId;
   const name = text(formData, "name");
   const rateGroupId = text(formData, "rateGroupId");
-  const category = text(formData, "category");
+  const categories = formData.getAll("categories").map(String);
   const lessonTypeId = text(formData, "lessonTypeId");
   if (!name) return { error: "Skriv et navn." };
   if (name.length > 40) return { error: "Navnet er for langt." };
   if (!rateGroupId) return { error: "Vælg en sats." };
-  if (!category) return { error: "Vælg en kategori." };
+  if (!categories.length) return { error: "Vælg mindst én kategori." };
   if (!lessonTypeId) return { error: "Vælg en type." };
   const price = readPrice(formData);
   if ("error" in price) return price;
@@ -111,16 +111,19 @@ export async function createService(_prev: ActionState, formData: FormData): Pro
   const supabase = await createClient();
   const { data: service, error } = await supabase
     .from("services")
-    .insert({ school_id: schoolId, name, rate_group_id: rateGroupId, category_code: category, lesson_type_id: lessonTypeId })
+    .insert({ school_id: schoolId, name, rate_group_id: rateGroupId, lesson_type_id: lessonTypeId })
     .select("id")
     .single();
   if (error?.code === "23505") return { error: `Ydelsen "${name}" findes allerede.` };
   if (error || !service) return { error: "Ydelsen kunne ikke oprettes. Prøv igen." };
 
-  const { error: priceError } = await supabase
-    .from("service_prices")
-    .insert({ school_id: schoolId, service_id: service.id, ...price });
-  if (priceError) {
+  const [{ error: priceError }, { error: categoryError }] = await Promise.all([
+    supabase.from("service_prices").insert({ school_id: schoolId, service_id: service.id, ...price }),
+    supabase
+      .from("service_categories")
+      .insert(categories.map((code) => ({ school_id: schoolId, service_id: service.id, category_code: code }))),
+  ]);
+  if (priceError || categoryError) {
     await supabase.from("services").delete().eq("id", service.id);
     return { error: "Ydelsen kunne ikke oprettes. Prøv igen." };
   }
@@ -135,25 +138,50 @@ export async function updateService(_prev: ActionState, formData: FormData): Pro
   if (!name) return { error: "Skriv et navn." };
   if (name.length > 40) return { error: "Navnet er for langt." };
 
+  const categories = new Set(formData.getAll("categories").map(String));
+  if (!categories.size) return { error: "Vælg mindst én kategori." };
+
   const changes: Record<string, string | boolean> = {
     name,
     rate_group_id: text(formData, "rateGroupId"),
     active: formData.get("active") === "on",
   };
-  // Kategori og type sendes kun, når ydelsen ikke er brugt (felterne er ellers låst).
-  if (formData.has("category")) changes.category_code = text(formData, "category");
+  // Typen sendes kun, når ydelsen ikke er brugt (feltet er ellers låst).
   if (formData.has("lessonTypeId")) changes.lesson_type_id = text(formData, "lessonTypeId");
 
+  const schoolId = membership.schoolId;
+  const id = text(formData, "id");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("services")
     .update(changes)
-    .eq("id", text(formData, "id"))
-    .eq("school_id", membership.schoolId)
+    .eq("id", id)
+    .eq("school_id", schoolId)
     .select("id");
   if (error?.code === "23505") return { error: `Ydelsen "${name}" findes allerede.` };
   if (error?.code === "23514") return { error: error.message };
   if (error || !data?.length) return { error: "Ydelsen kunne ikke gemmes. Prøv igen." };
+
+  // Kategorier: kun forskellen skrives. Databasen afviser at fjerne kategorier fra en brugt ydelse.
+  const { data: current } = await supabase.from("service_categories").select("category_code").eq("service_id", id);
+  const had = new Set((current ?? []).map((c) => c.category_code));
+  const add = [...categories].filter((c) => !had.has(c));
+  const remove = [...had].filter((c) => !categories.has(c));
+  if (add.length) {
+    const { error: addError } = await supabase
+      .from("service_categories")
+      .insert(add.map((code) => ({ school_id: schoolId, service_id: id, category_code: code })));
+    if (addError) return { error: "Kategorierne kunne ikke gemmes. Prøv igen." };
+  }
+  if (remove.length) {
+    const { error: removeError } = await supabase
+      .from("service_categories")
+      .delete()
+      .eq("service_id", id)
+      .in("category_code", remove);
+    if (removeError?.code === "23514") return { error: removeError.message };
+    if (removeError) return { error: "Kategorierne kunne ikke gemmes. Prøv igen." };
+  }
 
   refresh();
   return { message: "Ydelsen er gemt." };

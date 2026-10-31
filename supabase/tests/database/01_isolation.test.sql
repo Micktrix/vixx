@@ -24,9 +24,11 @@ update public.lesson_types set id = '00000000-0000-4000-b300-000000000001'
 where school_id = '00000000-0000-4000-b000-000000000001' and name = 'Kørsel';
 insert into public.rate_groups (id, school_id, name) values
   ('00000000-0000-4000-b400-000000000001', '00000000-0000-4000-b000-000000000001', 'Kørsel');
-insert into public.services (id, school_id, name, rate_group_id, category_code, lesson_type_id) values
+insert into public.services (id, school_id, name, rate_group_id, lesson_type_id) values
   ('00000000-0000-4000-b500-000000000001', '00000000-0000-4000-b000-000000000001', 'B privat',
-   '00000000-0000-4000-b400-000000000001', 'B', '00000000-0000-4000-b300-000000000001');
+   '00000000-0000-4000-b400-000000000001', '00000000-0000-4000-b300-000000000001');
+insert into public.service_categories (school_id, service_id, category_code) values
+  ('00000000-0000-4000-b000-000000000001', '00000000-0000-4000-b500-000000000001', 'B');
 insert into public.registrations (school_id, instructor_id, service_id, lesson_date, start_time, lesson_count) values
   ('00000000-0000-4000-b000-000000000001', '00000000-0000-4000-b200-000000000011',
    '00000000-0000-4000-b500-000000000001', current_date, '08:00', 2);

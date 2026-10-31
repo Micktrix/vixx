@@ -2,9 +2,9 @@ import { CheckChip, Fieldset, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { createClient } from "@/lib/supabase/server";
 
-type Service = { name: string; rate_group_id: string; category_code: string; lesson_type_id: string };
+type Service = { name: string; rate_group_id: string; lesson_type_id: string; categories: string[] };
 
-// Navn, sats, kategori og type. Er ydelsen brugt, er kategori og type låst (og sendes ikke med).
+// Navn, sats, kategorier og type. Er ydelsen brugt, er typen låst, og kategorier kan kun tilføjes.
 export async function ServiceFields({ schoolId, service, locked }: { schoolId: string; service?: Service; locked?: boolean }) {
   const supabase = await createClient();
   const [{ data: rateGroups }, { data: categories }, { data: lessonTypes }] = await Promise.all([
@@ -35,19 +35,26 @@ export async function ServiceFields({ schoolId, service, locked }: { schoolId: s
           </select>
         </label>
       </div>
-      <Fieldset legend="Kategori" hint={locked ? "Ydelsen er brugt på lektioner, så kategori og type kan ikke ændres." : undefined}>
-        {(categories ?? []).map((c) => (
-          <CheckChip
-            key={c.code}
-            type="radio"
-            name="category"
-            value={c.code}
-            label={c.code}
-            required
-            disabled={locked}
-            defaultChecked={service?.category_code === c.code}
-          />
-        ))}
+      <Fieldset
+        legend="Kategorier"
+        hint={
+          locked
+            ? "Ydelsen er brugt på lektioner: kategorier kan tilføjes, men ikke fjernes, og typen kan ikke ændres."
+            : "Vælg en eller flere. Prisen er den samme for alle ydelsens kategorier."
+        }
+      >
+        {(categories ?? []).map((c) => {
+          const has = !!service?.categories.includes(c.code);
+          return locked && has ? (
+            // Låst og valgt: vises som valgt og sendes med som skjult felt.
+            <span key={c.code} className="contents">
+              <input type="hidden" name="categories" value={c.code} />
+              <CheckChip name="categoriesLocked" value={c.code} label={c.code} defaultChecked disabled />
+            </span>
+          ) : (
+            <CheckChip key={c.code} name="categories" value={c.code} label={c.code} defaultChecked={has} />
+          );
+        })}
       </Fieldset>
       <Fieldset legend="Type">
         {shownTypes.map((t) => (

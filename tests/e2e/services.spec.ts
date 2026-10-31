@@ -10,7 +10,8 @@ function isoDaysFromToday(n: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const chip = (page: Page, name: string) => page.getByRole("radio", { name, exact: true }).locator("..");
+const chip = (page: Page, role: "checkbox" | "radio", name: string) =>
+  page.getByRole(role, { name, exact: true }).locator("..");
 
 async function createRateGroup(page: Page, name: string) {
   await page.goto("/kontor/ydelser/satser/ny");
@@ -24,8 +25,10 @@ async function createService(page: Page, name: string, rateGroup: string, price:
   await page.goto("/kontor/ydelser/ny");
   await page.getByLabel("Navn").fill(name);
   await page.getByLabel("Sats").selectOption({ label: rateGroup });
-  await chip(page, "BE").click();
-  await chip(page, "Kørsel").click();
+  // To kategorier på én ydelse.
+  await chip(page, "checkbox", "BE").click();
+  await chip(page, "checkbox", "C1").click();
+  await chip(page, "radio", "Kørsel").click();
   await page.getByLabel("Pris pr. lektion (kr.)").fill(price);
   await page.getByRole("button", { name: "Opret ydelse" }).click();
   await page.waitForURL(/\/kontor\/ydelser\/[0-9a-f-]{36}$/);
@@ -55,6 +58,7 @@ test("admin opretter sats og ydelse, og en fremtidig pris ændrer ikke dagens pr
 
   await page.goto("/kontor/ydelser");
   const row = page.getByRole("row").filter({ hasText: service });
+  await expect(row).toContainText("BE, C1");
   await expect(row).toContainText("300 kr.");
   await expect(row).toContainText("350,50 kr. fra");
 });
@@ -90,7 +94,10 @@ test("en ubrugt ydelse kan slettes, en brugt kan kun slås fra", async ({ page }
   await page.goto("/kontor/ydelser/00000000-0000-4000-a500-000000000006");
   await expect(page.getByRole("button", { name: "Slet ydelse" })).toHaveCount(0);
   await expect(page.getByText("kan kun slås fra")).toBeVisible();
-  await expect(page.getByRole("radio", { name: "C", exact: true })).toBeDisabled();
+  // Kategorier kan tilføjes, men ikke fjernes; typen er låst.
+  await expect(page.getByRole("checkbox", { name: "B", exact: true })).toBeDisabled();
+  await expect(page.getByRole("checkbox", { name: "C", exact: true })).toBeEnabled();
+  await expect(page.getByRole("radio", { name: "Teori", exact: true })).toBeDisabled();
 });
 
 test("kontoret ser ydelser og priser, men kan ikke rette", async ({ page }) => {

@@ -167,7 +167,8 @@ function FieldGroup({ legend, fields, values }: { legend: string; fields: FieldD
   );
 }
 
-// Kun admin ser og retter priser. Viser de ydelser, læreren kan undervise i, plus dem med egen pris.
+// Kun admin ser og retter priser. Viser de ydelser, læreren kan undervise i (typen og mindst én af
+// ydelsens kategorier), plus dem med egen pris.
 async function PriceBox({
   instructorId,
   schoolId,
@@ -184,7 +185,7 @@ async function PriceBox({
   const [{ data: services }, { data: prices }, { data: own }] = await Promise.all([
     supabase
       .from("services")
-      .select("id, name, category_code, lesson_type_id, active, rate_groups(name)")
+      .select("id, name, lesson_type_id, active, rate_groups(name), service_categories(category_code)")
       .eq("school_id", schoolId)
       .order("name"),
     supabase.from("service_prices").select("service_id, valid_from, amount_ore").eq("school_id", schoolId).lte("valid_from", today),
@@ -199,7 +200,11 @@ async function PriceBox({
   }
 
   const rows = (services ?? []).filter(
-    (s) => (s.active && categories.has(s.category_code) && types.has(s.lesson_type_id)) || ownPrice.has(s.id),
+    (s) =>
+      (s.active &&
+        types.has(s.lesson_type_id) &&
+        (s.service_categories as { category_code: string }[]).some((c) => categories.has(c.category_code))) ||
+      ownPrice.has(s.id),
   );
 
   return (

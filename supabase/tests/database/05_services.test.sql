@@ -3,7 +3,7 @@
 -- Lars (a200-…11) har egen pris 270 kr. på Amu C (a500-…01).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(19);
 
 -- ---------------------------------------------------------------------------
 -- Prishistorik
@@ -51,8 +51,20 @@ select is(public.unit_price_on('00000000-0000-4000-a200-000000000013', '00000000
 -- Brugte ydelser og satser
 -- ---------------------------------------------------------------------------
 select throws_ok(
-  $$update public.services set category_code = 'C' where id = '00000000-0000-4000-a500-000000000006'$$,
-  '23514', null, 'En brugt ydelse kan ikke skifte kategori');
+  $$delete from public.service_categories where service_id = '00000000-0000-4000-a500-000000000006' and category_code = 'B'$$,
+  '23514', null, 'En brugt ydelse kan ikke miste en kategori');
+select lives_ok(
+  $$insert into public.service_categories (school_id, service_id, category_code)
+    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a500-000000000006', 'BE')$$,
+  'En brugt ydelse kan få en kategori mere');
+select throws_ok(
+  $$update public.services set lesson_type_id = '00000000-0000-4000-a300-000000000002' where id = '00000000-0000-4000-a500-000000000006'$$,
+  '23514', null, 'En brugt ydelse kan ikke skifte type');
+select throws_ok(
+  $$delete from public.service_categories where service_id = '00000000-0000-4000-a500-000000000009'$$,
+  '23514', null, 'En ydelse skal have mindst én kategori');
+select is((select count(*) from public.service_categories where service_id = '00000000-0000-4000-a500-000000000003'),
+  2::bigint, 'Aften Amu C/E dækker to kategorier');
 select lives_ok(
   $$update public.services set name = 'B privat (ny)' where id = '00000000-0000-4000-a500-000000000006'$$,
   'En brugt ydelse kan skifte navn');
