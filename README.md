@@ -33,7 +33,9 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 
 - Brugernavn er telefonnummeret. Internt logger vi ind med en afledt adresse (`4520456789@login.vixx.dk`), fordi Supabase kræver en SMS-udbyder til rigtig telefon-login. Alt om login-metoden ligger i `src/lib/auth/login-identity.ts`, så SMS-engangskode kan sættes ind senere uden at ændre brugere.
 - Kontoret opretter brugere med en midlertidig kode. Ved første login skal man vælge sin egen (mindst 8 tegn).
-- Kontoret håndterer lærere; kun admin opretter og håndterer kontorbrugere.
+- En person kan have flere roller på samme skole: Admin, Kontor og Lærer vælges som afkrydsning. Admin + Kontor er det samme som Admin. Med både kontor og lærer skifter man mellem delene med en knap.
+- Kontoret håndterer lærere; kun admin giver adgang til kontoret og ændrer roller.
+- Deaktiveret, eller gæst efter "aktiv til": kan ikke logge ind eller planlægges. Historik og løn bevares.
 - "Log ud af alle enheder" sletter brugerens sessioner, og appen tjekker ved hver side, at sessionen stadig findes.
 - `SUPABASE_SECRET_KEY` bruges kun på serveren (`src/lib/supabase/admin.ts`).
 
@@ -43,7 +45,7 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 
 | Telefon | Navn | Rolle |
 |---|---|---|
-| +45 20 00 00 01 | Anne Admin | admin |
+| +45 20 00 00 01 | Anne Admin | admin og lærer |
 | +45 20 00 00 02 | Ole Kontor | kontor |
 | +45 20 00 00 11–19 | Lars Jensen m.fl. | lærere (18 = "Efter aftale", 19 = gæst) |
 
@@ -52,12 +54,15 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - Beløb gemmes i øre (heltal). Dato og tid er dansk lokaltid.
 - Én person (telefonnummer) kan høre til flere skoler via `school_members`.
 - Hver lektion husker sin lektionslængde, så ændringer på skolen ikke flytter gamle lektioner.
-- Kategorier (B, C …) er fælles; typer (Kørsel, Rybners …) vedligeholdes pr. skole.
+- Kategorier (B, C …) er fælles; typer (Kørsel, Rybners …) vedligeholdes pr. skole. Nye skoler får standardtyperne.
+- Lærerrollen er `instructors.active`; rækken slettes aldrig, så historik bevares.
 - RLS er slået til på alle tabeller. Hjælpefunktioner ligger i skemaet `private`.
 - Alle ændringer logges automatisk i `audit_log` uden følsomme værdier.
 
 ## Sider
 
-- `/` – forside (bliver til login i trin 2)
+- `/` – login
 - `/kontor` – kontordelen med sidemenu
-- `/laerer` – lærerdelen med bundmenu
+- `/kontor/undervisere` – undervisere og brugere; `/ny` opretter, `/<bruger-id>` er personens side
+- `/kontor/indstillinger` – typer
+- `/laerer` – lærerdelen med bundmenu; `/laerer/oplysninger` er lærerens egne oplysninger

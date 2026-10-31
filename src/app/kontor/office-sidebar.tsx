@@ -7,9 +7,9 @@ import { LogoMark } from "@/components/logo-mark";
 import { signOut } from "@/lib/auth/actions";
 import { officeHref, officeSections } from "./sections";
 
-type Props = { schoolName: string; userName: string; canSwitchSchool: boolean };
+type Props = { schoolName: string; userName: string; canSwitchSchool: boolean; teaches: boolean };
 
-export function OfficeSidebar({ schoolName, userName, canSwitchSchool }: Props) {
+export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches }: Props) {
   const pathname = usePathname();
 
   return (
@@ -27,7 +27,7 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool }: Props) 
         </div>
         {officeSections.map((s) => {
           const href = officeHref(s);
-          const current = pathname === href;
+          const current = s.slug ? pathname.startsWith(href) : pathname === href;
           return (
             <Link
               key={href}
@@ -46,6 +46,11 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool }: Props) 
         })}
         <div className="flex items-center gap-2 px-3 py-2.5 text-[15px] min-[860px]:mt-auto min-[860px]:flex-col min-[860px]:items-start min-[860px]:gap-1 min-[860px]:border-t min-[860px]:border-line min-[860px]:pt-4">
           <span className="hidden text-[13px] text-muted min-[860px]:block">Logget ind som {userName}</span>
+          {teaches && (
+            <Link href="/laerer" className="font-medium text-muted hover:text-ink">
+              Skift til lærer-appen
+            </Link>
+          )}
           {canSwitchSchool && (
             <Link href="/vaelg-skole" className="font-medium text-muted hover:text-ink">
               Skift skole

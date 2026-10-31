@@ -5,7 +5,8 @@
 -- Faste id'er (bruges også af tests i supabase/tests):
 --   skole            00000000-0000-4000-a000-000000000001
 --   brugere          00000000-0000-4000-a100-0000000000NN  (01 admin, 02 kontor, 11–19 lærere)
---   lærere           00000000-0000-4000-a200-0000000000NN  (11–19, samme NN som brugeren)
+--   lærere           00000000-0000-4000-a200-0000000000NN  (01 og 11–19, samme NN som brugeren;
+--                    Anne Admin er både admin og lærer)
 
 -- ---------------------------------------------------------------------------
 -- Brugere (auth) og profiler
@@ -71,6 +72,8 @@ from seed_people;
 -- ---------------------------------------------------------------------------
 -- Typer, satser og ydelser
 -- ---------------------------------------------------------------------------
+-- Skolen har fået standardtyper automatisk; seed bruger faste id'er, så de lægges ind forfra.
+delete from public.lesson_types where school_id = '00000000-0000-4000-a000-000000000001';
 insert into public.lesson_types (id, school_id, name, sort_order) values
   ('00000000-0000-4000-a300-000000000001', '00000000-0000-4000-a000-000000000001', 'Kørsel',    10),
   ('00000000-0000-4000-a300-000000000002', '00000000-0000-4000-a000-000000000001', 'Teori',     20),
@@ -148,11 +151,12 @@ select
   date '2020-01-01' + (nn::int * 37),
   current_date + (nn::int * 40)
 from seed_people
-where role = 'instructor';
+where role = 'instructor' or nn = '01';  -- Anne Admin underviser også (flere roller)
 
 insert into public.instructor_categories (school_id, instructor_id, category_code)
 select '00000000-0000-4000-a000-000000000001', ('00000000-0000-4000-a200-0000000000' || nn)::uuid, cat
 from (values
+  ('01', 'B'),
   ('11', 'B'), ('11', 'C'), ('11', 'CE'),
   ('12', 'B'), ('12', 'BE'),
   ('13', 'C'), ('13', 'CE'),

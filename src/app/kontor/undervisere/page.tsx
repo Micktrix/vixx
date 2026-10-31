@@ -1,77 +1,110 @@
-import { requireRole, type Role } from "@/lib/auth/session";
+import Link from "next/link";
+import { Pill } from "@/components/pill";
+import { requireRole } from "@/lib/auth/session";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { CreateMemberForm } from "./create-member-form";
-import { MemberActions } from "./member-actions";
+import { PERSON_SELECT, toPerson, type Person, type PersonRow } from "./people";
 
-const roleLabel: Record<Role, string> = { admin: "Admin", office: "Kontor", instructor: "Lærer" };
-const roleOrder: Record<Role, number> = { admin: 0, office: 1, instructor: 2 };
+const roleOrder = (p: Person) => (p.role === "admin" ? 0 : p.role === "office" ? 1 : 2);
 
-type Row = {
-  user_id: string;
-  role: Role;
-  profiles: { full_name: string; phone: string; must_change_password: boolean } | null;
-};
-
-// Trin 2: brugere og login. Den fulde underviser-side (stamdata, kompetencer, priser) kommer i trin 3.
 export default async function OfficeInstructorsPage() {
-  const { user, membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin", "office"]);
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("school_members")
-    .select("user_id, role, profiles(full_name, phone, must_change_password)")
-    .eq("school_id", membership.schoolId)
-    .eq("active", true);
+  const [{ data }, { data: cats }] = await Promise.all([
+    supabase.from("school_members").select(PERSON_SELECT).eq("school_id", membership.schoolId),
+    supabase.from("license_categories").select("code, sort_order"),
+  ]);
 
-  const rows = ((data ?? []) as unknown as Row[]).sort(
-    (a, b) =>
-      roleOrder[a.role] - roleOrder[b.role] ||
-      (a.profiles?.full_name ?? "").localeCompare(b.profiles?.full_name ?? "", "da"),
-  );
-  const isAdmin = membership.role === "admin";
+  const catOrder = new Map((cats ?? []).map((c) => [c.code, c.sort_order]));
+  const people = ((data ?? []) as unknown as PersonRow[])
+    .map((row) => toPerson(row))
+    .map((p) => ({ ...p, categories: p.categories.sort((a, b) => (catOrder.get(a) ?? 0) - (catOrder.get(b) ?? 0)) }))
+    .sort((a, b) => roleOrder(a) - roleOrder(b) || a.name.localeCompare(b.name, "da"));
+
+  const active = people.filter((p) => p.memberActive);
+  const inactive = people.filter((p) => !p.memberActive);
 
   return (
     <>
-      <header>
-        <p className="text-sm text-muted">Kontor</p>
-        <h1 className="text-[30px] font-bold">Undervisere og brugere</h1>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm text-muted">Kontor</p>
+          <h1 className="text-[30px] font-bold">Undervisere og brugere</h1>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/kontor/undervisere/ny?gaest=1"
+            className="inline-flex h-11 items-center rounded-xl border border-line2 bg-surface px-4 text-[15px] font-semibold"
+          >
+            + Tilføj gæstelærer
+          </Link>
+          <Link
+            href="/kontor/undervisere/ny"
+            className="inline-flex h-11 items-center rounded-xl border border-accent bg-accent px-4 text-[15px] font-bold text-ink"
+          >
+            + Opret bruger
+          </Link>
+        </div>
       </header>
 
-      <section className="flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-[18px]">
-        <h2 className="text-lg font-bold">Opret bruger</h2>
-        <CreateMemberForm canCreateStaff={isAdmin} />
-      </section>
-
-      <section className="rounded-[20px] border border-line bg-surface p-[18px]">
-        <h2 className="mb-3 text-lg font-bold">Brugere på skolen</h2>
-        <ul className="flex flex-col gap-2">
-          {rows.map((r) => (
-            <li
-              key={r.user_id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-bg px-3 py-2.5"
-            >
-              <div className="min-w-0">
-                <p className="font-semibold">
-                  {r.profiles?.full_name}{" "}
-                  <span className="ml-1 rounded-full bg-pend-bg px-2 py-0.5 text-xs font-bold text-pend">
-                    {roleLabel[r.role]}
-                  </span>
-                  {r.profiles?.must_change_password && (
-                    <span className="ml-1 rounded-full bg-accent-bg px-2 py-0.5 text-xs font-bold text-accent-ink">
-                      Midlertidig kode
-                    </span>
-                  )}
-                </p>
-                <p className="text-sm text-muted">{r.profiles ? formatPhone(r.profiles.phone) : ""}</p>
-              </div>
-              {r.user_id !== user.id && (isAdmin || r.role === "instructor") && (
-                <MemberActions userId={r.user_id} name={r.profiles?.full_name ?? ""} />
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <PeopleTable title="Aktive" people={active} />
+      {inactive.length > 0 && <PeopleTable title="Deaktiverede" people={inactive} />}
     </>
+  );
+}
+
+function PeopleTable({ title, people }: { title: string; people: Person[] }) {
+  return (
+    <section className="overflow-x-auto rounded-[20px] border border-line bg-surface">
+      <h2 className="border-b border-line px-[18px] py-3.5 text-lg font-bold">
+        {title} <span className="text-base font-normal text-muted">({people.length})</span>
+      </h2>
+      <table className="w-full min-w-[680px] text-left text-[15px]">
+        <thead className="text-[13px] text-muted">
+          <tr>
+            <th className="px-[18px] py-2.5 font-semibold">Navn</th>
+            <th className="px-3 py-2.5 font-semibold">Telefon (brugernavn)</th>
+            <th className="px-3 py-2.5 font-semibold">Roller</th>
+            <th className="px-3 py-2.5 font-semibold">Kategorier</th>
+            <th className="px-[18px] py-2.5 font-semibold">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {people.map((p) => (
+            <tr key={p.userId} className="border-t border-line">
+              <td className="px-[18px] py-3">
+                <Link href={`/kontor/undervisere/${p.userId}`} className="font-bold hover:text-accent-ink hover:underline">
+                  {p.name}
+                </Link>
+                {p.instructor?.is_guest && p.instructor.guest_company && (
+                  <span className="block text-[13px] text-muted">{p.instructor.guest_company}</span>
+                )}
+              </td>
+              <td className="px-3 py-3 whitespace-nowrap">{formatPhone(p.phone)}</td>
+              <td className="px-3 py-3">
+                <span className="flex flex-wrap gap-1">
+                  {p.roles.map((r) => (
+                    <Pill key={r}>{r}</Pill>
+                  ))}
+                  {p.instructor?.is_guest && p.teaches && <Pill>Gæst</Pill>}
+                </span>
+              </td>
+              <td className="px-3 py-3">{p.teaches ? p.categories.join(", ") || "–" : ""}</td>
+              <td className="px-[18px] py-3">
+                <Pill tone={p.status.tone}>{p.status.label}</Pill>
+              </td>
+            </tr>
+          ))}
+          {people.length === 0 && (
+            <tr>
+              <td colSpan={5} className="px-[18px] py-4 text-muted">
+                Ingen endnu.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </section>
   );
 }

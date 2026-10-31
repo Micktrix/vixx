@@ -10,6 +10,7 @@ export default async function OfficeLayout({ children }: LayoutProps<"/kontor">)
         schoolName={membership.schoolName}
         userName={user.fullName}
         canSwitchSchool={user.memberships.length > 1}
+        teaches={membership.teaches}
       />
       <main className="flex w-full max-w-[1240px] min-w-0 flex-col gap-[18px] px-[clamp(16px,4vw,44px)] pt-8 pb-12">
         {children}
