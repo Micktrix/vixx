@@ -89,7 +89,7 @@ export function CreateMemberForm({
 
       <div>
         <button type="submit" disabled={pending} className={primaryButtonClass}>
-          {pending ? "Opretter …" : "Opret og lav midlertidig kode"}
+          {pending ? "Opretter …" : "Opret bruger"}
         </button>
       </div>
       <ResultBox state={state} />

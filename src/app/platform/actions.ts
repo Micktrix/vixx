@@ -4,9 +4,8 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
-import { authFieldsForPhone } from "@/lib/auth/login-identity";
+import { authFieldsForPhone, firstPassword } from "@/lib/auth/login-identity";
 import { requirePlatformOwner, SCHOOL_COOKIE } from "@/lib/auth/session";
-import { generateTempPassword } from "@/lib/auth/temp-password";
 import { normalizePhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -49,7 +48,7 @@ export async function createSchool(_prev: ActionState, formData: FormData): Prom
   };
 
   if (!userId) {
-    tempPassword = generateTempPassword();
+    tempPassword = firstPassword(phone);
     const { data, error } = await admin.auth.admin.createUser({ ...authFieldsForPhone(phone), password: tempPassword });
     if (error || !data.user) {
       await undo();
@@ -75,7 +74,7 @@ export async function createSchool(_prev: ActionState, formData: FormData): Prom
   return {
     message: existing
       ? `${schoolName} er oprettet. ${existing.full_name} findes allerede i Vixx og er nu admin på skolen med sin nuværende kode.`
-      : `${schoolName} er oprettet med ${adminName} som admin. Giv personen den midlertidige kode. Den vises kun nu.`,
+      : `${schoolName} er oprettet med ${adminName} som admin. Første login er telefonnummeret som både brugernavn og kode. Derefter vælger personen sin egen kode.`,
     tempPassword,
     href: "/platform",
     hrefLabel: "Til alle skoler",

@@ -2,10 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/lib/action-state";
-import { authFieldsForPhone } from "@/lib/auth/login-identity";
+import { authFieldsForPhone, firstPassword } from "@/lib/auth/login-identity";
 import { roleSetFromChoices } from "@/lib/auth/roles";
 import { requireRole, type Membership } from "@/lib/auth/session";
-import { generateTempPassword } from "@/lib/auth/temp-password";
 import { parseDateInput } from "@/lib/dates";
 import { normalizePhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -62,7 +61,7 @@ export async function createMember(_prev: ActionState, formData: FormData): Prom
       };
     }
   } else {
-    tempPassword = generateTempPassword();
+    tempPassword = firstPassword(phone);
     const { data, error } = await admin.auth.admin.createUser({ ...authFieldsForPhone(phone), password: tempPassword });
     if (error || !data.user) {
       return { error: error?.code === "email_exists" || error?.code === "phone_exists"
@@ -115,7 +114,7 @@ export async function createMember(_prev: ActionState, formData: FormData): Prom
         hrefLabel: `Åbn ${name}`,
       }
     : {
-        message: `${name} er oprettet. Giv personen den midlertidige kode. Den vises kun nu.`,
+        message: `${name} er oprettet. Første login er telefonnummeret som både brugernavn og kode. Derefter vælger personen sin egen kode.`,
         tempPassword,
         href: personHref(userId),
         hrefLabel: `Åbn ${name}`,
@@ -262,7 +261,9 @@ export async function resetPassword(_prev: ActionState, formData: FormData): Pro
   if ("error" in target) return target;
 
   const admin = createAdminClient();
-  const tempPassword = generateTempPassword();
+  const { data: profile } = await admin.from("profiles").select("phone").eq("id", userId).single();
+  if (!profile) return { error: "Koden kunne ikke nulstilles. Prøv igen." };
+  const tempPassword = firstPassword(profile.phone);
   const { error } = await admin.auth.admin.updateUserById(userId, { password: tempPassword });
   if (error) return { error: "Koden kunne ikke nulstilles. Prøv igen." };
 
@@ -272,7 +273,10 @@ export async function resetPassword(_prev: ActionState, formData: FormData): Pro
   await admin.rpc("revoke_user_sessions", { p_user: userId });
 
   refresh();
-  return { message: "Ny midlertidig kode. Personen er logget ud og skal vælge en ny kode ved næste login.", tempPassword };
+  return {
+    message: "Koden er nulstillet til telefonnummeret. Personen er logget ud og skal vælge en ny kode ved næste login.",
+    tempPassword,
+  };
 }
 
 export async function signOutEverywhere(_prev: ActionState, formData: FormData): Promise<ActionState> {

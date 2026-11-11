@@ -23,3 +23,9 @@ export function authFieldsForPhone(e164: string) {
 }
 
 export const MIN_PASSWORD_LENGTH = 8;
+
+// Første kode = telefonnummeret, som man skriver det (danske numre uden +45, fx "20456789").
+// Brugeren skal vælge sin egen kode ved første login, og den må ikke være telefonnummeret.
+export function firstPassword(e164: string): string {
+  return e164.startsWith("+45") ? e164.slice(3) : e164.slice(1);
+}

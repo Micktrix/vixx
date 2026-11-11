@@ -11,7 +11,7 @@ export default async function LoginPage() {
     <AuthShell caption="Vixx" title="Timeregistrering">
       <h1 className="text-[22px] font-bold">Log ind</h1>
       <LoginForm />
-      <p className="text-[13.5px] text-muted">Første gang? Brug koden fra kontoret. Derefter vælger du din egen kode.</p>
+      <p className="text-[13.5px] text-muted">Første gang? Din kode er dit telefonnummer. Derefter vælger du din egen kode.</p>
       <p className="text-[13.5px] text-muted">Glemt kode? Kontakt kontoret.</p>
     </AuthShell>
   );

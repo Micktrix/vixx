@@ -34,7 +34,7 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 ## Login
 
 - Brugernavn er telefonnummeret. Internt logger vi ind med en afledt adresse (`4520456789@login.vixx.dk`), fordi Supabase kræver en SMS-udbyder til rigtig telefon-login. Alt om login-metoden ligger i `src/lib/auth/login-identity.ts`, så SMS-engangskode kan sættes ind senere uden at ændre brugere.
-- Kontoret opretter brugere med en midlertidig kode. Ved første login skal man vælge sin egen (mindst 8 tegn).
+- Første kode er personens telefonnummer (`firstPassword` i `src/lib/auth/login-identity.ts`). Ved første login skal man vælge sin egen (mindst 8 tegn, ikke telefonnummeret).
 - En person kan have flere roller på samme skole: Admin, Kontor og Lærer vælges som afkrydsning. Admin + Kontor er det samme som Admin. Med både kontor og lærer skifter man mellem delene med en knap.
 - Kontoret håndterer lærere; kun admin giver adgang til kontoret og ændrer roller.
 - Deaktiveret, eller gæst efter "aktiv til": kan ikke logge ind eller planlægges. Historik og løn bevares.

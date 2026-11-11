@@ -37,7 +37,7 @@ Tabeller (alle med `school_id`, `created_at`, `updated_at`):
 
 ### Trin 2 – Login og roller
 - Login med telefonnummer + kode. Første login tvinger ny kode.
-- Kontoret opretter lærere og kontorbrugere med midlertidig kode, kan nulstille kode og logge ud af alle enheder.
+- Kontoret opretter lærere og kontorbrugere med telefonnummeret som første kode (ændret 11. nov. 2026), kan nulstille kode og logge ud af alle enheder.
 - Rollebaseret adgang til kontor- og lærerdel.
 - Login-metoden pakkes, så SMS-engangskode kan tilføjes senere.
 - **Færdig når:** man kan logge ind som admin, kontor og lærer og kun se det, rollen må.

@@ -13,7 +13,7 @@ export default async function NewMemberPage({ searchParams }: PageProps<"/kontor
           ‹ Alle undervisere og brugere
         </Link>
         <h1 className="mt-1 text-[30px] font-bold">{guest ? "Tilføj gæstelærer" : "Opret bruger"}</h1>
-        <p className="text-muted">Telefonnummeret bliver brugernavn. Personen får en midlertidig kode.</p>
+        <p className="text-muted">Telefonnummeret bliver både brugernavn og første kode. Ved første login vælger personen sin egen kode.</p>
       </header>
       <section className="rounded-[20px] border border-line bg-surface p-[18px]">
         <CreateMemberForm

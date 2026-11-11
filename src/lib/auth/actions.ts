@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
-import { loginEmailForPhone, MIN_PASSWORD_LENGTH } from "./login-identity";
+import { firstPassword, loginEmailForPhone, MIN_PASSWORD_LENGTH } from "./login-identity";
 import { getCurrentUser, SCHOOL_COOKIE } from "./session";
 
 export type FormState = { error?: string } | undefined;
@@ -39,11 +39,14 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
   const repeat = String(formData.get("repeat") ?? "");
   if (password.length < MIN_PASSWORD_LENGTH) return { error: `Koden skal være på mindst ${MIN_PASSWORD_LENGTH} tegn.` };
   if (password !== repeat) return { error: "De to koder er ikke ens." };
+  if (password.replace(/\s/g, "").replace(/^\+45/, "") === firstPassword(user.phone)) {
+    return { error: "Vælg en anden kode end dit telefonnummer." };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    if (error.code === "same_password") return { error: "Vælg en anden kode end den midlertidige." };
+    if (error.code === "same_password") return { error: "Vælg en anden kode end den, du loggede ind med." };
     if (error.code === "weak_password") return { error: "Koden er for svag. Vælg en længere kode." };
     return { error: "Koden kunne ikke gemmes. Prøv igen." };
   }

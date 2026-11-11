@@ -52,8 +52,8 @@ Uanset valg: tag en ekstra kopi før større ændringer, fx `npx supabase db dum
 
 ## Brugere
 
-- Oprettes under Kontor → Indstillinger → Undervisere → "+ Opret bruger". Personen får en midlertidig kode og vælger sin egen ved første login.
-- **Glemt kode:** personens side → "Nulstil kode". Ny midlertidig kode vises én gang.
+- Oprettes under Kontor → Indstillinger → Undervisere → "+ Opret bruger". Personen logger første gang ind med sit telefonnummer som kode og vælger så sin egen.
+- **Glemt kode:** personens side → "Nulstil kode". Koden bliver telefonnummeret igen, og personen vælger en ny ved næste login.
 - **Mistet telefon:** "Log ud af alle enheder", derefter "Nulstil kode".
 - **Stopper:** "Deaktivér". Historik og løn bevares.
 - **Admin låst ude:** en anden admin kan nulstille koden. Er der ingen, kan platformens ejer gøre det i Supabase → Authentication → Users.

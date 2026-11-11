@@ -53,13 +53,13 @@ export async function createMember(page: Page, name: string, options: CreateOpti
     await page.getByLabel("Aktiv til").fill(options.guestUntil);
   }
 
-  await page.getByRole("button", { name: "Opret og lav midlertidig kode" }).click();
+  await page.getByRole("button", { name: "Opret bruger", exact: true }).click();
   const temp = (await page.getByTestId("temp-password").textContent())!.trim();
   const href = (await page.getByRole("link", { name: `Åbn ${name}` }).getAttribute("href"))!;
   return { phone, temp, href };
 }
 
-// Første login med midlertidig kode: vælg egen kode.
+// Første login med telefonnummeret som kode: vælg egen kode.
 export async function chooseOwnPassword(page: Page, password: string) {
   await page.getByLabel("Ny kode", { exact: true }).fill(password);
   await page.getByLabel("Gentag kode").fill(password);

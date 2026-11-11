@@ -62,7 +62,7 @@ export function ResultBox({ state }: { state: ActionState }) {
       <p>{state.message}</p>
       {state.tempPassword && (
         <p>
-          Midlertidig kode:{" "}
+          Første kode:{" "}
           <code data-testid="temp-password" className="rounded-md bg-surface px-2 py-0.5 font-mono text-base font-bold tracking-wider">
             {state.tempPassword}
           </code>

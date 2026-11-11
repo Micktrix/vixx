@@ -13,7 +13,7 @@ export default async function NewPasswordPage() {
   return (
     <AuthShell caption={`Hej ${user.fullName.split(" ")[0]}`} title="Vælg din egen kode">
       <p>
-        Du er logget ind med en midlertidig kode. Vælg en kode på mindst {MIN_PASSWORD_LENGTH} tegn, som kun du kender.
+        Du er logget ind med dit telefonnummer som kode. Vælg en kode på mindst {MIN_PASSWORD_LENGTH} tegn, som kun du kender.
       </p>
       <NewPasswordForm />
       <form action={signOut}>

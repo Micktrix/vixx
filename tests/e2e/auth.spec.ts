@@ -58,7 +58,9 @@ test("ny lærer skal vælge egen kode ved første login", async ({ page }) => {
   const { phone, temp } = await createMember(page, "E2E Førstegang");
   await logout(page);
 
-  await loginOk(page, phone, temp);
+  // Første kode er telefonnummeret.
+  expect(temp).toBe(phone);
+  await loginOk(page, phone, phone);
   await expect(page).toHaveURL("/ny-kode");
   await page.goto("/laerer");
   await expect(page).toHaveURL("/ny-kode");
@@ -67,6 +69,12 @@ test("ny lærer skal vælge egen kode ved første login", async ({ page }) => {
   await page.getByLabel("Gentag kode").fill("kort");
   await page.getByRole("button", { name: "Gem kode" }).click();
   await expect(page).toHaveURL("/ny-kode");
+
+  // Telefonnummeret kan ikke bruges som egen kode.
+  await page.getByLabel("Ny kode", { exact: true }).fill(phone);
+  await page.getByLabel("Gentag kode").fill(phone);
+  await page.getByRole("button", { name: "Gem kode" }).click();
+  await expect(page.getByText("Vælg en anden kode end dit telefonnummer.")).toBeVisible();
 
   await chooseOwnPassword(page, "min-egen-kode");
   await expect(page).toHaveURL("/laerer");
@@ -94,10 +102,11 @@ test("kontoret kan logge en lærer ud overalt og nulstille koden", async ({ brow
   await teacher.goto("/laerer");
   await expect(teacher).toHaveURL("/");
 
-  // Nulstil kode: den gamle kode virker ikke, den nye midlertidige kræver ny kode.
+  // Nulstil kode: den gamle kode virker ikke; koden er igen telefonnummeret og kræver ny kode.
   office.once("dialog", (dialog) => dialog.accept());
   await office.getByRole("button", { name: "Nulstil kode" }).click();
   const newTemp = (await office.getByTestId("temp-password").textContent())!.trim();
+  expect(newTemp).toBe(phone);
 
   await login(teacher, phone, "laererens-kode");
   await expect(loginError(teacher)).toHaveText("Forkert telefonnummer eller kode.");

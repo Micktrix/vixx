@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authFieldsForPhone, loginEmailForPhone } from "./login-identity";
-import { generateTempPassword } from "./temp-password";
+import { authFieldsForPhone, firstPassword, loginEmailForPhone } from "./login-identity";
 
 describe("login-identitet", () => {
   it("afleder den interne login-adresse af telefonnummeret", () => {
@@ -12,12 +11,9 @@ describe("login-identitet", () => {
   });
 });
 
-describe("midlertidig kode", () => {
-  it("er 10 tegn uden tegn der let forveksles", () => {
-    for (let i = 0; i < 50; i++) {
-      const code = generateTempPassword();
-      expect(code).toHaveLength(10);
-      expect(code).not.toMatch(/[0O1lI]/);
-    }
+describe("første kode", () => {
+  it("er telefonnummeret, som man skriver det", () => {
+    expect(firstPassword("+4520456789")).toBe("20456789");
+    expect(firstPassword("+46701234567")).toBe("46701234567");
   });
 });

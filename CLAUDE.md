@@ -44,7 +44,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 
 ## Login
 - **Brugernavn = telefonnummer** (gemmes som E.164, fx `+4520456789`). Unikt pr. person.
-- **Nu (test):** telefonnummer + kode. Kontoret opretter læreren med midlertidig kode; læreren skal vælge egen kode ved første login. Kontoret kan nulstille koden og logge læreren ud af alle enheder.
+- **Nu (test):** telefonnummer + kode. Første kode er personens eget telefonnummer (fx `20456789`), så telefonnummeret er både brugernavn og første kode. Ved første login skal man vælge egen kode (ikke telefonnummeret). Kontoret kan nulstille koden (til telefonnummeret igen) og logge læreren ud af alle enheder.
 - **Senere:** engangskode på SMS. Byg login, så metoden kan skiftes uden at ændre brugere eller data (telefonnummeret er identiteten).
 - Kontorbrugere har hver deres login, så det altid fremgår, hvem der har gjort hvad.
 
