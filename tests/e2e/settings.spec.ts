@@ -68,3 +68,32 @@ test("admin sætter en backup-e-mail, der er låst, og kontoret kan ikke se den"
   await page.goto("/kontor/indstillinger");
   await expect(page.getByText("Backup af timer")).toHaveCount(0);
 });
+
+test("admin retter lektionsplanen med dropdowns, og overlap bliver vist", async ({ page }) => {
+  await loginOk(page, ADMIN, PASSWORD);
+  await page.goto("/kontor/indstillinger");
+  const editor = page.getByTestId("plan-editor");
+  const schoolForm = page.locator("form").filter({ has: page.getByLabel("Lønperioden starter den") });
+  const before = await editor.getByRole("listitem").count();
+
+  // Ny lektion efter den sidste, og pausen vises.
+  await page.getByRole("button", { name: "+ Tilføj lektion" }).click();
+  await expect(editor.getByRole("listitem")).toHaveCount(before + 1);
+  await expect(editor).toContainText("Pause 30 min"); // standardplanen: 09:30 → 10:00
+
+  // To lektioner, der overlapper, giver en advarsel.
+  await page.getByLabel("Start på lektion 2").selectOption("08:30");
+  await expect(editor.getByRole("alert")).toContainText("Overlapper");
+  await page.getByLabel("Start på lektion 2").selectOption("08:45");
+  await expect(editor.getByRole("alert")).toHaveCount(0);
+
+  await schoolForm.getByRole("button", { name: "Gem" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Skolens indstillinger er gemt" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("plan-editor").getByRole("listitem")).toHaveCount(before + 1);
+
+  // Sæt planen tilbage, så andre tests ikke påvirkes.
+  await page.getByTestId("plan-editor").getByRole("button", { name: "Fjern" }).last().click();
+  await page.locator("form").filter({ has: page.getByLabel("Lønperioden starter den") }).getByRole("button", { name: "Gem" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Skolens indstillinger er gemt" })).toBeVisible();
+});

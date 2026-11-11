@@ -3,11 +3,12 @@ import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
-import { formatSpan, planBlocks, toPlan } from "@/lib/schedule";
+import { toPlan } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { loadResources, type Resource } from "@/lib/booking-data";
 import { AddResourceForm } from "./add-resource-form";
 import { BackupForm } from "./backup-form";
+import { PlanEditor } from "./plan-editor";
 import { deleteResource, updateResource, updateSchool } from "./actions";
 
 export default async function OfficeSettingsPage() {
@@ -46,19 +47,7 @@ export default async function OfficeSettingsPage() {
           required
         />
       </div>
-      <TextField
-        label="Lektionsplan (starttider)"
-        name="lessonStarts"
-        defaultValue={plan.starts.join(", ")}
-        required
-        hint="Dagens faste starttider. Man kan kun planlægge fra dem, og pauserne mellem dem holdes."
-      />
-      <p className="text-[13px] font-normal text-muted" data-testid="plan-preview">
-        Dagen:{" "}
-        {planBlocks(plan)
-          .map((b) => formatSpan(b))
-          .join(" · pause · ")}
-      </p>
+      <PlanEditor starts={plan.starts} minutes={plan.minutes} />
       <p className="text-[13px] font-normal text-muted">
         Lektionslængde og lektionsplan gælder nye lektioner. Lønperioden går fx fra den 21. til den 20.; skift helst ikke
         midt i en periode.
