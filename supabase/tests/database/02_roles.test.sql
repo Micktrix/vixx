@@ -88,7 +88,7 @@ select throws_ok(
 
 insert into public.registrations (id, school_id, instructor_id, service_id, lesson_date, start_time, lesson_count, status, locked_unit_price_ore)
 values ('00000000-0000-4000-a700-000000000001', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011',
-        '00000000-0000-4000-a500-000000000001', current_date, '14:00', 1, 'approved', 100);
+        '00000000-0000-4000-a500-000000000001', current_date, '14:30', 1, 'approved', 100);
 select is(
   (select status::text from public.registrations where id = '00000000-0000-4000-a700-000000000001'),
   'pending', 'En lærers nye registrering står altid som afventer');
@@ -154,11 +154,11 @@ select is(
 -- ---------------------------------------------------------------------------
 -- Lektionslængde: ændring på skolen flytter ikke eksisterende lektioner
 -- ---------------------------------------------------------------------------
-update public.schools set lesson_minutes = 50 where id = '00000000-0000-4000-a000-000000000001';
+update public.schools set lesson_minutes = 40 where id = '00000000-0000-4000-a000-000000000001';
 select is(
   (select end_time from public.scheduled_lessons
     where instructor_id = '00000000-0000-4000-a200-000000000011' and lesson_date = current_date - 2),
-  '10:15'::time, 'Eksisterende lektion beholder sin længde, når skolen ændrer lektionslængde');
+  '10:45'::time, 'Eksisterende lektion beholder sin længde, når skolen ændrer lektionslængde');
 
 select * from finish();
 rollback;

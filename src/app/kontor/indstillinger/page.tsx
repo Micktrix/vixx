@@ -3,6 +3,7 @@ import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
+import { formatSpan, planBlocks, toPlan } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { loadResources, type Resource } from "@/lib/booking-data";
 import { AddResourceForm } from "./add-resource-form";
@@ -16,11 +17,12 @@ export default async function OfficeSettingsPage() {
 
   const [resources, { data: school }, { data: backup }] = await Promise.all([
     loadResources(membership.schoolId, true),
-    supabase.from("schools").select("name, lesson_minutes, pay_period_start_day").eq("id", membership.schoolId).single(),
+    supabase.from("schools").select("name, lesson_minutes, lesson_starts, pay_period_start_day").eq("id", membership.schoolId).single(),
     // Kun admin kan se adressen (RLS); for kontoret er svaret tomt.
     supabase.from("school_backups").select("email, last_sent_at, last_error").eq("school_id", membership.schoolId).maybeSingle(),
   ]);
 
+  const plan = toPlan(school?.lesson_starts, school?.lesson_minutes ?? 45);
   const schoolFields = (
     <fieldset disabled={!isAdmin} className="flex flex-col gap-3">
       <div className="grid items-end gap-3 sm:grid-cols-3">
@@ -44,8 +46,22 @@ export default async function OfficeSettingsPage() {
           required
         />
       </div>
+      <TextField
+        label="Lektionsplan (starttider)"
+        name="lessonStarts"
+        defaultValue={plan.starts.join(", ")}
+        required
+        hint="Dagens faste starttider. Man kan kun planlægge fra dem, og pauserne mellem dem holdes."
+      />
+      <p className="text-[13px] font-normal text-muted" data-testid="plan-preview">
+        Dagen:{" "}
+        {planBlocks(plan)
+          .map((b) => formatSpan(b))
+          .join(" · pause · ")}
+      </p>
       <p className="text-[13px] font-normal text-muted">
-        Lektionslængden gælder nye lektioner. Lønperioden går fx fra den 21. til den 20.; skift helst ikke midt i en periode.
+        Lektionslængde og lektionsplan gælder nye lektioner. Lønperioden går fx fra den 21. til den 20.; skift helst ikke
+        midt i en periode.
       </p>
     </fieldset>
   );

@@ -105,7 +105,7 @@ export async function saveOwnLesson(_prev: ActionState, formData: FormData): Pro
         .update(read.values)
         .eq("id", read.id)
         .eq("origin", "instructor")
-        .select("id, lesson_minutes")
+        .select("id, span_minutes")
         .single()
     : await supabase
         .from("scheduled_lessons")
@@ -116,7 +116,7 @@ export async function saveOwnLesson(_prev: ActionState, formData: FormData): Pro
           origin: "instructor",
           created_by: user.id,
         })
-        .select("id, lesson_minutes")
+        .select("id, span_minutes")
         .single();
   const failed = dbError(error, "Lektionen kunne ikke planlægges. Prøv igen.");
   if (failed) return failed;
@@ -135,7 +135,7 @@ export async function saveOwnLesson(_prev: ActionState, formData: FormData): Pro
       resource_id: resourceId,
       booking_date: read.values.lesson_date,
       start_time: read.values.start_time,
-      minutes: read.values.lesson_count * data!.lesson_minutes,
+      minutes: data!.span_minutes, // hele blokken inkl. pauser
       instructor_id: instructorId,
       scheduled_lesson_id: data!.id,
       created_by: user.id,

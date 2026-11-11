@@ -59,7 +59,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
           action={saveOwnLesson}
           submitLabel={lesson ? "Gem ændringer" : "Planlæg"}
           services={services}
-          lessonMinutes={teacher.lessonMinutes}
+          plan={teacher.plan}
           busy={busy}
           hiddenFields={{ date, ...(lesson ? { id: lesson.id } : {}) }}
           resources={resources}

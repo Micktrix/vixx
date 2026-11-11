@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { TextField } from "@/components/form";
 import { requireRole } from "@/lib/auth/session";
 import { formatLongDate } from "@/lib/dates";
-import { lessonSpan } from "@/lib/schedule";
+import { storedSpan, toPlan } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { TeacherLessonForm } from "../../../laerer/lesson-form";
 import { officeSaveRegistration } from "../actions";
@@ -17,7 +17,7 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
   const { data: reg } = await supabase
     .from("registrations")
     .select(
-      "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, status, student_name, note, decision_comment, instructors(school_members(profiles(full_name)))",
+      "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, status, student_name, note, decision_comment, instructors(school_members(profiles(full_name)))",
     )
     .eq("id", typeof sp.id === "string" ? sp.id : "")
     .eq("school_id", membership.schoolId)
@@ -28,7 +28,7 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
     school_members: { profiles: { full_name: string } | null } | null;
   };
 
-  const [{ data: services }, { data: others }] = await Promise.all([
+  const [{ data: services }, { data: others }, { data: school }] = await Promise.all([
     supabase
       .from("services")
       .select("id, name")
@@ -37,12 +37,17 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
       .order("name"),
     supabase
       .from("registrations")
-      .select("start_time, lesson_count, lesson_minutes")
+      .select("start_time, lesson_count, lesson_minutes, span_minutes")
       .eq("instructor_id", reg.instructor_id)
       .eq("lesson_date", reg.lesson_date)
       .neq("status", "rejected")
       .neq("id", reg.id),
+    supabase.from("schools").select("lesson_starts").eq("id", membership.schoolId).single(),
   ]);
+  // Planens starttider. En ældre registrering uden for planen kan beholde sin starttid.
+  const plan = toPlan(school?.lesson_starts, reg.lesson_minutes);
+  const regStart = reg.start_time.slice(0, 5);
+  if (!plan.starts.includes(regStart)) plan.starts = [...plan.starts, regStart].sort();
 
 
   const approved = reg.status === "approved";
@@ -67,8 +72,8 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
           action={officeSaveRegistration}
           submitLabel={approved ? "Gem" : "Gem og godkend"}
           services={services ?? []}
-          lessonMinutes={reg.lesson_minutes}
-          busy={(others ?? []).map((o) => lessonSpan(o.start_time, o.lesson_count, o.lesson_minutes))}
+          plan={plan}
+          busy={(others ?? []).map((o) => storedSpan(o.start_time, o.span_minutes))}
           hiddenFields={{ id: reg.id }}
           initial={{
             serviceId: reg.service_id,

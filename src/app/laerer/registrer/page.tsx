@@ -63,7 +63,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
           action={saveRegistration}
           submitLabel={reg ? (reg.status === "rejected" ? "Send igen" : "Gem ændringer") : "Gem lektioner"}
           services={services}
-          lessonMinutes={teacher.lessonMinutes}
+          plan={teacher.plan}
           busy={busy}
           hiddenFields={{ date, ...(reg ? { id: reg.id } : {}) }}
           initial={{

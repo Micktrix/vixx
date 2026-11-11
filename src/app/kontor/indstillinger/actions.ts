@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/lib/action-state";
 import { requireRole } from "@/lib/auth/session";
 import { sendMail, sendSchoolBackup } from "@/lib/backup-send";
+import { parsePlanStarts } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 
 // Lokaler og køretøjer: kontoret og admin. Ubrugte kan slettes, brugte kun slås fra.
@@ -64,7 +65,7 @@ export async function deleteResource(_prev: ActionState, formData: FormData): Pr
 }
 
 // Skolens indstillinger. Kun admin (RLS: "Admin retter egen skole").
-// Lektionslængden gælder nye lektioner; eksisterende beholder deres længde.
+// Lektionslængde og lektionsplan gælder nye lektioner; eksisterende beholder deres tider.
 export async function updateSchool(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { membership } = await requireRole(["admin"]);
   const name = String(formData.get("name") ?? "").trim();
@@ -74,13 +75,16 @@ export async function updateSchool(_prev: ActionState, formData: FormData): Prom
   if (name.length > 80) return { error: "Navnet er for langt." };
   if (!Number.isInteger(minutes) || minutes < 15 || minutes > 240) return { error: "Lektionslængden skal være mellem 15 og 240 minutter." };
   if (!Number.isInteger(startDay) || startDay < 1 || startDay > 28) return { error: "Lønperioden skal starte mellem den 1. og den 28." };
+  const starts = parsePlanStarts(String(formData.get("lessonStarts") ?? ""));
+  if (!starts) return { error: "Skriv lektionsplanens starttider som fx 08:00, 08:45, 10:00." };
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("schools")
-    .update({ name, lesson_minutes: minutes, pay_period_start_day: startDay })
+    .update({ name, lesson_minutes: minutes, pay_period_start_day: startDay, lesson_starts: starts })
     .eq("id", membership.schoolId)
     .select("id");
+  if (error?.code === "23514") return { error: error.message }; // fx lektioner i planen, der overlapper
   if (error || !data?.length) return { error: "Indstillingerne kunne ikke gemmes. Prøv igen." };
   revalidatePath("/", "layout");
   return { message: "Skolens indstillinger er gemt." };

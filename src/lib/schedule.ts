@@ -15,9 +15,73 @@ export function fromMinutes(minutes: number): string {
 
 export const overlaps = (a: Span, b: Span) => a.from < b.to && b.from < a.to;
 
-export function lessonSpan(start: string, count: number, lessonMinutes: number): Span {
+// En gemt lektion: start og samlet længde inkl. pauser (span_minutes fra databasen).
+export function storedSpan(start: string, spanMinutes: number): Span {
   const from = toMinutes(start);
-  return { from, to: from + count * lessonMinutes };
+  return { from, to: from + spanMinutes };
+}
+
+// Skolens lektionsplan: faste starttider ("08:00", "08:45" …), og hver lektion varer `minutes`.
+export type LessonPlan = { starts: string[]; minutes: number };
+
+export const DEFAULT_PLAN: LessonPlan = {
+  starts: ["08:00", "08:45", "10:00", "10:45", "12:00", "12:45", "13:45", "14:30"],
+  minutes: 45,
+};
+
+// Planen fra skolens række (lesson_starts kommer som "08:00:00").
+export const toPlan = (starts: string[] | null | undefined, minutes: number): LessonPlan => ({
+  starts: starts?.length ? starts.map((t) => t.slice(0, 5)) : DEFAULT_PLAN.starts,
+  minutes,
+});
+
+// Antal lektioner fra en starttid efter planen: næste lektion starter på planens næste tid (med
+// pause imellem). Uden for planen fortsætter lektionerne i forlængelse. Samme regel som
+// private.lesson_span i databasen.
+export function planSpan(plan: LessonPlan, start: string, count: number): Span {
+  const from = toMinutes(start);
+  const i = plan.starts.indexOf(start);
+  let end = from;
+  for (let k = 0; k < count; k++) {
+    const slot = i >= 0 && i + k < plan.starts.length ? toMinutes(plan.starts[i + k]) : null;
+    end = (slot !== null && slot >= end ? slot : end) + plan.minutes;
+  }
+  return { from, to: end };
+}
+
+// Planen som sammenhængende blokke (lektioner i træk), fx 08:00–09:30, 10:00–11:30 …
+export function planBlocks(plan: LessonPlan): Span[] {
+  const blocks: Span[] = [];
+  for (const t of plan.starts) {
+    const from = toMinutes(t);
+    const last = blocks[blocks.length - 1];
+    if (last && last.to === from) last.to = from + plan.minutes;
+    else blocks.push({ from, to: from + plan.minutes });
+  }
+  return blocks;
+}
+
+// Starttider skrevet af brugeren ("8:00, 08:45 10.00") → sorteret liste, eller null ved fejl.
+export function parsePlanStarts(input: string): string[] | null {
+  const parts = input.split(/[\s,;]+/).filter(Boolean);
+  const times = parts.map((p) => {
+    const m = /^(\d{1,2})[:.](\d{2})$/.exec(p);
+    if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+    return `${m[1].padStart(2, "0")}:${m[2]}`;
+  });
+  if (!times.length || times.some((t) => t === null)) return null;
+  return [...new Set(times as string[])].sort();
+}
+
+// Planens starttider, hvor `count` lektioner kan ligge uden at ramme noget optaget.
+export function planSlotIsFree(plan: LessonPlan, start: string, count: number, busy: Span[]): boolean {
+  const span = planSpan(plan, start, count);
+  return span.to <= 24 * 60 && !busy.some((b) => overlaps(b, span));
+}
+
+// Første ledige starttid i planen.
+export function suggestPlanStart(plan: LessonPlan, count: number, busy: Span[]): string | null {
+  return plan.starts.find((t) => planSlotIsFree(plan, t, count, busy)) ?? null;
 }
 
 export function absenceSpan(start: string, hours: number): Span {
@@ -34,21 +98,8 @@ export function formatDuration(minutes: number): string {
   return [h ? `${h} t` : "", m ? `${m} min` : ""].filter(Boolean).join(" ");
 }
 
-// Starttider hvert kvarter fra 05:00 til 22:00, som i prototypen. Arbejdsdagen starter 08:00.
-export const DAY_START = 8 * 60;
+// Starttider hvert kvarter fra 05:00 til 22:00 (fravær, bookinger, "Kan arbejde"). Lektioner bruger skolens lektionsplan.
 export const TIME_SLOTS: string[] = Array.from({ length: (22 - 5) * 4 + 1 }, (_, i) => fromMinutes(5 * 60 + i * 15));
-
-// Kan en lektion af `duration` minutter starte på tidspunktet uden at ramme noget optaget?
-export function slotIsFree(start: string, duration: number, busy: Span[]): boolean {
-  const span = { from: toMinutes(start), to: toMinutes(start) + duration };
-  return span.to <= 24 * 60 && !busy.some((b) => overlaps(b, span));
-}
-
-// Første ledige tid fra 08:00, ellers første ledige overhovedet.
-export function suggestStart(duration: number, busy: Span[]): string | null {
-  const free = TIME_SLOTS.filter((t) => slotIsFree(t, duration, busy));
-  return free.find((t) => toMinutes(t) >= DAY_START) ?? free[0] ?? null;
-}
 
 export type DayInfo = {
   lessons: Span[];

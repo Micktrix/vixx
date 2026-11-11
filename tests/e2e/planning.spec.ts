@@ -30,11 +30,28 @@ test("kontoret planlægger, og optagede tider kan ikke vælges", async ({ page }
   const row = page.getByTestId("day-row").filter({ hasText: "Lars Jensen" });
   await expect(row.getByTestId("lesson-block")).toContainText("08:00–09:30");
 
-  // Samme dag: 08:00–09:15 er optaget, 09:30 er ledig.
+  // Samme dag: 08:00–09:30 er optaget, næste starttid i lektionsplanen er 10:00.
   await page.goto(`/kontor/planlaeg?laerer=${LARS}&dato=${date}`);
   await expect(page.getByRole("option", { name: "08:45 (optaget)" })).toHaveAttribute("disabled");
-  await expect(page.getByRole("option", { name: "09:30", exact: true })).not.toHaveAttribute("disabled");
-  await expect(page.getByLabel("Start")).toHaveValue("09:30");
+  await expect(page.getByRole("option", { name: "10:00", exact: true })).not.toHaveAttribute("disabled");
+  await expect(page.getByLabel("Start")).toHaveValue("10:00");
+  // Kun lektionsplanens starttider kan vælges.
+  await expect(page.getByRole("option", { name: "09:30", exact: true })).toHaveCount(0);
+});
+
+test("8 lektioner fra 08:00 følger lektionsplanen og slutter 15:15", async ({ page }) => {
+  await loginOk(page, OFFICE, PASSWORD);
+  const date = freeDay();
+  await page.goto(`/kontor/planlaeg?laerer=${LARS}&dato=${date}`);
+  await page.getByLabel("Antal lektioner").selectOption("8");
+  await page.getByLabel("Start").selectOption("08:00");
+  await expect(page.getByText("Slutter kl. 15:15")).toBeVisible();
+  await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
+  await page.getByRole("button", { name: "Planlæg lektion" }).click();
+  await page.waitForURL(/\/kontor\?vis=dag/);
+  await expect(page.getByTestId("day-row").filter({ hasText: "Lars Jensen" }).getByTestId("lesson-block")).toContainText(
+    "08:00–15:15",
+  );
 });
 
 test("fravær kan ikke ligge oven i en lektion", async ({ page }) => {
@@ -62,7 +79,7 @@ test("find ledig underviser viser optagede med årsag", async ({ page }) => {
   await planLesson(page, LARS, date, "08:00", 2, "B privat");
 
   await page.goto(`/kontor/find?dato=${date}`);
-  await page.getByLabel("Start").selectOption("09:00");
+  await page.getByLabel("Start").selectOption("08:45");
   await page.getByLabel("Antal").selectOption("2");
   await page.getByRole("button", { name: "Søg" }).click();
 

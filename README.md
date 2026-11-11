@@ -55,7 +55,8 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 
 - Beløb gemmes i øre (heltal). Dato og tid er dansk lokaltid.
 - Én person (telefonnummer) kan høre til flere skoler via `school_members`.
-- Hver lektion husker sin lektionslængde, så ændringer på skolen ikke flytter gamle lektioner.
+- Lektionsplan: `schools.lesson_starts` er dagens faste starttider. Databasen udfylder `span_minutes` (samlet længde inkl. pauser, `private.lesson_span`) på lektioner og registreringer, og overlap/bookinger bruger den. Samme regel i `planSpan` i `src/lib/schedule.ts`. Appens brugere kan kun starte på planens tider.
+- Hver lektion husker sin lektionslængde og samlede længde, så ændringer på skolen ikke flytter gamle lektioner.
 - Ydelser, lærere, lokaler og køretøjer har ingen kategorier eller typer. Kørekortkategorierne (`license_categories`) står kun som opslagstabel til elevdelen.
 - Lærerrollen er `instructors.active`; rækken slettes aldrig, så historik bevares.
 - Satser: `public.unit_price_ore(registrering)` giver låst sats → lærerens egen sats → ydelsens sats på lektionens dato (`service_price_on`; tabellen hedder `service_prices`). Løndelen til Dataløn er `services.payroll_code`. Samme regel i `src/lib/prices.ts` til visning.

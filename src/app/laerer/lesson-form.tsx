@@ -5,7 +5,7 @@ import { ResultBox, TextField, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import type { FormAction } from "@/lib/action-state";
 import type { ResourceInfo } from "@/lib/resources";
-import { fromMinutes, overlaps, slotIsFree, suggestStart, TIME_SLOTS, toMinutes, type Span } from "@/lib/schedule";
+import { fromMinutes, overlaps, planSlotIsFree, planSpan, suggestPlanStart, type LessonPlan, type Span } from "@/lib/schedule";
 
 type Service = { id: string; name: string };
 type Resource = ResourceInfo;
@@ -16,7 +16,7 @@ export function TeacherLessonForm({
   action,
   submitLabel,
   services,
-  lessonMinutes,
+  plan,
   busy,
   hiddenFields,
   initial,
@@ -27,7 +27,7 @@ export function TeacherLessonForm({
   action: FormAction;
   submitLabel: string;
   services: Service[];
-  lessonMinutes: number;
+  plan: LessonPlan; // skolens lektionsplan; kun dens starttider kan vælges
   busy: Span[];
   hiddenFields: Record<string, string>;
   initial: {
@@ -49,11 +49,10 @@ export function TeacherLessonForm({
   const [start, setStart] = useState(initial.start ?? "");
   const [resourceId, setResourceId] = useState(initial.resourceId ?? "");
 
-  const duration = count * lessonMinutes;
-  const shownStart = start && slotIsFree(start, duration, busy) ? start : (suggestStart(duration, busy) ?? "");
+  const shownStart = start && planSlotIsFree(plan, start, count, busy) ? start : (suggestPlanStart(plan, count, busy) ?? "");
 
-  // Kun ledige lokaler/køretøjer i lektionens tidsrum.
-  const span = shownStart ? { from: toMinutes(shownStart), to: toMinutes(shownStart) + duration } : null;
+  // Kun ledige lokaler/køretøjer i lektionens tidsrum (med planens pauser).
+  const span = shownStart ? planSpan(plan, shownStart, count) : null;
   const resourceFree = (id: string) => !span || !(resourceBusy[id] ?? []).some((b) => overlaps(b, span));
   const shownResourceId = resourceId && resourceFree(resourceId) ? resourceId : "";
 
@@ -107,8 +106,9 @@ export function TeacherLessonForm({
         Starttidspunkt
         <span className="flex items-center gap-3">
           <select name="start" value={shownStart} onChange={(e) => setStart(e.target.value)} required className={inputClass}>
-            {TIME_SLOTS.map((t) => {
-              const free = slotIsFree(t, duration, busy);
+            {!shownStart && <option value="">Ingen ledig starttid</option>}
+            {plan.starts.map((t) => {
+              const free = planSlotIsFree(plan, t, count, busy);
               return (
                 <option key={t} value={t} disabled={!free}>
                   {t}
@@ -117,9 +117,9 @@ export function TeacherLessonForm({
               );
             })}
           </select>
-          {shownStart && (
+          {span && (
             <span className="shrink-0 font-normal text-muted">
-              til <b className="text-ink">{fromMinutes(toMinutes(shownStart) + duration)}</b>
+              til <b className="text-ink">{fromMinutes(span.to)}</b>
             </span>
           )}
         </span>

@@ -50,8 +50,10 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 
 ## Forretningsregler (skal overholdes)
 **Lektioner og tid**
-- En lektion er som standard 45 min (indstilling pr. skole). Sluttid = start + antal × lektionslængde.
-- Arbejdsdagen starter 08:00. Ny planlægning foreslår 08:00; optagede tider kan ikke vælges.
+- En lektion er som standard 45 min (indstilling pr. skole).
+- **Lektionsplan** pr. skole (indstilling): faste starttider med pauser, standard 08:00 08:45 | 10:00 10:45 | 12:00 12:45 | 13:45 14:30. Man kan kun planlægge/registrere fra planens starttider, og flere lektioner følger planen med pauserne (8 lektioner fra 08:00 slutter 15:15). Ud over planens sidste tid fortsætter lektionerne uden pause.
+- Sluttiden gemmes på lektionen (`span_minutes`), så en senere ændring af planen ikke flytter gamle lektioner. Læreren er optaget hele blokken, også i pauserne.
+- Ny planlægning foreslår første ledige starttid i planen; optagede tider kan ikke vælges.
 - Ingen overlap: en lærer kan ikke have to lektioner, eller lektion og fravær, samtidig. Samme for lokaler og køretøjer.
 
 **Planlagt vs. registreret**

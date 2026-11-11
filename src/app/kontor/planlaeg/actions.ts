@@ -65,14 +65,14 @@ export async function saveLesson(_prev: ActionState, formData: FormData): Promis
 
   const resourceId = text("resourceId") || null;
   const supabase = await createClient();
-  let lesson: { id: string; lesson_minutes: number };
+  let lesson: { id: string; span_minutes: number };
   if (id) {
     const { data, error } = await supabase
       .from("scheduled_lessons")
       .update(values)
       .eq("id", id)
       .eq("school_id", membership.schoolId)
-      .select("id, lesson_minutes");
+      .select("id, span_minutes");
     const failed = dbError(error, "Lektionen kunne ikke gemmes. Prøv igen.");
     if (failed) return failed;
     if (!data?.length) return { error: "Lektionen findes ikke længere." };
@@ -81,7 +81,7 @@ export async function saveLesson(_prev: ActionState, formData: FormData): Promis
     const { data, error } = await supabase
       .from("scheduled_lessons")
       .insert({ ...values, school_id: membership.schoolId, origin: "office", created_by: user.id })
-      .select("id, lesson_minutes")
+      .select("id, span_minutes")
       .single();
     const failed = dbError(error, "Lektionen kunne ikke planlægges. Prøv igen.");
     if (failed) return failed;
@@ -101,7 +101,7 @@ export async function saveLesson(_prev: ActionState, formData: FormData): Promis
       resource_id: resourceId,
       booking_date: date,
       start_time: start,
-      minutes: count * lesson.lesson_minutes,
+      minutes: lesson.span_minutes, // hele blokken inkl. pauser
       instructor_id: instructorId,
       scheduled_lesson_id: lesson.id,
       created_by: user.id,

@@ -42,13 +42,13 @@ select throws_ok(
 select throws_ok(
   $$insert into public.registrations (school_id, instructor_id, service_id, lesson_date, start_time, lesson_count)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011',
-            '00000000-0000-4000-a500-000000000006', current_date, '09:00', 1)$$,
-  '23P01', 'Du har allerede registreret en lektion kl. 08:00–10:15.', 'Registreringer kan ikke overlappe');
+            '00000000-0000-4000-a500-000000000006', current_date, '08:45', 1)$$,
+  '23P01', 'Du har allerede registreret en lektion kl. 08:00–10:45.', 'Registreringer kan ikke overlappe');
 
 select lives_ok(
   $$insert into public.registrations (school_id, instructor_id, service_id, lesson_date, start_time, lesson_count, note)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011',
-            '00000000-0000-4000-a500-000000000006', current_date, '10:15', 1, 'Uplanlagt')$$,
+            '00000000-0000-4000-a500-000000000006', current_date, '10:45', 1, 'Uplanlagt')$$,
   'En uplanlagt registrering lige efter er tilladt');
 
 select is(

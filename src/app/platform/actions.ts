@@ -7,11 +7,21 @@ import type { ActionState } from "@/lib/action-state";
 import { authFieldsForPhone, firstPassword } from "@/lib/auth/login-identity";
 import { requirePlatformOwner, SCHOOL_COOKIE } from "@/lib/auth/session";
 import { normalizePhone } from "@/lib/phone";
+import { DEFAULT_PLAN, fromMinutes } from "@/lib/schedule";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // Platform-ejeren opretter skoler og deres første admin. Skolen og medlemskabet oprettes som den
 // indloggede bruger (RLS tillader det kun for platform-ejeren), så det står i ændringsloggen.
+
+// Standardplanen passer til 45 minutters lektioner. Med en anden længde lægges op til 8 lektioner i træk
+// fra 08:00 (inden 22:00); skolen retter selv planen under Indstillinger.
+function defaultStarts(minutes: number): string[] {
+  if (minutes === DEFAULT_PLAN.minutes) return DEFAULT_PLAN.starts;
+  return Array.from({ length: 8 }, (_, i) => 8 * 60 + i * minutes)
+    .filter((start) => start + minutes <= 22 * 60)
+    .map(fromMinutes);
+}
 
 export async function createSchool(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requirePlatformOwner();
@@ -33,7 +43,7 @@ export async function createSchool(_prev: ActionState, formData: FormData): Prom
 
   const { data: school, error: schoolError } = await supabase
     .from("schools")
-    .insert({ name: schoolName, lesson_minutes: minutes, pay_period_start_day: startDay })
+    .insert({ name: schoolName, lesson_minutes: minutes, pay_period_start_day: startDay, lesson_starts: defaultStarts(minutes) })
     .select("id")
     .single();
   if (schoolError || !school) return { error: "Skolen kunne ikke oprettes. Prøv igen." };

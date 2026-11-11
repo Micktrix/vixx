@@ -1,7 +1,7 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/session";
-import { absenceSpan, lessonSpan, toMinutes, type Span } from "@/lib/schedule";
+import { absenceSpan, storedSpan, toMinutes, toPlan, type Span } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 
 // Den indloggede lærer på den aktive skole, med skolens indstillinger.
@@ -15,7 +15,7 @@ export async function getTeacher() {
       .eq("school_id", membership.schoolId)
       .eq("user_id", user.id)
       .single(),
-    supabase.from("schools").select("lesson_minutes, pay_period_start_day").eq("id", membership.schoolId).single(),
+    supabase.from("schools").select("lesson_minutes, lesson_starts, pay_period_start_day").eq("id", membership.schoolId).single(),
   ]);
   if (!instructor || !school) notFound();
   return {
@@ -24,6 +24,7 @@ export async function getTeacher() {
     instructorId: instructor.id,
     onRequest: instructor.availability === "on_request",
     lessonMinutes: school.lesson_minutes,
+    plan: toPlan(school.lesson_starts, school.lesson_minutes),
     periodStartDay: school.pay_period_start_day,
   };
 }
@@ -68,7 +69,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
     supabase
       .from("registrations")
       .select(
-        "id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, status, decision_comment, note, student_name, scheduled_lesson_id, office_edited_at, unit_price_ore, services(name)",
+        "id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, status, decision_comment, note, student_name, scheduled_lesson_id, office_edited_at, unit_price_ore, services(name)",
       )
       .eq("instructor_id", id)
       .gte("lesson_date", from)
@@ -76,7 +77,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
       .order("start_time"),
     supabase
       .from("scheduled_lessons")
-      .select("id, lesson_date, start_time, lesson_count, lesson_minutes, student_name, note, origin, services(name)")
+      .select("id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, student_name, note, origin, services(name)")
       .eq("instructor_id", id)
       .gte("lesson_date", from)
       .lte("lesson_date", to)
@@ -114,7 +115,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
   return {
     registrations: (registrations.data ?? []).map(
       (r): TeacherRegistration => ({
-        ...lessonSpan(r.start_time, r.lesson_count, r.lesson_minutes),
+        ...storedSpan(r.start_time, r.span_minutes),
         id: r.id,
         date: r.lesson_date,
         start: r.start_time.slice(0, 5),
@@ -132,7 +133,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
     ),
     lessons: (lessons.data ?? []).map(
       (l): TeacherLesson => ({
-        ...lessonSpan(l.start_time, l.lesson_count, l.lesson_minutes),
+        ...storedSpan(l.start_time, l.span_minutes),
         id: l.id,
         date: l.lesson_date,
         start: l.start_time.slice(0, 5),

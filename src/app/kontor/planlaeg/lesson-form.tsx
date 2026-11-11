@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { ResultBox, TextField, useFormAction } from "@/components/form";
 import { inputClass, primaryButtonClass } from "@/components/styles";
 import type { ResourceInfo } from "@/lib/resources";
-import { availability, formatDuration, lessonSpan, overlaps, slotIsFree, suggestStart, TIME_SLOTS, type DayInfo, type Span } from "@/lib/schedule";
+import { availability, formatDuration, fromMinutes, overlaps, planSlotIsFree, planSpan, suggestPlanStart, type DayInfo, type LessonPlan, type Span } from "@/lib/schedule";
 import { getDay, getResourceBusy, saveLesson } from "./actions";
 
 export type FormInstructor = { id: string; name: string; onRequest: boolean };
@@ -26,7 +26,7 @@ type Initial = {
 export function LessonForm({
   instructors,
   services,
-  lessonMinutes,
+  plan,
   today,
   initial,
   initialDay,
@@ -35,7 +35,7 @@ export function LessonForm({
 }: {
   instructors: FormInstructor[];
   services: FormService[];
-  lessonMinutes: number;
+  plan: LessonPlan; // skolens lektionsplan; kun dens starttider kan vælges
   today: string;
   initial: Initial;
   initialDay: DayInfo | null;
@@ -54,7 +54,6 @@ export function LessonForm({
   const [resourceId, setResourceId] = useState(initial.resourceId ?? "");
 
   const instructor = instructors.find((i) => i.id === instructorId);
-  const duration = count * lessonMinutes;
   const busy = useMemo(() => (day ? [...day.lessons, ...day.absences] : []), [day]);
 
   // Ny lærer eller dato: hent dagen (optagede tider og advarsler) fra serveren.
@@ -73,15 +72,15 @@ export function LessonForm({
   }
 
   // Foreslå 08:00 eller første ledige tid, når det valgte tidspunkt ikke længere er ledigt.
-  const startIsFree = start && slotIsFree(start, duration, busy);
-  const shownStart = startIsFree ? start : (suggestStart(duration, busy) ?? "");
+  const startIsFree = start && planSlotIsFree(plan, start, count, busy);
+  const shownStart = startIsFree ? start : (suggestPlanStart(plan, count, busy) ?? "");
 
   const service = services.find((s) => s.id === serviceId);
 
-  const check = day && shownStart ? availability(day, lessonSpan(shownStart, count, lessonMinutes)) : null;
+  const check = day && shownStart ? availability(day, planSpan(plan, shownStart, count)) : null;
 
   // Lokale eller køretøj, der er ledigt i lektionens tidsrum.
-  const span = shownStart ? lessonSpan(shownStart, count, lessonMinutes) : null;
+  const span = shownStart ? planSpan(plan, shownStart, count) : null;
   const resourceFree = (id: string) => !span || !(resourceBusy[id] ?? []).some((b) => overlaps(b, span));
   const shownResourceId = resourceId && resourceFree(resourceId) ? resourceId : "";
   const blocked = day?.holiday === "approved";
@@ -123,7 +122,7 @@ export function LessonForm({
           <select name="count" value={count} onChange={(e) => setCount(Number(e.target.value))} className={inputClass}>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
-                {n} {n === 1 ? "lektion" : "lektioner"} · {formatDuration(n * lessonMinutes)}
+                {n} {n === 1 ? "lektion" : "lektioner"} · {formatDuration(n * plan.minutes)}
               </option>
             ))}
           </select>
@@ -138,8 +137,9 @@ export function LessonForm({
             disabled={loadingDay}
             className={inputClass}
           >
-            {TIME_SLOTS.map((t) => {
-              const free = slotIsFree(t, duration, busy);
+            {!shownStart && <option value="">Ingen ledig starttid</option>}
+            {plan.starts.map((t) => {
+              const free = planSlotIsFree(plan, t, count, busy);
               return (
                 <option key={t} value={t} disabled={!free}>
                   {t}
@@ -148,7 +148,9 @@ export function LessonForm({
               );
             })}
           </select>
-          <span className="text-[13px] font-normal text-muted">Optagede tider kan ikke vælges.</span>
+          <span className="text-[13px] font-normal text-muted">
+            {span ? `Slutter kl. ${fromMinutes(span.to)} (med pauser efter lektionsplanen). ` : ""}Optagede tider kan ikke vælges.
+          </span>
         </label>
       </div>
 

@@ -3,7 +3,7 @@ import { Pill } from "@/components/pill";
 import { inputClass, primaryButtonClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
-import { availability, formatSpan, lessonSpan, TIME_SLOTS } from "@/lib/schedule";
+import { availability, formatSpan, planSpan, toPlan } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { planHref } from "../calendar/params";
 import { dayInfo, loadSchedule } from "../schedule-data";
@@ -16,16 +16,17 @@ export default async function FindInstructorPage({ searchParams }: PageProps<"/k
   const supabase = await createClient();
 
   const date = parseDateInput(one("dato") ?? "") ?? todayDk();
-  const start = TIME_SLOTS.includes(one("start") ?? "") ? one("start")! : "08:00";
   const count = Math.min(12, Math.max(1, Number(one("antal")) || 1));
   const searched = !!one("dato");
 
   const [schedule, { data: school }] = await Promise.all([
     loadSchedule(membership.schoolId, date, date),
-    supabase.from("schools").select("lesson_minutes").eq("id", membership.schoolId).single(),
+    supabase.from("schools").select("lesson_minutes, lesson_starts").eq("id", membership.schoolId).single(),
   ]);
 
-  const span = lessonSpan(start, count, school?.lesson_minutes ?? 45);
+  const plan = toPlan(school?.lesson_starts, school?.lesson_minutes ?? 45);
+  const start = plan.starts.includes(one("start") ?? "") ? one("start")! : plan.starts[0];
+  const span = planSpan(plan, start, count);
   const results = schedule.instructors
     .map((i) => ({ instructor: i, check: availability(dayInfo(schedule, i, date), span) }))
     .sort((a, b) => Number(b.check.ok) - Number(a.check.ok) || a.instructor.name.localeCompare(b.instructor.name, "da"));
@@ -46,7 +47,7 @@ export default async function FindInstructorPage({ searchParams }: PageProps<"/k
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Start
           <select name="start" defaultValue={start} className={inputClass}>
-            {TIME_SLOTS.map((t) => (
+            {plan.starts.map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>

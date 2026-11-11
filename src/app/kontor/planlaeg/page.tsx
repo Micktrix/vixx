@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/form";
 import { requireRole } from "@/lib/auth/session";
 import { busyByResource, loadBookings, loadResources } from "@/lib/booking-data";
 import { formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
+import { toPlan } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { calendarHref } from "../calendar/params";
 import { dayInfo, loadSchedule } from "../schedule-data";
@@ -37,7 +38,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
       .eq("school_id", membership.schoolId)
       .eq("active", true)
       .order("name"),
-    supabase.from("schools").select("lesson_minutes").eq("id", membership.schoolId).single(),
+    supabase.from("schools").select("lesson_minutes, lesson_starts").eq("id", membership.schoolId).single(),
     loadResources(membership.schoolId),
     loadBookings(membership.schoolId, date, date),
   ]);
@@ -46,6 +47,11 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
   const instructorId = lesson?.instructor_id ?? one("laerer") ?? "";
   const instructor = schedule.instructors.find((i) => i.id === instructorId);
   const formServices: FormService[] = services ?? [];
+
+  // Planens starttider. En ældre lektion uden for planen kan beholde sin starttid.
+  const plan = toPlan(school?.lesson_starts, lesson?.lesson_minutes ?? school?.lesson_minutes ?? 45);
+  const lessonStart = lesson?.start_time.slice(0, 5);
+  if (lessonStart && !plan.starts.includes(lessonStart)) plan.starts = [...plan.starts, lessonStart].sort();
 
   return (
     <>
@@ -61,7 +67,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
         <LessonForm
           instructors={schedule.instructors}
           services={formServices}
-          lessonMinutes={lesson?.lesson_minutes ?? school?.lesson_minutes ?? 45}
+          plan={plan}
           today={today}
           initialDay={instructor ? dayInfo(schedule, instructor, date, lesson?.id) : null}
           resources={resources}

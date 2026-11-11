@@ -1,6 +1,6 @@
 import "server-only";
 import { todayDk } from "@/lib/dates";
-import { absenceSpan, lessonSpan, toMinutes, type DayInfo, type Span } from "@/lib/schedule";
+import { absenceSpan, storedSpan, toMinutes, type DayInfo, type Span } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 
 // Alt hvad kontorets kalender, planlægning og "Find ledig underviser" skal bruge for en periode.
@@ -68,7 +68,7 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       .eq("school_members.active", true),
     supabase
       .from("scheduled_lessons")
-      .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, student_name, note, services(name)")
+      .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, student_name, note, services(name)")
       .eq("school_id", schoolId)
       .gte("lesson_date", from)
       .lte("lesson_date", to)
@@ -107,7 +107,7 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       }))
       .sort((a, b) => a.name.localeCompare(b.name, "da")),
     lessons: (lessons.data ?? []).map((l) => ({
-      ...lessonSpan(l.start_time, l.lesson_count, l.lesson_minutes),
+      ...storedSpan(l.start_time, l.span_minutes),
       id: l.id,
       instructorId: l.instructor_id,
       date: l.lesson_date,

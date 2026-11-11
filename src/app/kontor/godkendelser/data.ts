@@ -1,6 +1,6 @@
 import "server-only";
 import { flagFor, type Flag } from "@/lib/approval";
-import { lessonSpan, type Span } from "@/lib/schedule";
+import { storedSpan, type Span } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 
 export type Status = "pending" | "approved" | "rejected";
@@ -33,6 +33,7 @@ type Row = {
   start_time: string;
   lesson_count: number;
   lesson_minutes: number;
+  span_minutes: number;
   service_id: string;
   student_name: string | null;
   note: string | null;
@@ -48,7 +49,7 @@ type Row = {
 };
 
 const SELECT =
-  "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, student_name, note, status, decision_comment, decided_by, decided_at, office_edited_at, unit_price_ore, services(name), scheduled_lessons(lesson_count, service_id), instructors(school_members(profiles(full_name)))";
+  "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, student_name, note, status, decision_comment, decided_by, decided_at, office_edited_at, unit_price_ore, services(name), scheduled_lessons(lesson_count, service_id), instructors(school_members(profiles(full_name)))";
 
 export async function loadApprovals(schoolId: string, status: Status, instructorId: string | null) {
   const supabase = await createClient();
@@ -59,7 +60,7 @@ export async function loadApprovals(schoolId: string, status: Status, instructor
 
   const rows = ((data ?? []) as unknown as Row[]).map(
     (r): ApprovalRow => ({
-      ...lessonSpan(r.start_time, r.lesson_count, r.lesson_minutes),
+      ...storedSpan(r.start_time, r.span_minutes),
       id: r.id,
       instructorId: r.instructor_id,
       instructorName: r.instructors?.school_members?.profiles?.full_name ?? "",

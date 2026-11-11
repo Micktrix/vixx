@@ -38,24 +38,24 @@ test("en lærer klarer dagen fra telefonen: udført, uplanlagt, egen planlægnin
 
   // Uplanlagt lektion senere samme dag. Optagede tider kan ikke vælges.
   await panel.getByRole("link", { name: "+ Tilføj lektioner" }).click();
-  await expect(page.getByRole("option", { name: "08:30 – optaget" })).toHaveAttribute("disabled");
+  await expect(page.getByRole("option", { name: "08:45 – optaget" })).toHaveAttribute("disabled");
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
   await page.getByRole("button", { name: "Færre" }).click(); // 2 → 1
-  await page.getByLabel("Starttidspunkt").selectOption("13:00");
+  await page.getByLabel("Starttidspunkt").selectOption("12:45");
   await page.getByLabel("Note (valgfri)").fill("Ekstra time");
   await page.getByRole("button", { name: "Gem lektioner" }).click();
   await page.waitForURL(/\/laerer\?dag=/);
-  await expect(page.getByTestId("registration").filter({ hasText: "13:00" })).toContainText("Uplanlagt");
+  await expect(page.getByTestId("registration").filter({ hasText: "12:45" })).toContainText("Uplanlagt");
 
   // Egen lektion i morgen.
   await page.goto(`/laerer?dag=${daysFromToday(1)}`);
   await page.getByRole("link", { name: "+ Planlæg lektion" }).click();
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
-  await page.getByLabel("Starttidspunkt").selectOption("09:00");
+  await page.getByLabel("Starttidspunkt").selectOption("08:45");
   await page.getByRole("button", { name: "Planlæg", exact: true }).click();
   await page.waitForURL(/\/laerer\?dag=/);
   await expect(page.getByTestId("planned")).toContainText("Planlagt af dig");
-  await expect(page.getByTestId("planned")).toContainText("09:00–10:30");
+  await expect(page.getByTestId("planned")).toContainText("08:45–10:45"); // to lektioner med pausen 09:30–10:00
 
   // Overblik: 2 + 1 lektioner registreret.
   await page.goto("/laerer/overblik");

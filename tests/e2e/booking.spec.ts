@@ -20,7 +20,7 @@ test("en køretime får en bil, og bilen følger lektionen, når den flyttes", a
 
   await loginOk(page, OFFICE, PASSWORD);
   await page.goto(`/kontor/planlaeg?laerer=${instructorId}&dato=${date}`);
-  await page.getByLabel("Start").selectOption("09:00");
+  await page.getByLabel("Start").selectOption("08:45");
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
   await page.getByLabel("Lokale eller køretøj (valgfri)").selectOption({ label: "Personbil 1" });
   await page.getByRole("button", { name: "Planlæg lektion" }).click();
@@ -28,18 +28,18 @@ test("en køretime får en bil, og bilen følger lektionen, når den flyttes", a
 
   await page.goto(`/kontor/koeretoejer?vis=dag&dato=${date}`);
   const car = page.getByTestId("resource-row").filter({ hasText: "Personbil 1" });
-  await expect(car.getByTestId("booking-block")).toContainText("09:00–09:45");
+  await expect(car.getByTestId("booking-block")).toContainText("08:45–09:30");
 
   // Flyt lektionen: bilen følger med.
   await page.goto(`/kontor?vis=dag&dato=${date}`);
   await page.getByTestId("lesson-block").first().click();
   await expect(page.getByLabel("Lokale eller køretøj (valgfri)")).toHaveValue(/.+/);
-  await page.getByLabel("Start").selectOption("13:00");
+  await page.getByLabel("Start").selectOption("12:45");
   await page.getByRole("button", { name: "Gem ændringer" }).click();
   await page.waitForURL(/\/kontor\?vis=dag/);
   await page.goto(`/kontor/koeretoejer?vis=dag&dato=${date}`);
   await expect(page.getByTestId("resource-row").filter({ hasText: "Personbil 1" }).getByTestId("booking-block")).toContainText(
-    "13:00–13:45",
+    "12:45–13:30",
   );
 });
 
@@ -167,7 +167,7 @@ test("en lærer planlægger sin egen køretime med bil, og bilen flytter med", a
   await teacher.goto(`/laerer?dag=${date}`);
   await teacher.getByRole("link", { name: "+ Planlæg lektion" }).click();
   await teacher.getByLabel("Ydelse").selectOption({ label: "B privat" });
-  await teacher.getByLabel("Starttidspunkt").selectOption("09:00");
+  await teacher.getByLabel("Starttidspunkt").selectOption("08:45");
   await teacher.getByLabel("Bil eller lokale (valgfri)").selectOption({ label: "Personbil 1" });
   await teacher.getByRole("button", { name: "Planlæg", exact: true }).click();
   await teacher.waitForURL(/\/laerer\?dag=/);
@@ -176,13 +176,13 @@ test("en lærer planlægger sin egen køretime med bil, og bilen flytter med", a
   // Flyt lektionen: bilen følger med.
   await teacher.getByRole("link", { name: "Ret" }).click();
   await expect(teacher.getByLabel("Bil eller lokale (valgfri)")).toHaveValue(/.+/);
-  await teacher.getByLabel("Starttidspunkt").selectOption("14:00");
+  await teacher.getByLabel("Starttidspunkt").selectOption("12:45");
   await teacher.getByRole("button", { name: "Gem ændringer" }).click();
   await teacher.waitForURL(/\/laerer\?dag=/);
 
   await loginOk(page, OFFICE, PASSWORD);
   await page.goto(`/kontor/koeretoejer?vis=dag&dato=${date}`);
   await expect(page.getByTestId("resource-row").filter({ hasText: "Personbil 1" }).getByTestId("booking-block")).toContainText(
-    "14:00–15:30",
+    "12:45–14:30", // to lektioner med pausen 13:30–13:45
   );
 });
