@@ -22,6 +22,7 @@ export const TABLE_LABEL: Record<string, string> = {
   services: "Ydelse",
   service_categories: "Ydelsens kategori",
   service_prices: "Sats",
+  school_backups: "Backup-e-mail",
   pay_periods: "Lønperiode",
   messages: "Besked",
   resources: "Lokale/køretøj",

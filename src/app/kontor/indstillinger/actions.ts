@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/lib/action-state";
 import { requireRole } from "@/lib/auth/session";
+import { sendMail, sendSchoolBackup } from "@/lib/backup-send";
 import { createClient } from "@/lib/supabase/server";
 
 // Lokaler og køretøjer: kontoret og admin. Ubrugte kan slettes, brugte kun slås fra.
@@ -83,4 +84,46 @@ export async function updateSchool(_prev: ActionState, formData: FormData): Prom
   if (error || !data?.length) return { error: "Indstillingerne kunne ikke gemmes. Prøv igen." };
   revalidatePath("/", "layout");
   return { message: "Skolens indstillinger er gemt." };
+}
+
+// Backup af timer på e-mail. Kun admin. Ændres adressen, får den gamle adresse besked, så en
+// ændring ikke kan ske ubemærket (fx hvis en konto er overtaget).
+export async function saveBackupEmail(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, membership } = await requireRole(["admin"]);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Skriv en gyldig e-mailadresse." };
+
+  const supabase = await createClient();
+  const { data: before } = await supabase
+    .from("school_backups")
+    .select("email")
+    .eq("school_id", membership.schoolId)
+    .maybeSingle();
+  if ((before?.email ?? "") === email) return { message: "Ingen ændringer." };
+
+  const { error } = await supabase
+    .from("school_backups")
+    .upsert({ school_id: membership.schoolId, email: email || null }, { onConflict: "school_id" });
+  if (error) return { error: "Adressen kunne ikke gemmes. Prøv igen." };
+
+  if (before?.email) {
+    await sendMail({
+      to: before.email,
+      subject: `Backup-adressen for ${membership.schoolName} er ændret`,
+      text:
+        `${user.fullName} har ændret backup-adressen for timer i Vixx ` +
+        `${email ? `til ${email}` : "og slået backuppen fra"}. Denne adresse får ikke længere backup.\n\n` +
+        `Var det ikke aftalt, så kontakt skolens admin med det samme.\n\nVenlig hilsen\nVixx`,
+    });
+  }
+  revalidatePath("/kontor/indstillinger");
+  return { message: email ? `Backup sendes nu til ${email} hver nat.` : "Backuppen er slået fra." };
+}
+
+export async function sendBackupNow(): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const result = await sendSchoolBackup(membership.schoolId);
+  revalidatePath("/kontor/indstillinger");
+  if (result.error) return { error: result.error };
+  return { message: `Backup sendt med ${result.count} registreringer.` };
 }

@@ -100,6 +100,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 
 **Log og privatliv**
 - Alle ændringer skrives i en ændringslog (hvem, hvornår, hvad). Følsomme værdier skrives ikke i loggen.
+- Backup af timer: hver nat sendes en CSV med registreringer (igangværende + forrige lønperiode, alle statusser, uden elevnavne/noter) til en backup-e-mail, som kun admin kan se og rette. Ændring giver besked til den gamle adresse.
 - Gem **ikke** CPR eller bankoplysninger (løn udbetales via Dataløn til NemKonto).
 - Storskærm/dashboard viser aldrig elevnavne.
 

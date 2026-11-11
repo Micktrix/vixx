@@ -44,6 +44,15 @@ Supabase' gratis plan har **ingen automatisk backup**, og projektet sættes på 
 
 Uanset valg: tag en ekstra kopi før større ændringer, fx `npx supabase db dump --linked -f backup.sql` (filen må ikke i git).
 
+### Backup af timer på e-mail
+
+Hver nat kl. ca. 02–03 (Vercel Cron, `vercel.json` → `/api/backup`) sendes en CSV til skolens backup-adresse med alle registreringer i den igangværende og den forrige lønperiode (godkendte, afventende og afviste, uden elevnavne og noter). Adressen sættes af admin under Indstillinger → "Backup af timer". Ændres den, får den gamle adresse besked, og ændringen står i ændringsloggen.
+
+- Mails sendes via **Resend** (EU) fra `backup@mail.vixx.dk`. DNS-posterne til `mail.vixx.dk` ligger hos Simply.com; `vixx.dk`'s egne mail-poster er ikke rørt.
+- Miljøvariabler i Vercel (Production): `RESEND_API_KEY` (følsom) og `CRON_SECRET` (følsom). Uden `CRON_SECRET` afvises den natlige kørsel.
+- Status: Indstillinger viser, hvornår der sidst blev sendt, eller hvorfor det fejlede. "Send backup nu" sender med det samme.
+- Det er en nødkopi af timerne, ikke en backup af hele databasen.
+
 ## Fejl og overvågning
 
 - **Appens fejl:** Vercel → projekt `vixx` → Logs. Filtrér på "Error". Brugeren ser en dansk fejlside med en reference; søg på den i loggen.
