@@ -23,8 +23,8 @@ export default async function OfficeSettingsPage() {
 
   const schoolFields = (
     <fieldset disabled={!isAdmin} className="flex flex-col gap-3">
-      <TextField label="Navn" name="name" defaultValue={school?.name} required maxLength={80} />
-      <div className="grid grid-cols-2 items-end gap-3">
+      <div className="grid items-end gap-3 sm:grid-cols-3">
+        <TextField label="Navn" name="name" defaultValue={school?.name} required maxLength={80} />
         <TextField
           label="Lektionslængde (min.)"
           name="lessonMinutes"
@@ -58,7 +58,7 @@ export default async function OfficeSettingsPage() {
         <h1 className="text-[30px] font-bold">Indstillinger</h1>
       </header>
 
-      <div className="grid items-start gap-[18px] lg:grid-cols-3">
+      <div className="flex flex-col gap-[18px]">
         <Box title="Nyt lokale eller køretøj">
           <AddResourceForm />
         </Box>
