@@ -65,7 +65,7 @@ export type TeacherLesson = Span & {
 export async function loadTeacherPeriod(teacher: Teacher, from: string, to: string) {
   const supabase = await createClient();
   const id = teacher.instructorId;
-  const [registrations, lessons, absences, holidays, canWork, locked] = await Promise.all([
+  const [registrations, lessons, absences, holidays, canWork, locked, bookings] = await Promise.all([
     supabase
       .from("registrations")
       .select(
@@ -109,6 +109,15 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
       .eq("locked", true)
       .lte("starts_on", to)
       .gte("ends_on", from),
+    // Egne bookinger af bil eller lokale (fx et møde). En lektions booking står på lektionen.
+    supabase
+      .from("bookings")
+      .select("id, booking_date, start_time, minutes, title, resources(name)")
+      .eq("instructor_id", id)
+      .is("scheduled_lesson_id", null)
+      .gte("booking_date", from)
+      .lte("booking_date", to)
+      .order("start_time"),
   ]);
 
   const name = (s: unknown) => (s as { name: string } | null)?.name ?? "";
@@ -164,6 +173,13 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
       to: toMinutes(c.end_time),
     })),
     locked: (locked.data ?? []).map((p) => ({ from: p.starts_on, to: p.ends_on })),
+    bookings: (bookings.data ?? []).map((b) => ({
+      ...storedSpan(b.start_time, b.minutes),
+      id: b.id,
+      date: b.booking_date,
+      title: b.title?.trim() || null,
+      resourceName: name(b.resources),
+    })),
   };
 }
 

@@ -55,7 +55,7 @@ export function LessonForm({
   const [resourceId, setResourceId] = useState(initial.resourceId ?? "");
 
   const instructor = instructors.find((i) => i.id === instructorId);
-  const busy = useMemo(() => (day ? [...day.lessons, ...day.absences] : []), [day]);
+  const busy = useMemo(() => (day ? [...day.lessons, ...day.absences, ...day.bookings] : []), [day]);
 
   // Ny lærer eller dato: hent dagen (optagede tider og advarsler) fra serveren.
   function changeDay(nextInstructor: string, nextDate: string) {

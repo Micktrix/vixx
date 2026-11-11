@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Pill } from "@/components/pill";
 import { addDays, formatShortDay, isWeekend } from "@/lib/dates";
-import { formatSpan } from "@/lib/schedule";
+import { formatSpan, fromMinutes } from "@/lib/schedule";
 import { dayInfo, REASON_LABEL, type Schedule } from "../schedule-data";
 import { calendarHref, planHref } from "./params";
 
@@ -49,6 +49,7 @@ export function WeekView({ schedule, weekStart, today }: { schedule: Schedule; w
                   const day = dayInfo(schedule, instructor, d);
                   const lessons = weekLessons.filter((l) => l.date === d);
                   const absences = schedule.absences.filter((a) => a.instructorId === instructor.id && a.date === d);
+                  const bookings = schedule.bookings.filter((b) => b.instructorId === instructor.id && b.date === d);
                   return (
                     <td key={d} className={`px-1.5 py-1.5 ${d < today ? "bg-soft/60" : ""}`}>
                       <div className="flex flex-col gap-1">
@@ -66,6 +67,15 @@ export function WeekView({ schedule, weekStart, today }: { schedule: Schedule; w
                             className="rounded-md border border-accent-line bg-accent-bg px-1.5 py-1 hover:border-accent"
                           >
                             <b>{l.start}</b> {l.serviceName} · {l.count}
+                          </Link>
+                        ))}
+                        {bookings.map((b) => (
+                          <Link
+                            key={b.id}
+                            href={`/kontor/booking?id=${b.id}`}
+                            className="rounded-md border border-line2 bg-soft px-1.5 py-1 hover:border-ink/40"
+                          >
+                            <b>{fromMinutes(b.from)}</b> {b.title}
                           </Link>
                         ))}
                         {instructor.onRequest &&

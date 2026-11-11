@@ -5,6 +5,7 @@ import { OFFICE, PASSWORD, loginOk, newTeacher } from "./helpers";
 const SCHOOL = "00000000-0000-4000-a000-000000000001";
 const B_PRIVAT = "00000000-0000-4000-a500-000000000006";
 const LOKALE_2 = "00000000-0000-4000-a600-000000000002";
+const PERSONBIL_1 = "00000000-0000-4000-a600-000000000003";
 
 function day(n: number) {
   const d = new Date();
@@ -12,6 +13,12 @@ function day(n: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 // En tilfældig dag langt ude i fremtiden, så testene ikke støder ind i hinanden.
+function addDaysIso(iso: string, n: number) {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 const freeDay = () => day(300 + Math.floor(Math.random() * 3000));
 
 test("en køretime får en bil, og bilen følger lektionen, når den flyttes", async ({ browser, page }) => {
@@ -58,6 +65,77 @@ test("et lokale kan ikke dobbeltbookes af kontoret", async ({ page }) => {
       await page.waitForURL(/\/kontor\/lokaler/);
     }
   }
+});
+
+test("en booking med en underviser vises i kalenderen og gør underviseren optaget", async ({ browser, page }) => {
+  const name = `E2E Taxa ${Date.now() % 100000}`;
+  const { instructorId, page: teacher } = await newTeacher(browser, name);
+  const date = freeDay();
+
+  // Kontoret booker Lokale 2 med underviseren og kommentaren "TAXA".
+  await loginOk(page, OFFICE, PASSWORD);
+  await page.goto(`/kontor/booking?ressource=${LOKALE_2}&dato=${date}`);
+  await page.getByLabel("Fra kl.").selectOption("10:00");
+  await page.getByLabel("Til kl.").selectOption("11:30");
+  await page.getByLabel("Titel (valgfri)").fill("TAXA");
+  await page.getByLabel("Underviser (valgfri)").selectOption({ label: name });
+  await page.getByRole("button", { name: "Book" }).click();
+  await page.waitForURL(/\/kontor\/lokaler/);
+
+  // I kontorets kalender står bookingen på underviserens række.
+  await page.goto(`/kontor?vis=dag&dato=${date}`);
+  await expect(page.getByTestId("day-row").filter({ hasText: name }).getByTestId("booking-block")).toContainText("TAXA");
+
+  // Underviseren kan ikke planlægges i tidsrummet.
+  await page.goto(`/kontor/planlaeg?laerer=${instructorId}&dato=${date}`);
+  await expect(page.getByRole("option", { name: "10:00 (optaget)" })).toHaveAttribute("disabled");
+  await expect(page.getByRole("option", { name: "12:00", exact: true })).not.toHaveAttribute("disabled");
+
+  // Og kan ikke bookes til noget andet samtidig.
+  await page.goto(`/kontor/booking?ressource=${PERSONBIL_1}&dato=${date}`);
+  await page.getByLabel("Fra kl.").selectOption("11:00");
+  await page.getByLabel("Til kl.").selectOption("12:00");
+  await page.getByLabel("Underviser (valgfri)").selectOption({ label: name });
+  await page.getByRole("button", { name: "Book" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "booket" })).toContainText("Læreren har booket TAXA kl. 10:00–11:30.");
+
+  // Læreren ser bookingen i appen.
+  await teacher.goto(`/laerer?dag=${date}`);
+  await expect(teacher.getByTestId("own-booking")).toContainText("10:00–11:30 · TAXA · Lokale 2");
+});
+
+test("kontoret booker et lokale flere dage ad gangen, og en konflikt booker intet", async ({ page }) => {
+  const start = freeDay();
+  const title = `E2E kursus ${Date.now() % 100000}`;
+  await loginOk(page, OFFICE, PASSWORD);
+
+  await page.goto(`/kontor/booking?ressource=${LOKALE_2}&dato=${start}`);
+  await page.getByLabel("Fra kl.").selectOption("08:00");
+  await page.getByLabel("Til kl.").selectOption("12:00");
+  await page.getByLabel("Titel (valgfri)").fill(title);
+  await page.getByLabel("Flere dage").check();
+  await page.getByLabel("Til og med").fill(addDaysIso(start, 2));
+  await page.getByLabel("Kun hverdage (man–fre)").uncheck();
+  await page.getByRole("button", { name: "Book" }).click();
+  await page.waitForURL(/\/kontor\/lokaler/);
+  const { data: made } = await localAdmin().from("bookings").select("booking_date").eq("title", title).order("booking_date");
+  expect(made?.map((b) => b.booking_date)).toEqual([start, addDaysIso(start, 1), addDaysIso(start, 2)]);
+
+  // En ny periode, der rammer dag 3, afvises, og intet bliver booket.
+  const other = `${title} B`;
+  await page.goto(`/kontor/booking?ressource=${LOKALE_2}&dato=${addDaysIso(start, -1)}`);
+  await page.getByLabel("Fra kl.").selectOption("11:00");
+  await page.getByLabel("Til kl.").selectOption("13:00");
+  await page.getByLabel("Titel (valgfri)").fill(other);
+  await page.getByLabel("Flere dage").check();
+  await page.getByLabel("Til og med").fill(addDaysIso(start, 2));
+  await page.getByLabel("Kun hverdage (man–fre)").uncheck();
+  await page.getByRole("button", { name: "Book" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Intet er booket" })).toContainText("Lokale 2 er optaget kl. 08:00–12:00.");
+  const { count } = await localAdmin().from("bookings").select("id", { count: "exact", head: true }).eq("title", other);
+  expect(count).toBe(0);
+
+  await localAdmin().from("bookings").delete().eq("title", title);
 });
 
 test("en lærer booker et lokale i appen og kan slette sin booking", async ({ browser }) => {

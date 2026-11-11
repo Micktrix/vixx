@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { nowMinutesDk, resourceNow, teacherNow } from "./now-status";
 import type { DayInfo } from "./schedule";
 
-const empty: DayInfo = { lessons: [], absences: [], holiday: null, onRequest: false, canWork: [] };
+const empty: DayInfo = { lessons: [], absences: [], bookings: [], holiday: null, onRequest: false, canWork: [] };
 const t = (h: number, m = 0) => h * 60 + m;
 
 describe("lige nu: lærere", () => {

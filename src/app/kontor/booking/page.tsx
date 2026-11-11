@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { planHref } from "../calendar/params";
 import { loadSchedule } from "../schedule-data";
 import { deleteBooking, saveBooking } from "./actions";
+import { MultiDayFields } from "./multi-day-fields";
 
 export default async function OfficeBookingPage({ searchParams }: PageProps<"/kontor/booking">) {
   const { membership } = await requireRole(["admin", "office"]);
@@ -98,6 +99,7 @@ export default async function OfficeBookingPage({ searchParams }: PageProps<"/ko
               </select>
             </label>
           </div>
+          {!booking && <MultiDayFields date={date} />}
           <TextField label="Titel (valgfri)" name="title" defaultValue={booking?.title ?? ""} maxLength={80} placeholder="Fx teoriaften eller service" />
           <label className="flex flex-col gap-1.5 text-sm font-bold">
             Underviser (valgfri)

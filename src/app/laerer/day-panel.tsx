@@ -30,6 +30,7 @@ export function DayPanel({
   const registeredLessonIds = new Set(regs.map((r) => r.scheduledLessonId));
   const open = period.lessons.filter((l) => l.date === date && !registeredLessonIds.has(l.id));
   const absences = period.absences.filter((a) => a.date === date);
+  const bookings = period.bookings.filter((b) => b.date === date);
   const holiday = period.holidays.find((h) => h.from <= date && date <= h.to);
   const canWork = period.canWork.filter((c) => c.date === date);
   const total = regs.filter((r) => r.status !== "rejected").reduce((n, r) => n + r.count, 0);
@@ -49,6 +50,14 @@ export function DayPanel({
             Fravær {formatSpan(a)} · {REASON_LABEL[a.reason]}
           </b>
           <span className="block text-[13px]">Registreret af kontoret</span>
+        </p>
+      ))}
+      {bookings.map((b) => (
+        <p key={b.id} className="rounded-xl border border-line2 bg-soft px-3.5 py-2.5 text-sm" data-testid="own-booking">
+          <b>
+            {formatSpan(b)} · {b.title ? `${b.title} · ${b.resourceName}` : b.resourceName}
+          </b>
+          <span className="block text-[13px] text-muted">Booket. Du kan ikke planlægges i tidsrummet.</span>
         </p>
       ))}
       {holiday && (

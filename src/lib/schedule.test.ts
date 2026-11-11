@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { availability, DEFAULT_PLAN, formatDuration, fromMinutes, parsePlanStarts, planBlocks, planSlotIsFree, planSpan, storedSpan, suggestPlanStart, toMinutes, toPlan, type DayInfo } from "./schedule";
 
-const empty: DayInfo = { lessons: [], absences: [], holiday: null, onRequest: false, canWork: [] };
+const empty: DayInfo = { lessons: [], absences: [], bookings: [], holiday: null, onRequest: false, canWork: [] };
 
 describe("tid", () => {
   it("regner frem og tilbage", () => {
@@ -66,6 +66,9 @@ describe("availability", () => {
     expect(availability({ ...empty, holiday: "approved" }, span).why).toBe("Ferie");
     expect(availability({ ...empty, absences: [{ from: 480, to: 960 }] }, span).why).toBe("Fravær 08:00–16:00");
     expect(availability({ ...empty, lessons: [storedSpan("10:00", 45)] }, span).why).toBe("Lektion 10:00–10:45");
+  });
+  it("lærerens egen booking (fx et møde) gør optaget", () => {
+    expect(availability({ ...empty, bookings: [storedSpan("09:30", 60)] }, span).why).toBe("Booket 09:30–10:30");
   });
   it("søgt ferie er en advarsel, ikke en blokering", () => {
     expect(availability({ ...empty, holiday: "pending" }, span)).toMatchObject({ ok: true, warn: "Har søgt ferie" });

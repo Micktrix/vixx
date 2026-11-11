@@ -33,6 +33,9 @@ export type ScheduleAbsence = Span & {
   note: string | null;
 };
 
+// Lærerens egen booking af bil eller lokale (fx et møde). Gør læreren optaget i tidsrummet.
+export type ScheduleBooking = Span & { id: string; instructorId: string; date: string; title: string; resourceName: string };
+
 export type ScheduleHoliday = { id: string; instructorId: string; from: string; to: string; status: "pending" | "approved" | "rejected" };
 
 export type Schedule = {
@@ -40,6 +43,7 @@ export type Schedule = {
   lessons: ScheduleLesson[];
   absences: ScheduleAbsence[];
   holidays: ScheduleHoliday[];
+  bookings: ScheduleBooking[];
   canWork: (Span & { instructorId: string; date: string })[];
 };
 
@@ -57,7 +61,7 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
   const supabase = await createClient();
   const today = todayDk();
 
-  const [instructors, lessons, absences, holidays, canWork] = await Promise.all([
+  const [instructors, lessons, absences, holidays, canWork, bookings] = await Promise.all([
     supabase
       .from("instructors")
       .select(
@@ -92,6 +96,15 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       .eq("school_id", schoolId)
       .gte("available_date", from)
       .lte("available_date", to),
+    supabase
+      .from("bookings")
+      .select("id, instructor_id, booking_date, start_time, minutes, title, resources(name)")
+      .eq("school_id", schoolId)
+      .not("instructor_id", "is", null)
+      .is("scheduled_lesson_id", null)
+      .gte("booking_date", from)
+      .lte("booking_date", to)
+      .order("start_time"),
   ]);
 
   return {
@@ -133,6 +146,17 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       to: h.to_date,
       status: h.status,
     })),
+    bookings: (bookings.data ?? []).map((b) => {
+      const resourceName = (b.resources as unknown as { name: string } | null)?.name ?? "";
+      return {
+        ...storedSpan(b.start_time, b.minutes),
+        id: b.id,
+        instructorId: b.instructor_id!,
+        date: b.booking_date,
+        title: b.title?.trim() || resourceName,
+        resourceName,
+      };
+    }),
     canWork: (canWork.data ?? []).map((c) => ({
       instructorId: c.instructor_id,
       date: c.available_date,
@@ -148,6 +172,7 @@ export function dayInfo(schedule: Schedule, instructor: ScheduleInstructor, date
   return {
     lessons: schedule.lessons.filter((l) => l.instructorId === instructor.id && l.date === date && l.id !== ignoreLessonId),
     absences: schedule.absences.filter((a) => a.instructorId === instructor.id && a.date === date),
+    bookings: schedule.bookings.filter((b) => b.instructorId === instructor.id && b.date === date),
     holiday: holiday?.status === "approved" ? "approved" : holiday?.status === "pending" ? "pending" : null,
     onRequest: instructor.onRequest,
     canWork: schedule.canWork.filter((c) => c.instructorId === instructor.id && c.date === date),

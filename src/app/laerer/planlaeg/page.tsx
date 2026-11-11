@@ -38,7 +38,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
   const lessonBooking = lesson ? bookings.find((b) => b.lessonId === lesson.id) : undefined;
   const back = `/laerer?dag=${date}`;
   if (period.holidays.some((h) => h.status === "approved")) redirect(back);
-  const busy = [...period.lessons.filter((l) => l.id !== lesson?.id), ...period.absences];
+  const busy = [...period.lessons.filter((l) => l.id !== lesson?.id), ...period.absences, ...period.bookings];
 
   return (
     <Screen

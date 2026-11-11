@@ -9,6 +9,7 @@ export function DayView({ schedule, date, past }: { schedule: Schedule; date: st
   const items = [
     ...schedule.lessons.filter((l) => l.date === date),
     ...schedule.absences.filter((a) => a.date === date),
+    ...schedule.bookings.filter((b) => b.date === date),
   ];
   // Tidslinjen viser 07–18 og udvides, hvis noget ligger uden for.
   const start = Math.min(7 * 60, ...items.map((i) => Math.floor(i.from / 60) * 60));
@@ -37,6 +38,7 @@ export function DayView({ schedule, date, past }: { schedule: Schedule; date: st
           const day = dayInfo(schedule, instructor, date);
           const lessons = schedule.lessons.filter((l) => l.instructorId === instructor.id && l.date === date);
           const absences = schedule.absences.filter((a) => a.instructorId === instructor.id && a.date === date);
+          const bookings = schedule.bookings.filter((b) => b.instructorId === instructor.id && b.date === date);
           const lessonCount = lessons.reduce((n, l) => n + l.count, 0);
           return (
             <div key={instructor.id} className="flex border-b border-line last:border-b-0" data-testid="day-row">
@@ -92,6 +94,22 @@ export function DayView({ schedule, date, past }: { schedule: Schedule; date: st
                     style={pos(a)}
                   >
                     <b>{REASON_LABEL[a.reason]}</b> {formatSpan(a)}
+                  </Link>
+                ))}
+                {bookings.map((b) => (
+                  <Link
+                    key={b.id}
+                    href={`/kontor/booking?id=${b.id}`}
+                    title={`${b.title} · ${b.resourceName} ${formatSpan(b)}`}
+                    className="absolute inset-y-2 overflow-hidden rounded-lg border border-line2 bg-soft px-2 py-1 text-[12px] leading-tight hover:border-ink/40"
+                    style={pos(b)}
+                    data-testid="booking-block"
+                  >
+                    <b className="block truncate">{b.title}</b>
+                    <span className="block truncate text-muted">
+                      {formatSpan(b)}
+                      {b.title !== b.resourceName ? ` · ${b.resourceName}` : ""}
+                    </span>
                   </Link>
                 ))}
                 {lessons.map((l) => (

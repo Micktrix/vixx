@@ -104,6 +104,7 @@ export const TIME_SLOTS: string[] = Array.from({ length: (22 - 5) * 4 + 1 }, (_,
 export type DayInfo = {
   lessons: Span[];
   absences: Span[];
+  bookings: Span[]; // lærerens egne bookinger af bil/lokale (ikke en lektions booking)
   holiday: "approved" | "pending" | null;
   onRequest: boolean; // "Efter aftale"
   canWork: Span[]; // "Kan arbejde" (kun for "Efter aftale")
@@ -120,6 +121,8 @@ export function availability(day: DayInfo, span: Span): Availability {
   if (absence) return { ok: false, why: `Fravær ${formatSpan(absence)}` };
   const lesson = day.lessons.find((l) => overlaps(l, span));
   if (lesson) return { ok: false, why: `Lektion ${formatSpan(lesson)}` };
+  const booking = day.bookings.find((b) => overlaps(b, span));
+  if (booking) return { ok: false, why: `Booket ${formatSpan(booking)}` };
   const warn = day.holiday === "pending" ? "Har søgt ferie" : undefined;
   if (day.onRequest) {
     const cover = day.canWork.find((c) => c.from <= span.from && span.to <= c.to);
