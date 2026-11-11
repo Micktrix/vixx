@@ -134,8 +134,10 @@ test("et køretøj kan oprettes og slettes, når det ikke er brugt", async ({ pa
   await page.goto("/kontor/koeretoejer");
   await expect(page.getByTestId("resource-row").filter({ hasText: name })).toBeVisible();
 
-  // Ubrugt: kan slettes.
+  // Ubrugt: kan slettes. Listerne er foldet sammen, til man åbner dem.
   await page.goto("/kontor/indstillinger");
+  await page.locator("summary").filter({ hasText: "Køretøjer" }).click();
+  await page.locator("summary").filter({ hasText: "Lokaler" }).click();
   page.once("dialog", (d) => d.accept());
   await page.getByTestId("resource-setting").filter({ has: page.locator(`input[value="${name}"]`) }).getByRole("button", { name: "Slet" }).click();
   await expect(page.getByTestId("resource-setting").filter({ has: page.locator(`input[value="${name}"]`) })).toHaveCount(0);

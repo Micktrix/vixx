@@ -18,14 +18,14 @@ export function AddResourceForm() {
         const target = e.target as unknown as HTMLInputElement;
         if (target.name === "kind") setKind(target.value as "room" | "vehicle");
       }}
-      className="flex flex-col gap-3 rounded-xl border border-dashed border-line2 p-3"
+      className="flex flex-col gap-3"
     >
       <div className="flex flex-wrap items-end gap-3">
         <Fieldset legend="Ny">
           <CheckChip type="radio" name="kind" value="room" label="Lokale" defaultChecked />
           <CheckChip type="radio" name="kind" value="vehicle" label="Køretøj" />
         </Fieldset>
-        <TextField label="Navn" name="name" required className="max-w-[240px] flex-1" placeholder={kind === "room" ? "Fx Lokale 3" : "Fx Personbil 2"} />
+        <TextField label="Navn" name="name" required className="min-w-[160px] flex-1" placeholder={kind === "room" ? "Fx Lokale 3" : "Fx Personbil 2"} />
       </div>
       <div>
         <button type="submit" disabled={pending} className={primaryButtonClass}>
