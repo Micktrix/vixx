@@ -80,7 +80,7 @@ test("en lærer booker et lokale i appen og kan slette sin booking", async ({ br
   await expect(teacher.getByTestId("resource-card").filter({ has: teacher.locator(`a[href*="ressource=${LOKALE_2}"]`) })).not.toContainText("Forberedelse");
 });
 
-test("storskærmen viser hvem og hvad der er optaget og ledigt lige nu, uden elevnavne", async ({ browser, page }) => {
+test("storskærmen viser dagens lektioner pr. lærer med lokale, og de ledige lokaler, uden elevnavne", async ({ browser, page }) => {
   const now = new Date();
   test.skip(now.getHours() >= 22, "Lektionen ville gå over midnat.");
   const start = `${String(now.getHours()).padStart(2, "0")}:${String(Math.floor(now.getMinutes() / 15) * 15).padStart(2, "0")}`;
@@ -103,20 +103,43 @@ test("storskærmen viser hvem og hvad der er optaget og ledigt lige nu, uden ele
   await loginOk(page, OFFICE, PASSWORD);
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/storskaerm");
-  const teacherRow = page.getByTestId("teacher-board").getByTestId("board-row").filter({ hasText: name });
-  await expect(teacherRow).toHaveAttribute("data-tone", "busy");
-  await expect(teacherRow).toContainText("Optaget til");
-  await expect(teacherRow).toContainText("B privat"); // lektionen på tidslinjen
-  await expect(page.getByTestId("teacher-board").getByTestId("board-row").filter({ hasText: free })).toHaveAttribute("data-tone", "free");
-  const roomRow = page.getByTestId("resource-board").getByTestId("board-row").filter({ hasText: room });
-  await expect(roomRow).toHaveAttribute("data-tone", "busy");
-  await expect(roomRow).toContainText(name);
-  await expect(page.getByTestId("kpis")).toContainText("Lokaler ledige nu");
+  const teacherRow = page.getByTestId("dashboard-row").filter({ hasText: name });
+  await expect(teacherRow).toContainText("B privat");
+  // En lærer uden noget i dag har ingen række.
+  await expect(page.getByTestId("dashboard-row").filter({ hasText: free })).toHaveCount(0);
+  // Lokalet er booket af læreren: det står på lærerens række og ikke blandt de ledige.
+  await expect(teacherRow).toContainText(`Teori · ${room}`);
+  await expect(page.getByTestId("free-rooms")).not.toContainText(room);
+  await expect(page.getByTestId("free-rooms")).toContainText("Lokale 2");
+  await expect(page.getByTestId("kpis")).toContainText("lektioner i dag");
   // Alt kan ses på én skærm: siden ruller ikke.
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
   await expect(page.locator("body")).not.toContainText("Hemmelig Elevsen");
 
   // Ryd op, så testlokaler ikke hober sig op (bookingen slettes først; ellers må lokalet ikke slettes).
+  await localAdmin().from("bookings").delete().eq("resource_id", resource!.id);
+  await localAdmin().from("resources").delete().eq("id", resource!.id);
+});
+
+test("på storskærmen står et booket møde med note og lokale på lærerens række", async ({ browser, page }) => {
+  const now = new Date();
+  test.skip(now.getHours() >= 23, "Bookingen ville gå over midnat.");
+  const start = `${String(now.getHours()).padStart(2, "0")}:${String(Math.floor(now.getMinutes() / 15) * 15).padStart(2, "0")}`;
+  const name = `E2E Møde ${Date.now() % 100000}`;
+  const note = `Møde ${Date.now() % 100000}`;
+  const { instructorId } = await newTeacher(browser, name);
+  const room = `E2E Konference ${Date.now() % 100000}`;
+  const { data: resource } = await localAdmin().from("resources").insert({ school_id: SCHOOL, kind: "room", name: room }).select("id").single();
+  await localAdmin().from("bookings").insert({
+    school_id: SCHOOL, resource_id: resource!.id, booking_date: day(0), start_time: start, minutes: 60, title: note, instructor_id: instructorId,
+  });
+
+  await loginOk(page, OFFICE, PASSWORD);
+  await page.goto("/storskaerm");
+  const teacherRow = page.getByTestId("dashboard-row").filter({ hasText: name });
+  await expect(teacherRow).toContainText(`${note} · ${room}`);
+  await expect(page.getByTestId("free-rooms")).not.toContainText(room);
+
   await localAdmin().from("bookings").delete().eq("resource_id", resource!.id);
   await localAdmin().from("resources").delete().eq("id", resource!.id);
 });
