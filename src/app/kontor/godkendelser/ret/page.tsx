@@ -31,9 +31,10 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
   const [{ data: services }, { data: others }, { data: school }] = await Promise.all([
     supabase
       .from("services")
-      .select("id, name")
+      .select("id, name, break_after")
       .eq("school_id", membership.schoolId)
       .eq("active", true)
+      .order("sort_order")
       .order("name"),
     supabase
       .from("registrations")
@@ -71,7 +72,7 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
         <TeacherLessonForm
           action={officeSaveRegistration}
           submitLabel={approved ? "Gem" : "Gem og godkend"}
-          services={services ?? []}
+          services={(services ?? []).map((s) => ({ id: s.id, name: s.name, breakAfter: s.break_after }))}
           plan={plan}
           busy={(others ?? []).map((o) => storedSpan(o.start_time, o.span_minutes))}
           hiddenFields={{ id: reg.id }}

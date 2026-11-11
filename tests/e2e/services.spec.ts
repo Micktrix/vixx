@@ -80,3 +80,37 @@ test("kontoret ser ydelser og satser, men kan ikke rette", async ({ page }) => {
   await page.goto("/kontor/ydelser/ny");
   await expect(page).toHaveURL("/kontor");
 });
+
+test("admin bestemmer ydelsernes rækkefølge og klynger, og dropdown følger med", async ({ page }) => {
+  await loginOk(page, ADMIN, PASSWORD);
+  await page.goto("/kontor/ydelser");
+  const rows = page.getByTestId("service-row");
+  const names = async () => (await rows.locator("td:nth-child(2)").allTextContents()).map((t) => t.trim());
+
+  // Flyt den anden ydelse op øverst.
+  const second = (await names())[1];
+  await rows.nth(1).getByRole("button", { name: "Flyt op" }).click();
+  await expect.poll(async () => (await names())[0]).toBe(second);
+
+  // Streg efter den øverste: dropdown får en skillelinje lige efter den.
+  await rows.first().getByRole("button", { name: "Streg efter" }).click();
+  await expect(rows.first().getByRole("button", { name: "Fjern streg" })).toBeVisible();
+  await page.goto("/kontor/planlaeg");
+  const options = (await page.getByLabel("Ydelse").locator("option").allTextContents()).map((t) => t.trim());
+  expect(options[1]).toBe(second);
+  expect(options[2]).toContain("────");
+
+  // Ryd op: fjern stregen og flyt tilbage.
+  await page.goto("/kontor/ydelser");
+  await rows.first().getByRole("button", { name: "Fjern streg" }).click();
+  await expect(rows.first().getByRole("button", { name: "Streg efter" })).toBeVisible();
+  await rows.first().getByRole("button", { name: "Flyt ned" }).click();
+  await expect.poll(async () => (await names())[1]).toBe(second);
+});
+
+test("kontoret og lærerne kan ikke ændre rækkefølgen", async ({ page }) => {
+  await loginOk(page, OFFICE, PASSWORD);
+  await page.goto("/kontor/ydelser");
+  await expect(page.getByRole("button", { name: "Flyt op" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Streg efter" })).toHaveCount(0);
+});

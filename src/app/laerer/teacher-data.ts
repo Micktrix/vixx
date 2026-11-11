@@ -176,11 +176,13 @@ export async function allowedServices(teacher: Teacher) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("services")
-    .select("id, name")
+    .select("id, name, break_after")
     .eq("school_id", teacher.membership.schoolId)
     .eq("active", true)
+    .order("sort_order")
     .order("name");
-  return data ?? [];
+  // Skolens rækkefølge, med streg efter de ydelser, der afslutter en klynge.
+  return (data ?? []).map((s) => ({ id: s.id, name: s.name, breakAfter: s.break_after }));
 }
 
 export type AllowedService = Awaited<ReturnType<typeof allowedServices>>[number];

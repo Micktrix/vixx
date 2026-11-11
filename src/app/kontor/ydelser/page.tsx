@@ -6,6 +6,7 @@ import { formatDate, todayDk } from "@/lib/dates";
 import { formatKroner } from "@/lib/money";
 import { nextPriceAfter, priceOn, type PriceRow } from "@/lib/prices";
 import { createClient } from "@/lib/supabase/server";
+import { moveService, toggleBreak } from "./actions";
 import type { ServiceUsage } from "@/lib/prices";
 
 const th = "px-3 py-2.5 font-semibold first:pl-[18px] last:pr-[18px]";
@@ -19,7 +20,12 @@ export default async function ServicesPage() {
   const today = todayDk();
 
   const [{ data: services }, { data: prices }, { data: usageData }] = await Promise.all([
-    supabase.from("services").select("id, name, payroll_code, active").eq("school_id", schoolId).order("name"),
+    supabase
+      .from("services")
+      .select("id, name, payroll_code, active, break_after")
+      .eq("school_id", schoolId)
+      .order("sort_order")
+      .order("name"),
     supabase.from("service_prices").select("service_id, valid_from, amount_ore").eq("school_id", schoolId),
     supabase.rpc("service_usage", { p_school: schoolId }),
   ]);
@@ -55,6 +61,7 @@ export default async function ServicesPage() {
         <table className="w-full min-w-[680px] text-left text-[15px]">
           <thead className="text-[13px] text-muted">
             <tr>
+              {isAdmin && <th className={`${th} w-[1%]`}>Rækkefølge</th>}
               <th className={th}>Ydelse</th>
               <th className={`${th} text-right`}>Sats pr. lektion</th>
               <th className={th}>Løndel</th>
@@ -63,14 +70,40 @@ export default async function ServicesPage() {
             </tr>
           </thead>
           <tbody>
-            {(services ?? []).map((s) => {
+            {(services ?? []).map((s, i, all) => {
               const ps = pricesBy.get(s.id) ?? [];
               const current = priceOn(ps, today);
               const upcoming = nextPriceAfter(ps, today);
               // Har ydelsen kun en kommende pris, er den også "nu" (første pris gælder bagud).
               const next = upcoming && upcoming.valid_from !== current?.valid_from ? upcoming : null;
               return (
-                <tr key={s.id} className={`border-t border-line ${s.active ? "" : "text-muted"}`}>
+                <tr
+                  key={s.id}
+                  className={`${i > 0 && all[i - 1].break_after ? "border-t-4 border-line2" : "border-t border-line"} ${s.active ? "" : "text-muted"}`}
+                  data-testid="service-row"
+                >
+                  {isAdmin && (
+                    <td className={`${td} whitespace-nowrap`}>
+                      <span className="flex items-center gap-1">
+                        <MoveButton id={s.id} dir="up" disabled={i === 0} />
+                        <MoveButton id={s.id} dir="down" disabled={i === all.length - 1} />
+                        {i < all.length - 1 && (
+                          <form action={toggleBreak}>
+                            <input type="hidden" name="id" value={s.id} />
+                            <input type="hidden" name="breakAfter" value={String(s.break_after)} />
+                            <button
+                              type="submit"
+                              className={`ml-1 rounded-lg border px-2 py-1 text-[12px] font-semibold ${
+                                s.break_after ? "border-line2 bg-soft text-ink" : "border-line text-muted hover:text-ink"
+                              }`}
+                            >
+                              {s.break_after ? "Fjern streg" : "Streg efter"}
+                            </button>
+                          </form>
+                        )}
+                      </span>
+                    </td>
+                  )}
                   <td className={td}>
                     {isAdmin ? (
                       <Link
@@ -97,7 +130,7 @@ export default async function ServicesPage() {
                 </tr>
               );
             })}
-            {!services?.length && <EmptyRow cols={5} text="Ingen ydelser endnu. Opret den første med + Ny ydelse." />}
+            {!services?.length && <EmptyRow cols={isAdmin ? 6 : 5} text="Ingen ydelser endnu. Opret den første med + Ny ydelse." />}
           </tbody>
         </table>
       </section>
@@ -108,10 +141,29 @@ export default async function ServicesPage() {
           En ændring af satsen gælder fra en dato: lektioner før datoen beholder den gamle sats, og godkendte lektioner
           beholder altid den sats, de blev godkendt med. En lærer kan have sin egen sats på en ydelse; den sættes på
           lærerens side under Undervisere. En ydelse, der er brugt, kan kun slås fra, ikke slettes.
+          Rækkefølgen her er den samme som i dropdown, når man planlægger og registrerer. Med ↑ ↓ flyttes de mest brugte op,
+          og &quot;Streg efter&quot; deler listen i klynger.
           {isAdmin ? "" : " Kun admin kan rette ydelser og satser."}
         </p>
       </Box>
     </>
+  );
+}
+
+function MoveButton({ id, dir, disabled }: { id: string; dir: "up" | "down"; disabled: boolean }) {
+  return (
+    <form action={moveService}>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="dir" value={dir} />
+      <button
+        type="submit"
+        disabled={disabled}
+        aria-label={dir === "up" ? "Flyt op" : "Flyt ned"}
+        className="size-8 rounded-lg border border-line text-[15px] font-bold text-muted hover:text-ink disabled:opacity-30"
+      >
+        {dir === "up" ? "↑" : "↓"}
+      </button>
+    </form>
   );
 }
 

@@ -34,9 +34,10 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
     loadSchedule(membership.schoolId, date, date),
     supabase
       .from("services")
-      .select("id, name")
+      .select("id, name, break_after")
       .eq("school_id", membership.schoolId)
       .eq("active", true)
+      .order("sort_order")
       .order("name"),
     supabase.from("schools").select("lesson_minutes, lesson_starts").eq("id", membership.schoolId).single(),
     loadResources(membership.schoolId),
@@ -46,7 +47,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
 
   const instructorId = lesson?.instructor_id ?? one("laerer") ?? "";
   const instructor = schedule.instructors.find((i) => i.id === instructorId);
-  const formServices: FormService[] = services ?? [];
+  const formServices: FormService[] = (services ?? []).map((s) => ({ id: s.id, name: s.name, breakAfter: s.break_after }));
 
   // Planens starttider. En ældre lektion uden for planen kan beholde sin starttid.
   const plan = toPlan(school?.lesson_starts, lesson?.lesson_minutes ?? school?.lesson_minutes ?? 45);

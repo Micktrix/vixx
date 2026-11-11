@@ -2,13 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { ResultBox, TextField, useFormAction } from "@/components/form";
+import { ServiceOptions, type ServiceOption } from "@/components/service-options";
 import { inputClass, primaryButtonClass } from "@/components/styles";
 import type { ResourceInfo } from "@/lib/resources";
 import { availability, formatDuration, fromMinutes, overlaps, planSlotIsFree, planSpan, suggestPlanStart, type DayInfo, type LessonPlan, type Span } from "@/lib/schedule";
 import { getDay, getResourceBusy, saveLesson } from "./actions";
 
 export type FormInstructor = { id: string; name: string; onRequest: boolean };
-export type FormService = { id: string; name: string };
+export type FormService = ServiceOption;
 export type FormResource = ResourceInfo;
 
 type Initial = {
@@ -174,11 +175,7 @@ export function LessonForm({
           <option value="" disabled>
             Vælg ydelse
           </option>
-          {services.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
+          <ServiceOptions services={services} />
         </select>
       </label>
 

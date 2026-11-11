@@ -2,12 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import { ResultBox, TextField, useFormAction } from "@/components/form";
+import { ServiceOptions, type ServiceOption } from "@/components/service-options";
 import { inputClass } from "@/components/styles";
 import type { FormAction } from "@/lib/action-state";
 import type { ResourceInfo } from "@/lib/resources";
 import { fromMinutes, overlaps, planSlotIsFree, planSpan, suggestPlanStart, type LessonPlan, type Span } from "@/lib/schedule";
 
-type Service = { id: string; name: string };
+type Service = ServiceOption;
 type Resource = ResourceInfo;
 
 // Formular til at registrere en kørt lektion eller planlægge en lektion frem i tiden.
@@ -68,11 +69,7 @@ export function TeacherLessonForm({
           <option value="" disabled>
             {services.length ? "Vælg ydelse" : "Der er ingen ydelser endnu"}
           </option>
-          {services.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
+          <ServiceOptions services={services} />
         </select>
       </label>
 
