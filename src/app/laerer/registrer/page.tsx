@@ -20,7 +20,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
   const { data: reg } = id
     ? await supabase
         .from("registrations")
-        .select("id, lesson_date, start_time, lesson_count, service_id, category_code, status, student_name, note, decision_comment")
+        .select("id, lesson_date, start_time, lesson_count, service_id, status, student_name, note, decision_comment")
         .eq("id", id)
         .maybeSingle()
     : { data: null };
@@ -68,7 +68,6 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
           hiddenFields={{ date, ...(reg ? { id: reg.id } : {}) }}
           initial={{
             serviceId: reg?.service_id,
-            category: reg?.category_code,
             count: reg?.lesson_count,
             start: reg?.start_time.slice(0, 5) ?? "08:00",
             studentName: reg?.student_name ?? undefined,

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/session";
 import { KIND_LABEL, loadBookings, loadResources, type Booking, type ResourceKind } from "@/lib/booking-data";
-import { resourceDetail } from "@/lib/resources";
 import { addDays, formatLongDate, formatShortDay, isWeekend, parseDateInput, todayDk, weekNumber, weekStart } from "@/lib/dates";
 import { formatDuration, formatSpan, fromMinutes } from "@/lib/schedule";
 
@@ -103,7 +102,6 @@ export async function ResourceCalendar({ kind, searchParams }: { kind: ResourceK
                   <div className="flex w-[190px] shrink-0 flex-col px-[18px] py-2.5">
                     <b>{r.name}</b>
                     <span className="text-[12px] text-muted">
-                      {resourceDetail(r) ? `${resourceDetail(r)} · ` : ""}
                       {used ? `Booket ${formatDuration(used)}` : "Ledigt hele dagen"}
                     </span>
                   </div>

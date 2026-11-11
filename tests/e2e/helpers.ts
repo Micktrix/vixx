@@ -33,7 +33,6 @@ export const newPhone = () => `3${Math.floor(1_000_000 + Math.random() * 8_999_9
 type CreateOptions = {
   roles?: ("Admin" | "Kontor" | "Lærer")[];
   guestUntil?: string;
-  categories?: string[];
 };
 
 // Opretter en person via "Opret bruger". Lærer er valgt på forhånd.
@@ -53,9 +52,6 @@ export async function createMember(page: Page, name: string, options: CreateOpti
     await page.getByLabel("Gæstelærer").check();
     await page.getByLabel("Aktiv til").fill(options.guestUntil);
   }
-  for (const code of options.categories ?? []) {
-    await page.getByRole("checkbox", { name: code, exact: true }).locator("..").click();
-  }
 
   await page.getByRole("button", { name: "Opret og lav midlertidig kode" }).click();
   const temp = (await page.getByTestId("temp-password").textContent())!.trim();
@@ -71,11 +67,11 @@ export async function chooseOwnPassword(page: Page, password: string) {
   await page.waitForURL((url) => url.pathname !== "/ny-kode");
 }
 
-// En ny lærer (kategori B, alle typer), logget ind på sin egen side. Returnerer også lærerkortets id.
+// En ny lærer, logget ind på sin egen side. Returnerer også lærerkortets id.
 export async function newTeacher(browser: Browser, name: string) {
   const office = await browser.newPage();
   await loginOk(office, OFFICE, PASSWORD);
-  const { phone, temp } = await createMember(office, name, { categories: ["B"] });
+  const { phone, temp } = await createMember(office, name);
   await office.close();
 
   const { data } = await localAdmin()

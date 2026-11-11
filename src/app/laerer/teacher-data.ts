@@ -4,14 +4,14 @@ import { requireRole } from "@/lib/auth/session";
 import { absenceSpan, lessonSpan, toMinutes, type Span } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 
-// Den indloggede lærer på den aktive skole, med kompetencer og skolens indstillinger.
+// Den indloggede lærer på den aktive skole, med skolens indstillinger.
 export async function getTeacher() {
   const { user, membership } = await requireRole(["instructor"]);
   const supabase = await createClient();
   const [{ data: instructor }, { data: school }] = await Promise.all([
     supabase
       .from("instructors")
-      .select("id, availability, instructor_categories(category_code), instructor_lesson_types(lesson_type_id)")
+      .select("id, availability")
       .eq("school_id", membership.schoolId)
       .eq("user_id", user.id)
       .single(),
@@ -23,8 +23,6 @@ export async function getTeacher() {
     membership,
     instructorId: instructor.id,
     onRequest: instructor.availability === "on_request",
-    categories: instructor.instructor_categories.map((c) => c.category_code),
-    lessonTypeIds: instructor.instructor_lesson_types.map((t) => t.lesson_type_id),
     lessonMinutes: school.lesson_minutes,
     periodStartDay: school.pay_period_start_day,
   };
@@ -42,7 +40,6 @@ export type TeacherRegistration = Span & {
   count: number;
   serviceId: string;
   serviceName: string;
-  category: string;
   status: Status;
   comment: string | null;
   note: string | null;
@@ -58,7 +55,6 @@ export type TeacherLesson = Span & {
   start: string;
   count: number;
   serviceName: string;
-  category: string;
   studentName: string | null;
   note: string | null;
   origin: "office" | "instructor";
@@ -72,7 +68,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
     supabase
       .from("registrations")
       .select(
-        "id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, category_code, status, decision_comment, note, student_name, scheduled_lesson_id, office_edited_at, unit_price_ore, services(name)",
+        "id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, status, decision_comment, note, student_name, scheduled_lesson_id, office_edited_at, unit_price_ore, services(name)",
       )
       .eq("instructor_id", id)
       .gte("lesson_date", from)
@@ -80,7 +76,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
       .order("start_time"),
     supabase
       .from("scheduled_lessons")
-      .select("id, lesson_date, start_time, lesson_count, lesson_minutes, category_code, student_name, note, origin, services(name)")
+      .select("id, lesson_date, start_time, lesson_count, lesson_minutes, student_name, note, origin, services(name)")
       .eq("instructor_id", id)
       .gte("lesson_date", from)
       .lte("lesson_date", to)
@@ -125,7 +121,6 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
         count: r.lesson_count,
         serviceId: r.service_id,
         serviceName: name(r.services),
-        category: r.category_code,
         status: r.status,
         comment: r.decision_comment,
         note: r.note,
@@ -143,7 +138,6 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
         start: l.start_time.slice(0, 5),
         count: l.lesson_count,
         serviceName: name(l.services),
-        category: l.category_code,
         studentName: l.student_name,
         note: l.note,
         origin: l.origin,
@@ -176,32 +170,16 @@ export type TeacherPeriod = Awaited<ReturnType<typeof loadTeacherPeriod>>;
 
 export const isLocked = (period: TeacherPeriod, date: string) => period.locked.some((p) => p.from <= date && date <= p.to);
 
-// Ydelser, læreren kan vælge: aktive, i en aktiv sats, typen og mindst én af ydelsens kategorier.
+// Ydelser, læreren kan vælge: alle aktive.
 export async function allowedServices(teacher: Teacher) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("services")
-    .select("id, name, lesson_type_id, rate_groups(name, active), service_categories(category_code)")
+    .select("id, name")
     .eq("school_id", teacher.membership.schoolId)
     .eq("active", true)
     .order("name");
-  type Row = {
-    id: string;
-    name: string;
-    lesson_type_id: string;
-    rate_groups: { name: string; active: boolean } | null;
-    service_categories: { category_code: string }[];
-  };
-  return ((data ?? []) as unknown as Row[])
-    .filter((s) => s.rate_groups?.active && teacher.lessonTypeIds.includes(s.lesson_type_id))
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      lessonTypeId: s.lesson_type_id,
-      groupName: s.rate_groups?.name ?? "",
-      categories: s.service_categories.map((c) => c.category_code).filter((c) => teacher.categories.includes(c)),
-    }))
-    .filter((s) => s.categories.length > 0);
+  return data ?? [];
 }
 
 export type AllowedService = Awaited<ReturnType<typeof allowedServices>>[number];

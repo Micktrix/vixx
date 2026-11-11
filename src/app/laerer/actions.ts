@@ -25,7 +25,7 @@ export async function markDone(_prev: ActionState, formData: FormData): Promise<
   const supabase = await createClient();
   const { data: lesson } = await supabase
     .from("scheduled_lessons")
-    .select("id, school_id, instructor_id, service_id, category_code, lesson_date, start_time, lesson_count, lesson_minutes, student_name")
+    .select("id, school_id, instructor_id, service_id, lesson_date, start_time, lesson_count, lesson_minutes, student_name")
     .eq("id", String(formData.get("lessonId") ?? ""))
     .maybeSingle();
   if (!lesson) return { error: "Lektionen findes ikke længere." };
@@ -34,7 +34,6 @@ export async function markDone(_prev: ActionState, formData: FormData): Promise<
     school_id: lesson.school_id,
     instructor_id: lesson.instructor_id,
     service_id: lesson.service_id,
-    category_code: lesson.category_code,
     scheduled_lesson_id: lesson.id,
     lesson_date: lesson.lesson_date,
     start_time: lesson.start_time,

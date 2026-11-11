@@ -5,18 +5,12 @@ import { CheckChip, Fieldset, ResultBox, TextField, useFormAction } from "@/comp
 import { primaryButtonClass } from "@/components/styles";
 import { createMember } from "./actions";
 
-type Option = { value: string; label: string };
-
 export function CreateMemberForm({
   canGrantOffice,
   guest: initialGuest,
-  categories,
-  lessonTypes,
 }: {
   canGrantOffice: boolean;
   guest: boolean;
-  categories: Option[];
-  lessonTypes: Option[];
 }) {
   const { state, onSubmit, pending } = useFormAction(createMember);
   const [teaches, setTeaches] = useState(true);
@@ -90,18 +84,6 @@ export function CreateMemberForm({
               />
             </div>
           )}
-
-          <Fieldset legend="Kategorier">
-            {categories.map((c) => (
-              <CheckChip key={c.value} name="categories" value={c.value} label={c.label} />
-            ))}
-          </Fieldset>
-
-          <Fieldset legend="Typer" hint="Bruges, når kontoret søger efter en ledig underviser.">
-            {lessonTypes.map((t) => (
-              <CheckChip key={t.value} name="lessonTypes" value={t.value} label={t.label} defaultChecked />
-            ))}
-          </Fieldset>
         </>
       )}
 

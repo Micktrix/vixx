@@ -17,7 +17,6 @@ async function approved(instructorId: string, serviceId: string, start: string, 
     school_id: SCHOOL,
     instructor_id: instructorId,
     service_id: serviceId,
-    category_code: serviceId === AMU_C ? "C" : "B",
     lesson_date: today(),
     start_time: start,
     lesson_count: count,
@@ -33,7 +32,6 @@ test("lønoverblik og Dataløn-eksport stemmer med en manuel beregning", async (
   const { instructorId } = await newTeacher(browser, name);
   const number = String(Date.now() % 100000);
   await localAdmin().from("instructors").update({ employee_number: number }).eq("id", instructorId);
-  await localAdmin().from("instructor_categories").insert({ school_id: SCHOOL, instructor_id: instructorId, category_code: "C" });
 
   // Manuelt: Amu C 3 × 270 = 810 kr. + B privat 2 × 220 = 440 kr. = 1.250 kr. Afventende tæller ikke.
   await approved(instructorId, AMU_C, "08:00", 3, 27000);

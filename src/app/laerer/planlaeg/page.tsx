@@ -19,7 +19,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
   const { data: lesson } = id
     ? await supabase
         .from("scheduled_lessons")
-        .select("id, lesson_date, start_time, lesson_count, service_id, category_code, student_name, note")
+        .select("id, lesson_date, start_time, lesson_count, service_id, student_name, note")
         .eq("id", id)
         .eq("origin", "instructor")
         .maybeSingle()
@@ -35,10 +35,6 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
     loadResources(teacher.membership.schoolId),
     loadBookings(teacher.membership.schoolId, date, date),
   ]);
-  // Køretøjer i lærerens kategorier (eller uden kategori); alle lokaler.
-  const myResources = resources.filter(
-    (r) => r.kind === "room" || !r.categories.length || r.categories.some((c) => teacher.categories.includes(c)),
-  );
   const lessonBooking = lesson ? bookings.find((b) => b.lessonId === lesson.id) : undefined;
   const back = `/laerer?dag=${date}`;
   if (period.holidays.some((h) => h.status === "approved")) redirect(back);
@@ -66,11 +62,10 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
           lessonMinutes={teacher.lessonMinutes}
           busy={busy}
           hiddenFields={{ date, ...(lesson ? { id: lesson.id } : {}) }}
-          resources={myResources}
+          resources={resources}
           resourceBusy={busyByResource(bookings, lesson?.id)}
           initial={{
             serviceId: lesson?.service_id,
-            category: lesson?.category_code,
             count: lesson?.lesson_count,
             start: lesson?.start_time.slice(0, 5),
             studentName: lesson?.student_name ?? undefined,

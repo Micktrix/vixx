@@ -1,5 +1,5 @@
 import { Box } from "@/components/box";
-import { ActionForm, CheckChip, Fieldset, TextField } from "@/components/form";
+import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { todayDk } from "@/lib/dates";
 import { CONTACT_FIELDS, EMPLOYMENT_FIELDS, KIN_FIELDS, type FieldDef } from "@/lib/instructor-fields";
@@ -8,7 +8,6 @@ import { priceOn } from "@/lib/prices";
 import { createClient } from "@/lib/supabase/server";
 import {
   setAvailability,
-  updateCompetences,
   updateInstructorDetails,
   updateInstructorPrices,
 } from "../instructor-actions";
@@ -21,7 +20,7 @@ type Instructor = Record<string, string | boolean | null> & {
   availability: "fixed" | "on_request";
 };
 
-// Lærerens stamdata, kompetencer, tilgængelighed og egne priser.
+// Lærerens stamdata, tilgængelighed og egne satser.
 export async function InstructorSections({
   instructorId,
   schoolId,
@@ -34,21 +33,10 @@ export async function InstructorSections({
   roleOff: boolean;
 }) {
   const supabase = await createClient();
-  const [{ data: instructor }, { data: categories }, { data: lessonTypes }, { data: myCats }, { data: myTypes }] =
-    await Promise.all([
-      supabase.from("instructors").select("*").eq("id", instructorId).single(),
-      supabase.from("license_categories").select("code, name").order("sort_order"),
-      supabase.from("lesson_types").select("id, name, active").eq("school_id", schoolId).order("sort_order"),
-      supabase.from("instructor_categories").select("category_code").eq("instructor_id", instructorId),
-      supabase.from("instructor_lesson_types").select("lesson_type_id").eq("instructor_id", instructorId),
-    ]);
+  const { data: instructor } = await supabase.from("instructors").select("*").eq("id", instructorId).single();
   if (!instructor) return null;
 
   const i = instructor as unknown as Instructor;
-  const catSet = new Set((myCats ?? []).map((c) => c.category_code));
-  const typeSet = new Set((myTypes ?? []).map((t) => t.lesson_type_id));
-  // Typer, der er slået fra, vises kun, hvis læreren stadig har dem.
-  const shownTypes = (lessonTypes ?? []).filter((t) => t.active || typeSet.has(t.id));
 
   return (
     <>
@@ -85,29 +73,6 @@ export async function InstructorSections({
         </ActionForm>
       </Box>
 
-      <div className="grid gap-[18px] lg:grid-cols-2">
-        <Box title="Kompetencer" hint="Bruges ved planlægning og registrering">
-          <ActionForm action={updateCompetences} submitLabel="Gem kompetencer" className="flex flex-col gap-4">
-            <input type="hidden" name="instructorId" value={i.id} />
-            <Fieldset legend="Kategorier">
-              {(categories ?? []).map((c) => (
-                <CheckChip key={c.code} name="categories" value={c.code} label={c.code} defaultChecked={catSet.has(c.code)} />
-              ))}
-            </Fieldset>
-            <Fieldset legend="Typer">
-              {shownTypes.map((t) => (
-                <CheckChip
-                  key={t.id}
-                  name="lessonTypes"
-                  value={t.id}
-                  label={t.active ? t.name : `${t.name} (slået fra)`}
-                  defaultChecked={typeSet.has(t.id)}
-                />
-              ))}
-            </Fieldset>
-          </ActionForm>
-        </Box>
-
         <Box title="Tilgængelighed">
           <ActionForm action={setAvailability} submitLabel="Gem" className="flex flex-col gap-3">
             <input type="hidden" name="instructorId" value={i.id} />
@@ -141,9 +106,8 @@ export async function InstructorSections({
             </label>
           </ActionForm>
         </Box>
-      </div>
 
-      {isAdmin && <PriceBox instructorId={i.id} schoolId={schoolId} categories={catSet} types={typeSet} />}
+      {isAdmin && <PriceBox instructorId={i.id} schoolId={schoolId} />}
     </>
   );
 }
@@ -168,25 +132,20 @@ function FieldGroup({ legend, fields, values }: { legend: string; fields: FieldD
   );
 }
 
-// Kun admin ser og retter priser. Viser de ydelser, læreren kan undervise i (typen og mindst én af
-// ydelsens kategorier), plus dem med egen pris.
+// Kun admin ser og retter satser. Viser ydelser i brug, plus dem med egen sats.
 async function PriceBox({
   instructorId,
   schoolId,
-  categories,
-  types,
 }: {
   instructorId: string;
   schoolId: string;
-  categories: Set<string>;
-  types: Set<string>;
 }) {
   const supabase = await createClient();
   const today = todayDk();
   const [{ data: services }, { data: prices }, { data: own }] = await Promise.all([
     supabase
       .from("services")
-      .select("id, name, lesson_type_id, active, rate_groups(name), service_categories(category_code)")
+      .select("id, name, active")
       .eq("school_id", schoolId)
       .order("name"),
     supabase.from("service_prices").select("service_id, valid_from, amount_ore").eq("school_id", schoolId),
@@ -204,22 +163,16 @@ async function PriceBox({
     }),
   );
 
-  const rows = (services ?? []).filter(
-    (s) =>
-      (s.active &&
-        types.has(s.lesson_type_id) &&
-        (s.service_categories as { category_code: string }[]).some((c) => categories.has(c.category_code))) ||
-      ownPrice.has(s.id),
-  );
+  const rows = (services ?? []).filter((s) => s.active || ownPrice.has(s.id));
 
   return (
-    <Box title="Priser pr. ydelse" hint="Tom = standardprisen. Skriv et beløb for en egen pris.">
+    <Box title="Satser pr. ydelse" hint="Tom = ydelsens sats. Skriv et beløb for en egen sats.">
       {rows.length === 0 ? (
         <p className="text-muted">
-          Ingen ydelser passer til lærerens kompetencer endnu. Ydelser oprettes under Ydelser og satser.
+          Ingen ydelser endnu. Ydelser oprettes under Ydelser og satser.
         </p>
       ) : (
-        <ActionForm action={updateInstructorPrices} submitLabel="Gem priser">
+        <ActionForm action={updateInstructorPrices} submitLabel="Gem satser">
           <input type="hidden" name="instructorId" value={instructorId} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-left text-[15px]">
@@ -227,7 +180,7 @@ async function PriceBox({
                 <tr>
                   <th className="py-2 pr-3 font-semibold">Ydelse</th>
                   <th className="py-2 pr-3 text-right font-semibold">Standard</th>
-                  <th className="py-2 text-right font-semibold">Egen pris (kr.)</th>
+                  <th className="py-2 text-right font-semibold">Egen sats (kr.)</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,16 +191,13 @@ async function PriceBox({
                     <tr key={s.id} className="border-t border-line">
                       <td className="py-2.5 pr-3">
                         <b>{s.name}</b>
-                        <span className="block text-[13px] text-muted">
-                          {(s.rate_groups as unknown as { name: string } | null)?.name}
-                          {!s.active && " · slået fra"}
-                        </span>
+                        {!s.active && <span className="block text-[13px] text-muted">Slået fra</span>}
                       </td>
                       <td className="py-2.5 pr-3 text-right whitespace-nowrap">{std ? formatKroner(std.ore) : "–"}</td>
                       <td className="py-2.5 text-right">
                         <input
                           name={`price_${s.id}`}
-                          aria-label={`Egen pris for ${s.name}`}
+                          aria-label={`Egen sats for ${s.name}`}
                           inputMode="decimal"
                           placeholder="–"
                           defaultValue={mine != null ? String(mine / 100).replace(".", ",") : ""}

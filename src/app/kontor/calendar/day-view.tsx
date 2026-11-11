@@ -98,7 +98,7 @@ export function DayView({ schedule, date, past }: { schedule: Schedule; date: st
                   <Link
                     key={l.id}
                     href={planHref({ lesson: l.id })}
-                    title={`${formatSpan(l)} ${l.serviceName} (${l.category}) · ${l.count} lek.${l.studentName ? ` · ${l.studentName}` : ""}`}
+                    title={`${formatSpan(l)} ${l.serviceName} · ${l.count} lek.${l.studentName ? ` · ${l.studentName}` : ""}`}
                     className="absolute inset-y-2 overflow-hidden rounded-lg border border-accent-line bg-accent-bg px-2 py-1 text-[12px] leading-tight hover:border-accent"
                     style={pos(l)}
                     data-testid="lesson-block"

@@ -37,22 +37,6 @@ test("kontoret planlægger, og optagede tider kan ikke vælges", async ({ page }
   await expect(page.getByLabel("Start")).toHaveValue("09:30");
 });
 
-test("en ydelse med flere kategorier kræver valg af kategori", async ({ page }) => {
-  await loginOk(page, OFFICE, PASSWORD);
-  const date = freeDay();
-  await page.goto(`/kontor/planlaeg?laerer=${LARS}&dato=${date}`);
-  await page.getByLabel("Ydelse").selectOption({ label: "Aften Amu C/E" });
-  await expect(page.getByRole("radio", { name: "C", exact: true })).toBeVisible();
-  await page.getByRole("radio", { name: "CE", exact: true }).locator("..").click();
-  await page.getByRole("button", { name: "Planlæg lektion" }).click();
-  await page.waitForURL(/\/kontor\?vis=dag/);
-
-  // Ret lektionen: kategorien er gemt.
-  await page.getByTestId("day-row").filter({ hasText: "Lars Jensen" }).getByTestId("lesson-block").click();
-  await expect(page.getByRole("heading", { name: "Ret lektion" })).toBeVisible();
-  await expect(page.getByRole("radio", { name: "CE", exact: true })).toBeChecked();
-});
-
 test("fravær kan ikke ligge oven i en lektion", async ({ page }) => {
   await loginOk(page, OFFICE, PASSWORD);
   const date = freeDay();
@@ -80,17 +64,14 @@ test("find ledig underviser viser optagede med årsag", async ({ page }) => {
   await page.goto(`/kontor/find?dato=${date}`);
   await page.getByLabel("Start").selectOption("09:00");
   await page.getByLabel("Antal").selectOption("2");
-  await page.getByLabel("Kategori").selectOption("B");
-  await page.getByLabel("Type").selectOption({ label: "Kørsel" });
   await page.getByRole("button", { name: "Søg" }).click();
 
   const lars = page.getByTestId("find-result").filter({ hasText: "Lars Jensen" });
   await expect(lars).toContainText("Optaget");
   await expect(lars).toContainText("Lektion 08:00–09:30");
-  // Pia kan B og Kørsel og har intet den dag.
+  // Pia har intet den dag. Alle lærere vises.
   await expect(page.getByTestId("find-result").filter({ hasText: "Pia Andersen" })).toContainText("Ledig");
-  // Søren kan kun C/CE og er skjult.
-  await expect(page.getByTestId("find-result").filter({ hasText: "Søren Nielsen" })).toHaveCount(0);
+  await expect(page.getByTestId("find-result").filter({ hasText: "Søren Nielsen" })).toHaveCount(1);
 });
 
 test("ferie kan først godkendes, når lektionerne i perioden er flyttet", async ({ page }) => {

@@ -173,7 +173,6 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/kontor
                     <td className="px-3 py-3 whitespace-nowrap">{newGroup && formatShortDay(r.date)}</td>
                     <td className="px-3 py-3">
                       <span className="text-muted">{formatSpan(r)}</span> <b>{r.serviceName}</b>
-                      <span className="text-muted"> · {r.category}</span>
                       {r.studentName && <span className="block text-[13px] text-muted">Elev: {r.studentName}</span>}
                       {r.note && <span className="block text-[13px] text-muted">{r.note}</span>}
                     </td>

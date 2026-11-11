@@ -26,15 +26,15 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000
 
 -- "Udført" på dagens planlagte lektion.
 select lives_ok(
-  $$insert into public.registrations (school_id, instructor_id, service_id, scheduled_lesson_id, lesson_date, start_time, lesson_count, category_code)
-    select school_id, instructor_id, service_id, id, lesson_date, start_time, lesson_count, category_code
+  $$insert into public.registrations (school_id, instructor_id, service_id, scheduled_lesson_id, lesson_date, start_time, lesson_count)
+    select school_id, instructor_id, service_id, id, lesson_date, start_time, lesson_count
     from public.scheduled_lessons
     where instructor_id = '00000000-0000-4000-a200-000000000011' and lesson_date = current_date$$,
   'Læreren kan registrere en planlagt lektion som udført');
 
 select throws_ok(
-  $$insert into public.registrations (school_id, instructor_id, service_id, scheduled_lesson_id, lesson_date, start_time, lesson_count, category_code)
-    select school_id, instructor_id, service_id, id, lesson_date, start_time, lesson_count, category_code
+  $$insert into public.registrations (school_id, instructor_id, service_id, scheduled_lesson_id, lesson_date, start_time, lesson_count)
+    select school_id, instructor_id, service_id, id, lesson_date, start_time, lesson_count
     from public.scheduled_lessons
     where instructor_id = '00000000-0000-4000-a200-000000000011' and lesson_date = current_date$$,
   '23505', 'Lektionen er allerede registreret.', 'En planlagt lektion kan kun registreres én gang');

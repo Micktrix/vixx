@@ -12,10 +12,9 @@ const navButton = "inline-flex size-[42px] items-center justify-center rounded-x
 
 type Row = {
   lesson_count: number;
-  category_code: string;
   status: "pending" | "approved" | "rejected";
   unit_price_ore: number | null;
-  services: { lesson_types: { name: string } | null } | null;
+  services: { name: string } | null;
 };
 
 export default async function InstructorOverviewPage({ searchParams }: PageProps<"/laerer/overblik">) {
@@ -28,7 +27,7 @@ export default async function InstructorOverviewPage({ searchParams }: PageProps
   const [{ data }, { data: holidays }] = await Promise.all([
     supabase
       .from("registrations")
-      .select("lesson_count, category_code, status, unit_price_ore, services(lesson_types(name))")
+      .select("lesson_count, status, unit_price_ore, services(name)")
       .eq("instructor_id", teacher.instructorId)
       .gte("lesson_date", range.start)
       .lte("lesson_date", range.end),
@@ -47,16 +46,14 @@ export default async function InstructorOverviewPage({ searchParams }: PageProps
   const total = sum(regs);
   const amount = approved.reduce((n, r) => n + r.lesson_count * (r.unit_price_ore ?? 0), 0);
 
-  const byCategory = new Map<string, { approved: number; pending: number }>();
-  const byType = new Map<string, number>();
+  const byService = new Map<string, { approved: number; pending: number }>();
   for (const r of regs) {
-    const c = byCategory.get(r.category_code) ?? { approved: 0, pending: 0 };
+    const name = r.services?.name ?? "";
+    const c = byService.get(name) ?? { approved: 0, pending: 0 };
     c[r.status === "approved" ? "approved" : "pending"] += r.lesson_count;
-    byCategory.set(r.category_code, c);
-    const type = r.services?.lesson_types?.name ?? "";
-    byType.set(type, (byType.get(type) ?? 0) + r.lesson_count);
+    byService.set(name, c);
   }
-  const max = Math.max(1, ...[...byCategory.values()].map((v) => v.approved + v.pending));
+  const max = Math.max(1, ...[...byService.values()].map((v) => v.approved + v.pending));
   const daysLeft = Math.round((Date.parse(range.end) - Date.parse(today)) / 86_400_000);
   const pick = (p: { start: string; end: string }) => (p.start <= today && today <= p.end ? today : p.start);
 
@@ -103,11 +100,11 @@ export default async function InstructorOverviewPage({ searchParams }: PageProps
       </section>
 
       <section className="flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-[18px]">
-        <h2 className="font-bold">Pr. kategori</h2>
-        {[...byCategory].map(([cat, v]) => (
-          <div key={cat} className="flex flex-col gap-1">
+        <h2 className="font-bold">Pr. ydelse</h2>
+        {[...byService].map(([name, v]) => (
+          <div key={name} className="flex flex-col gap-1">
             <div className="flex justify-between text-sm">
-              <b>{cat}</b>
+              <b>{name}</b>
               <span>
                 {v.approved + v.pending} lek.{v.pending ? ` (${v.pending} afventer)` : ""}
               </span>
@@ -118,20 +115,8 @@ export default async function InstructorOverviewPage({ searchParams }: PageProps
             </div>
           </div>
         ))}
-        {!byCategory.size && <p className="text-sm text-muted">Ingen lektioner i perioden endnu.</p>}
+        {!byService.size && <p className="text-sm text-muted">Ingen lektioner i perioden endnu.</p>}
       </section>
-
-      {byType.size > 0 && (
-        <section className="flex flex-col gap-1.5 rounded-[20px] border border-line bg-surface p-[18px]">
-          <h2 className="mb-1 font-bold">Pr. type</h2>
-          {[...byType].sort((a, b) => b[1] - a[1]).map(([type, n]) => (
-            <div key={type} className="flex justify-between text-sm">
-              <span>{type}</span>
-              <b>{n}</b>
-            </div>
-          ))}
-        </section>
-      )}
 
       <section className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-[18px]">
         <h2 className="font-bold">Ferie</h2>

@@ -1,7 +1,7 @@
 -- Platform-ejeren (Anne i seed) opretter skoler og tilknytter admin. Andre kan ikke.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(6);
+select plan(5);
 
 insert into public.schools (id, name) values ('00000000-0000-4000-e000-000000000001', 'Anden Skole');
 
@@ -28,8 +28,6 @@ select lives_ok(
   'Platform-ejeren kan give en person admin på den nye skole');
 reset role;
 
-select is((select count(*) from public.lesson_types where school_id = '00000000-0000-4000-e000-000000000002'), 6::bigint,
-  'Den nye skole får standardtyperne');
 
 select * from finish();
 rollback;

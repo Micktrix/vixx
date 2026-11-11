@@ -10,14 +10,6 @@ import { dayInfo, loadSchedule } from "../schedule-data";
 import { deleteLesson } from "./actions";
 import { LessonForm, type FormService } from "./lesson-form";
 
-type ServiceRow = {
-  id: string;
-  name: string;
-  lesson_type_id: string;
-  rate_groups: { name: string; active: boolean } | null;
-  service_categories: { category_code: string }[];
-};
-
 export default async function PlanLessonPage({ searchParams }: PageProps<"/kontor/planlaeg">) {
   const { membership } = await requireRole(["admin", "office"]);
   const sp = await searchParams;
@@ -29,7 +21,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
   const { data: lesson } = lessonId
     ? await supabase
         .from("scheduled_lessons")
-        .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, category_code, student_name, note, origin")
+        .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, student_name, note, origin")
         .eq("id", lessonId)
         .eq("school_id", membership.schoolId)
         .maybeSingle()
@@ -41,7 +33,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
     loadSchedule(membership.schoolId, date, date),
     supabase
       .from("services")
-      .select("id, name, lesson_type_id, rate_groups(name, active), service_categories(category_code)")
+      .select("id, name")
       .eq("school_id", membership.schoolId)
       .eq("active", true)
       .order("name"),
@@ -53,15 +45,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
 
   const instructorId = lesson?.instructor_id ?? one("laerer") ?? "";
   const instructor = schedule.instructors.find((i) => i.id === instructorId);
-  const formServices: FormService[] = ((services ?? []) as unknown as ServiceRow[])
-    .filter((s) => s.rate_groups?.active)
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      lessonTypeId: s.lesson_type_id,
-      categories: s.service_categories.map((c) => c.category_code),
-      groupName: s.rate_groups?.name ?? "",
-    }));
+  const formServices: FormService[] = services ?? [];
 
   return (
     <>
@@ -89,7 +73,6 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
             start: lesson?.start_time.slice(0, 5) ?? one("start"),
             count: lesson?.lesson_count ?? 1,
             serviceId: lesson?.service_id,
-            category: lesson?.category_code,
             studentName: lesson?.student_name ?? undefined,
             note: lesson?.note ?? undefined,
             resourceId: lessonBooking?.resourceId,

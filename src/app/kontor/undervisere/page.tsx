@@ -11,15 +11,10 @@ export default async function OfficeInstructorsPage() {
   const { membership } = await requireRole(["admin", "office"]);
   const supabase = await createClient();
 
-  const [{ data }, { data: cats }] = await Promise.all([
-    supabase.from("school_members").select(PERSON_SELECT).eq("school_id", membership.schoolId),
-    supabase.from("license_categories").select("code, sort_order"),
-  ]);
+  const { data } = await supabase.from("school_members").select(PERSON_SELECT).eq("school_id", membership.schoolId);
 
-  const catOrder = new Map((cats ?? []).map((c) => [c.code, c.sort_order]));
   const people = ((data ?? []) as unknown as PersonRow[])
     .map((row) => toPerson(row))
-    .map((p) => ({ ...p, categories: p.categories.sort((a, b) => (catOrder.get(a) ?? 0) - (catOrder.get(b) ?? 0)) }))
     .sort((a, b) => roleOrder(a) - roleOrder(b) || a.name.localeCompare(b.name, "da"));
 
   const active = people.filter((p) => p.memberActive);
@@ -66,7 +61,6 @@ function PeopleTable({ title, people }: { title: string; people: Person[] }) {
             <th className="px-[18px] py-2.5 font-semibold">Navn</th>
             <th className="px-3 py-2.5 font-semibold">Telefon (brugernavn)</th>
             <th className="px-3 py-2.5 font-semibold">Roller</th>
-            <th className="px-3 py-2.5 font-semibold">Kategorier</th>
             <th className="px-[18px] py-2.5 font-semibold">Status</th>
           </tr>
         </thead>
@@ -90,7 +84,6 @@ function PeopleTable({ title, people }: { title: string; people: Person[] }) {
                   {p.instructor?.is_guest && p.teaches && <Pill>Gæst</Pill>}
                 </span>
               </td>
-              <td className="px-3 py-3">{p.teaches ? p.categories.join(", ") || "–" : ""}</td>
               <td className="px-[18px] py-3">
                 <Pill tone={p.status.tone}>{p.status.label}</Pill>
               </td>
@@ -98,7 +91,7 @@ function PeopleTable({ title, people }: { title: string; people: Person[] }) {
           ))}
           {people.length === 0 && (
             <tr>
-              <td colSpan={5} className="px-[18px] py-4 text-muted">
+              <td colSpan={4} className="px-[18px] py-4 text-muted">
                 Ingen endnu.
               </td>
             </tr>

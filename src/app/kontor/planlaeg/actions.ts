@@ -45,7 +45,6 @@ export async function saveLesson(_prev: ActionState, formData: FormData): Promis
   const start = text("start");
   const count = Number(text("count"));
   const serviceId = text("serviceId");
-  const category = text("category") || null;
 
   if (!instructorId) return { error: "Vælg en underviser." };
   if (!date) return { error: "Vælg en dato." };
@@ -60,7 +59,6 @@ export async function saveLesson(_prev: ActionState, formData: FormData): Promis
     start_time: start,
     lesson_count: count,
     service_id: serviceId,
-    category_code: category,
     student_name: text("studentName") || null,
     note: text("note") || null,
   };

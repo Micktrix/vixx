@@ -8,9 +8,7 @@ export type PayrollRegistration = {
   unitPriceOre: number | null; // låst pris for godkendte
   serviceId: string;
   serviceName: string;
-  rateGroupId: string;
-  rateGroupName: string;
-  payrollCode: string | null;
+  payrollCode: string | null; // ydelsens løndel i Dataløn
 };
 
 export type PayrollInstructor = { id: string; name: string; employeeNumber: string | null; isGuest: boolean };
@@ -20,25 +18,25 @@ export type InstructorSummary = {
   approvedCount: number;
   approvedOre: number;
   pendingCount: number;
-  byRateGroup: Map<string, { count: number; ore: number }>;
+  byService: Map<string, { count: number; ore: number }>;
 };
 
 export function summarize(instructors: PayrollInstructor[], registrations: PayrollRegistration[]): InstructorSummary[] {
   return instructors
     .map((instructor) => {
       const mine = registrations.filter((r) => r.instructorId === instructor.id);
-      const byRateGroup = new Map<string, { count: number; ore: number }>();
+      const byService = new Map<string, { count: number; ore: number }>();
       let approvedCount = 0;
       let approvedOre = 0;
       for (const r of mine.filter((r) => r.status === "approved")) {
         const amount = r.count * (r.unitPriceOre ?? 0);
         approvedCount += r.count;
         approvedOre += amount;
-        const g = byRateGroup.get(r.rateGroupId) ?? { count: 0, ore: 0 };
-        byRateGroup.set(r.rateGroupId, { count: g.count + r.count, ore: g.ore + amount });
+        const t = byService.get(r.serviceId) ?? { count: 0, ore: 0 };
+        byService.set(r.serviceId, { count: t.count + r.count, ore: t.ore + amount });
       }
       const pendingCount = mine.filter((r) => r.status === "pending").reduce((n, r) => n + r.count, 0);
-      return { instructor, approvedCount, approvedOre, pendingCount, byRateGroup };
+      return { instructor, approvedCount, approvedOre, pendingCount, byService };
     })
     .filter((s) => s.approvedCount || s.pendingCount)
     .sort((a, b) => a.instructor.name.localeCompare(b.instructor.name, "da"));

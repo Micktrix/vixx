@@ -81,7 +81,6 @@ export function DayPanel({
             <span className="flex min-w-0 flex-col">
               <span>
                 <span className="text-muted">{formatSpan(r)}</span> <b>{r.serviceName}</b>
-                {r.category && <span className="text-muted"> · {r.category}</span>}
               </span>
               {!r.scheduledLessonId && (
                 <span>

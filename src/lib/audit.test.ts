@@ -22,7 +22,7 @@ group("ændringsloggen på dansk", () => {
       names,
     );
     expect(d.title).toBe("Rettede registrering");
-    expect(d.details).toEqual(["status: afventer → godkendt", "låst pris: – → 270 kr."]);
+    expect(d.details).toEqual(["status: afventer → godkendt", "låst sats: – → 270 kr."]);
   });
 
   it("en oprettelse viser de vigtige felter og slår navne op", () => {

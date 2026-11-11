@@ -11,8 +11,6 @@ export type ScheduleInstructor = {
   onRequest: boolean;
   isGuest: boolean;
   activeUntil: string | null;
-  categories: string[];
-  lessonTypeIds: string[];
 };
 
 export type ScheduleLesson = Span & {
@@ -22,7 +20,6 @@ export type ScheduleLesson = Span & {
   start: string;
   count: number;
   serviceName: string;
-  category: string;
   studentName: string | null;
   note: string | null;
 };
@@ -54,8 +51,6 @@ type InstructorRow = {
   is_guest: boolean;
   active_until: string | null;
   school_members: { active: boolean; profiles: { full_name: string } | null } | null;
-  instructor_categories: { category_code: string }[];
-  instructor_lesson_types: { lesson_type_id: string }[];
 };
 
 export async function loadSchedule(schoolId: string, from: string, to: string): Promise<Schedule> {
@@ -66,14 +61,14 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
     supabase
       .from("instructors")
       .select(
-        "id, availability, is_guest, active_until, school_members!inner(active, profiles(full_name)), instructor_categories(category_code), instructor_lesson_types(lesson_type_id)",
+        "id, availability, is_guest, active_until, school_members!inner(active, profiles(full_name))",
       )
       .eq("school_id", schoolId)
       .eq("active", true)
       .eq("school_members.active", true),
     supabase
       .from("scheduled_lessons")
-      .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, category_code, student_name, note, services(name)")
+      .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, student_name, note, services(name)")
       .eq("school_id", schoolId)
       .gte("lesson_date", from)
       .lte("lesson_date", to)
@@ -109,8 +104,6 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
         onRequest: i.availability === "on_request",
         isGuest: i.is_guest,
         activeUntil: i.active_until,
-        categories: i.instructor_categories.map((c) => c.category_code),
-        lessonTypeIds: i.instructor_lesson_types.map((t) => t.lesson_type_id),
       }))
       .sort((a, b) => a.name.localeCompare(b.name, "da")),
     lessons: (lessons.data ?? []).map((l) => ({
@@ -121,7 +114,6 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       start: l.start_time.slice(0, 5),
       count: l.lesson_count,
       serviceName: (l.services as unknown as { name: string } | null)?.name ?? "",
-      category: l.category_code,
       studentName: l.student_name,
       note: l.note,
     })),

@@ -9,7 +9,7 @@ import { TIME_SLOTS } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 
 // Registrering (kørt lektion) og egen planlægning fra lærer-appen.
-// Databasen sikrer: kun egne data, ikke frem i tiden (registrering), ingen overlap, kompetence, låst periode.
+// Databasen sikrer: kun egne data, ikke frem i tiden (registrering), ingen overlap, låst periode.
 
 function readLesson(formData: FormData) {
   const text = (k: string) => String(formData.get(k) ?? "").trim();
@@ -27,7 +27,6 @@ function readLesson(formData: FormData) {
       start_time: start,
       lesson_count: count,
       service_id: text("serviceId"),
-      category_code: text("category") || null,
       student_name: text("studentName") || null,
       note: text("note") || null,
     },

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { planHref } from "../calendar/params";
 import { dayInfo, loadSchedule } from "../schedule-data";
 
-// Find ledig underviser: dato, tid, antal, kategori og type → kun relevante lærere, ledige først.
+// Find ledig underviser: dato, tid og antal → alle lærere, ledige først.
 export default async function FindInstructorPage({ searchParams }: PageProps<"/kontor/find">) {
   const { membership } = await requireRole(["admin", "office"]);
   const sp = await searchParams;
@@ -18,24 +18,18 @@ export default async function FindInstructorPage({ searchParams }: PageProps<"/k
   const date = parseDateInput(one("dato") ?? "") ?? todayDk();
   const start = TIME_SLOTS.includes(one("start") ?? "") ? one("start")! : "08:00";
   const count = Math.min(12, Math.max(1, Number(one("antal")) || 1));
-  const category = one("kategori") ?? "";
-  const typeId = one("type") ?? "";
-  const searched = !!(category && typeId);
+  const searched = !!one("dato");
 
-  const [schedule, { data: categories }, { data: types }, { data: school }] = await Promise.all([
+  const [schedule, { data: school }] = await Promise.all([
     loadSchedule(membership.schoolId, date, date),
-    supabase.from("license_categories").select("code").order("sort_order"),
-    supabase.from("lesson_types").select("id, name").eq("school_id", membership.schoolId).eq("active", true).order("sort_order"),
     supabase.from("schools").select("lesson_minutes").eq("id", membership.schoolId).single(),
   ]);
 
   const span = lessonSpan(start, count, school?.lesson_minutes ?? 45);
-  const relevant = schedule.instructors.filter((i) => i.categories.includes(category) && i.lessonTypeIds.includes(typeId));
-  const results = relevant
+  const results = schedule.instructors
     .map((i) => ({ instructor: i, check: availability(dayInfo(schedule, i, date), span) }))
     .sort((a, b) => Number(b.check.ok) - Number(a.check.ok) || a.instructor.name.localeCompare(b.instructor.name, "da"));
   const free = results.filter((r) => r.check.ok).length;
-  const hidden = schedule.instructors.length - relevant.length;
 
   return (
     <>
@@ -44,7 +38,7 @@ export default async function FindInstructorPage({ searchParams }: PageProps<"/k
         <h1 className="text-[30px] font-bold">Find ledig underviser</h1>
       </header>
 
-      <form className="grid gap-3 rounded-[20px] border border-line bg-surface p-[18px] sm:grid-cols-3 lg:grid-cols-6" method="get">
+      <form className="grid gap-3 rounded-[20px] border border-line bg-surface p-[18px] sm:grid-cols-2 lg:grid-cols-4" method="get">
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Dato
           <input type="date" name="dato" defaultValue={date} className={inputClass} />
@@ -65,30 +59,6 @@ export default async function FindInstructorPage({ searchParams }: PageProps<"/k
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5 text-sm font-bold">
-          Kategori
-          <select name="kategori" defaultValue={category} required className={inputClass}>
-            <option value="" disabled>
-              Vælg
-            </option>
-            {(categories ?? []).map((c) => (
-              <option key={c.code}>{c.code}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm font-bold">
-          Type
-          <select name="type" defaultValue={typeId} required className={inputClass}>
-            <option value="" disabled>
-              Vælg
-            </option>
-            {(types ?? []).map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
         <div className="flex items-end">
           <button type="submit" className={primaryButtonClass}>
             Søg
@@ -102,8 +72,7 @@ export default async function FindInstructorPage({ searchParams }: PageProps<"/k
             {formatLongDate(date)} · {formatSpan(span)}
           </h2>
           <p className="text-muted">
-            {free ? `${free} ledig${free === 1 ? "" : "e"} med kompetencen` : "Ingen ledige med kompetencen"}
-            {hidden ? `. ${hidden} underviser${hidden === 1 ? "" : "e"} uden kompetencen er skjult.` : "."}
+            {free ? `${free} ledig${free === 1 ? "" : "e"} af ${results.length}.` : "Ingen ledige."}
           </p>
           <ul className="flex flex-col gap-2">
             {results.map(({ instructor, check }) => (

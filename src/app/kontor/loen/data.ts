@@ -9,7 +9,7 @@ type Row = {
   lesson_count: number;
   unit_price_ore: number | null;
   service_id: string;
-  services: { name: string; rate_group_id: string; rate_groups: { name: string; payroll_code: string | null } | null } | null;
+  services: { name: string; payroll_code: string | null } | null;
   instructors: {
     employee_number: string | null;
     is_guest: boolean;
@@ -17,14 +17,14 @@ type Row = {
   } | null;
 };
 
-// Alle registreringer i perioden med lærer, ydelse og sats. unit_price_ore er den låste pris for godkendte.
+// Alle registreringer i perioden med lærer og ydelse (navn og løndel). unit_price_ore er den låste pris for godkendte.
 export async function loadPayroll(schoolId: string, period: PayPeriod) {
   const supabase = await createClient();
   const [{ data }, { data: periodRow }] = await Promise.all([
     supabase
       .from("registrations")
       .select(
-        "instructor_id, status, lesson_count, unit_price_ore, service_id, services(name, rate_group_id, rate_groups(name, payroll_code)), instructors(employee_number, is_guest, school_members(profiles(full_name)))",
+        "instructor_id, status, lesson_count, unit_price_ore, service_id, services(name, payroll_code), instructors(employee_number, is_guest, school_members(profiles(full_name)))",
       )
       .eq("school_id", schoolId)
       .gte("lesson_date", period.start)
@@ -56,9 +56,7 @@ export async function loadPayroll(schoolId: string, period: PayPeriod) {
       unitPriceOre: r.unit_price_ore,
       serviceId: r.service_id,
       serviceName: r.services?.name ?? "",
-      rateGroupId: r.services?.rate_group_id ?? "",
-      rateGroupName: r.services?.rate_groups?.name ?? "",
-      payrollCode: r.services?.rate_groups?.payroll_code ?? null,
+      payrollCode: r.services?.payroll_code ?? null,
     };
   });
 

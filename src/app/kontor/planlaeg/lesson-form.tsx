@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CheckChip, Fieldset, ResultBox, TextField, useFormAction } from "@/components/form";
+import { ResultBox, TextField, useFormAction } from "@/components/form";
 import { inputClass, primaryButtonClass } from "@/components/styles";
-import { resourceDetail, resourcesForLesson, type ResourceInfo } from "@/lib/resources";
+import type { ResourceInfo } from "@/lib/resources";
 import { availability, formatDuration, lessonSpan, overlaps, slotIsFree, suggestStart, TIME_SLOTS, type DayInfo, type Span } from "@/lib/schedule";
 import { getDay, getResourceBusy, saveLesson } from "./actions";
 
-export type FormInstructor = { id: string; name: string; categories: string[]; lessonTypeIds: string[]; onRequest: boolean };
-export type FormService = { id: string; name: string; lessonTypeId: string; categories: string[]; groupName: string };
+export type FormInstructor = { id: string; name: string; onRequest: boolean };
+export type FormService = { id: string; name: string };
 export type FormResource = ResourceInfo;
 
 type Initial = {
@@ -18,7 +18,6 @@ type Initial = {
   start?: string;
   count: number;
   serviceId?: string;
-  category?: string;
   studentName?: string;
   note?: string;
   resourceId?: string;
@@ -77,21 +76,13 @@ export function LessonForm({
   const startIsFree = start && slotIsFree(start, duration, busy);
   const shownStart = startIsFree ? start : (suggestStart(duration, busy) ?? "");
 
-  // Kun ydelser, læreren har kompetence til: typen og mindst én af ydelsens kategorier.
-  const allowed = instructor
-    ? services.filter(
-        (s) => instructor.lessonTypeIds.includes(s.lessonTypeId) && s.categories.some((c) => instructor.categories.includes(c)),
-      )
-    : [];
-  const service = allowed.find((s) => s.id === serviceId);
-  const categoryChoices = service ? service.categories.filter((c) => instructor?.categories.includes(c)) : [];
+  const service = services.find((s) => s.id === serviceId);
 
   const check = day && shownStart ? availability(day, lessonSpan(shownStart, count, lessonMinutes)) : null;
 
-  // Lokale eller køretøj, der er ledigt i lektionens tidsrum og passer til ydelsen (kategori for biler, type for lokaler).
+  // Lokale eller køretøj, der er ledigt i lektionens tidsrum.
   const span = shownStart ? lessonSpan(shownStart, count, lessonMinutes) : null;
   const resourceFree = (id: string) => !span || !(resourceBusy[id] ?? []).some((b) => overlaps(b, span));
-  const offered = resourcesForLesson(resources ?? [], service ? { categories: service.categories, lessonTypeId: service.lessonTypeId } : null);
   const shownResourceId = resourceId && resourceFree(resourceId) ? resourceId : "";
   const blocked = day?.holiday === "approved";
 
@@ -179,40 +170,15 @@ export function LessonForm({
           className={inputClass}
         >
           <option value="" disabled>
-            {allowed.length ? "Vælg ydelse" : "Underviseren har ingen kompetencer, der passer til en ydelse"}
+            Vælg ydelse
           </option>
-          {[...new Set(allowed.map((s) => s.groupName))].map((g) => (
-            <optgroup key={g} label={g}>
-              {allowed
-                .filter((s) => s.groupName === g)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-            </optgroup>
+          {services.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
           ))}
         </select>
-        <span className="text-[13px] font-normal text-muted">Kun ydelser, underviseren har kompetence til.</span>
       </label>
-
-      {categoryChoices.length > 1 ? (
-        <Fieldset legend="Kategori">
-          {categoryChoices.map((c) => (
-            <CheckChip
-              key={`${serviceId}-${c}`}
-              type="radio"
-              name="category"
-              value={c}
-              label={c}
-              required
-              defaultChecked={c === initial.category && serviceId === initial.serviceId}
-            />
-          ))}
-        </Fieldset>
-      ) : (
-        categoryChoices[0] && <input type="hidden" name="category" value={categoryChoices[0]} />
-      )}
 
       {resources.length > 0 && (
         <label className="flex flex-col gap-1.5 text-sm font-bold">
@@ -222,13 +188,12 @@ export function LessonForm({
             {(["vehicle", "room"] as const).map((kind) => (
               <optgroup key={kind} label={kind === "vehicle" ? "Køretøjer" : "Lokaler"}>
                 {resources
-                  .filter((r) => r.kind === kind && offered.includes(r))
+                  .filter((r) => r.kind === kind)
                   .map((r) => {
                     const free = resourceFree(r.id);
                     return (
                       <option key={r.id} value={r.id} disabled={!free}>
                         {r.name}
-                        {resourceDetail(r) ? ` (${resourceDetail(r)})` : ""}
                         {free ? "" : " – optaget"}
                       </option>
                     );

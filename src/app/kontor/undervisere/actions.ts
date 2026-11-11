@@ -100,10 +100,7 @@ export async function createMember(_prev: ActionState, formData: FormData): Prom
       .insert({ school_id: schoolId, user_id: userId, is_guest: guest, guest_company: guestCompany, active_until: activeUntil })
       .select("id")
       .single();
-    const competenceError = instructor
-      ? await insertCompetences(supabase, schoolId, instructor.id, formData)
-      : null;
-    if (instructorError || competenceError) {
+    if (instructorError || !instructor) {
       await undo();
       return { error: "Læreren kunne ikke oprettes. Prøv igen." };
     }
@@ -123,29 +120,6 @@ export async function createMember(_prev: ActionState, formData: FormData): Prom
         href: personHref(userId),
         hrefLabel: `Åbn ${name}`,
       };
-}
-
-async function insertCompetences(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  schoolId: string,
-  instructorId: string,
-  formData: FormData,
-) {
-  const categories = formData.getAll("categories").map(String);
-  const types = formData.getAll("lessonTypes").map(String);
-  if (categories.length) {
-    const { error } = await supabase.from("instructor_categories").insert(
-      categories.map((code) => ({ school_id: schoolId, instructor_id: instructorId, category_code: code })),
-    );
-    if (error) return error;
-  }
-  if (types.length) {
-    const { error } = await supabase.from("instructor_lesson_types").insert(
-      types.map((id) => ({ school_id: schoolId, instructor_id: instructorId, lesson_type_id: id })),
-    );
-    if (error) return error;
-  }
-  return null;
 }
 
 type Target = { memberships: { school_id: string; role: string; active: boolean }[] };

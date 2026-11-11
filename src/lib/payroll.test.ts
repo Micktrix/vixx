@@ -15,8 +15,8 @@ const instructors: PayrollInstructor[] = [
   { id: "pia", name: "Pia Andersen", employeeNumber: "114", isGuest: false },
 ];
 
-const amuC = { serviceId: "amuc", serviceName: "Amu C", rateGroupId: "amu", rateGroupName: "Amu kørsel", payrollCode: "2101" };
-const bPrivat = { serviceId: "bpriv", serviceName: "B privat", rateGroupId: "priv", rateGroupName: "Privatkørsel", payrollCode: "2104" };
+const amuC = { serviceId: "amuc", serviceName: "Amu C", payrollCode: "2101" };
+const bPrivat = { serviceId: "bpriv", serviceName: "B privat", payrollCode: "2104" };
 
 const regs: PayrollRegistration[] = [
   { instructorId: "lars", status: "approved", count: 3, unitPriceOre: 27000, ...amuC },
@@ -40,9 +40,9 @@ describe("lønoverblik", () => {
   it("afventende vises for sig, afviste slet ikke", () => {
     expect(lars.pendingCount).toBe(4);
   });
-  it("fordeler på satser", () => {
-    expect(lars.byRateGroup.get("amu")).toEqual({ count: 6, ore: 163000 });
-    expect(lars.byRateGroup.get("priv")).toEqual({ count: 2, ore: 44000 });
+  it("fordeler på ydelser", () => {
+    expect(lars.byService.get("amuc")).toEqual({ count: 6, ore: 163000 });
+    expect(lars.byService.get("bpriv")).toEqual({ count: 2, ore: 44000 });
   });
   it("gæster er med i overblikket; lærere uden lektioner er ikke", () => {
     expect(summary.map((s) => s.instructor.id)).toEqual(["bo", "lars", "mette"]);

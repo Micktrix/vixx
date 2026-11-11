@@ -1,9 +1,9 @@
--- Trin 5: ingen overlap, kompetence, kategori og ferie.
--- Seed: Lars (a200-…11, kategorier B/C/CE, typer Kørsel/Teori) har lektion i dag kl. 08:00–10:15 (Amu CE, 3 × 45 min).
+-- Trin 5: ingen overlap, ydelser i brug og ferie.
+-- Seed: Lars (a200-…11) har lektion i dag kl. 08:00–10:15 (Amu CE, 3 × 45 min).
 -- Jens (…15) er syg i dag 08:00–16:00. Mads (…17) har godkendt ferie om 30–34 dage. Hanne (…16) har søgt ferie om 14–18 dage.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(15);
 
 -- Uafhængig af manuelle afprøvninger: kun seedens lektion kl. 08:00 for Lars i dag.
 delete from public.scheduled_lessons
@@ -81,36 +81,23 @@ select lives_ok(
   'Uden lektioner kan ferien godkendes');
 
 -- ---------------------------------------------------------------------------
--- Kompetence og kategori
+-- Ydelser: alle aktive lærere kan alle ydelser i brug
 -- ---------------------------------------------------------------------------
-select throws_ok(
+select lives_ok(
   $$insert into public.scheduled_lessons (school_id, instructor_id, service_id, lesson_date, start_time, lesson_count, origin)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000014',
             '00000000-0000-4000-a500-000000000001', current_date + 5, '08:00', 1, 'office')$$,
-  '23514', null, 'Pia (kun B) kan ikke planlægges på Amu C');
+  'Enhver aktiv lærer kan planlægges på enhver ydelse');
+reset role;
 
+update public.services set active = false where id = '00000000-0000-4000-a500-000000000009';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
 select throws_ok(
   $$insert into public.scheduled_lessons (school_id, instructor_id, service_id, lesson_date, start_time, lesson_count, origin)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011',
-            '00000000-0000-4000-a500-000000000003', current_date + 5, '08:00', 1, 'office')$$,
-  '23514', 'Vælg kategori for ydelsen.', 'En ydelse med flere kategorier kræver et valg');
-
-select lives_ok(
-  $$insert into public.scheduled_lessons (school_id, instructor_id, service_id, category_code, lesson_date, start_time, lesson_count, origin)
-    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011',
-            '00000000-0000-4000-a500-000000000003', 'CE', current_date + 5, '08:00', 1, 'office')$$,
-  'Med valgt kategori kan Aften Amu C/E planlægges');
-
-select is(
-  (select category_code from public.scheduled_lessons
-   where instructor_id = '00000000-0000-4000-a200-000000000015' and lesson_date = current_date and start_time = '16:00'),
-  'B', 'Én kategori på ydelsen udfyldes automatisk');
-
-select throws_ok(
-  $$insert into public.scheduled_lessons (school_id, instructor_id, service_id, category_code, lesson_date, start_time, lesson_count, origin)
-    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011',
-            '00000000-0000-4000-a500-000000000003', 'B', current_date + 6, '08:00', 1, 'office')$$,
-  '23514', 'Ydelsen dækker ikke kategori B.', 'Kategorien skal høre til ydelsen');
+            '00000000-0000-4000-a500-000000000009', current_date + 5, '12:00', 1, 'office')$$,
+  '23514', 'Ydelsen er slået fra og kan ikke vælges.', 'En ydelse, der er slået fra, kan ikke vælges');
 reset role;
 
 -- ---------------------------------------------------------------------------

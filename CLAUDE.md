@@ -37,7 +37,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 - Alle forretningstabeller har `school_id`. **RLS er slået til på alle tabeller**, og en bruger kan kun se data fra sin egen skole.
 - Roller pr. skole: `admin` (superadmin for skolen), `office` (kontor), `instructor` (lærer). Platformens ejer (Michael) har en separat `platform_owner`-rolle.
 - Rettigheder (foreløbigt):
-  - `admin`: alt, inkl. priser, ydelser, satser, kontorbrugere, oplåsning af lønperioder.
+  - `admin`: alt, inkl. ydelser og satser, kontorbrugere, oplåsning af lønperioder.
   - `office`: planlægge, godkende/afvise/rette registreringer, fravær, ferie, lokaler/køretøjer, undervisere (ikke priser).
   - `instructor`: egne data – skema, registreringer, ferieanmodning, "Kan arbejde", egne bookinger, egne kontakt- og pårørendeoplysninger.
 - Skriv RLS-politikker og test dem. Ingen forretningslogik der kun er sikret i frontend.
@@ -66,32 +66,32 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 - Ved godkendelse **låses prisen** på registreringen (`locked_price`). Senere prisændringer rører den ikke.
 - Afvist lektion kan rettes og sendes igen af læreren, eller rettes og godkendes direkte af kontoret (læreren får besked).
 
-**Ydelser, satser og priser**
-- *Sats* = lønnens gruppe og Dataløn-løndel (fx Amu kørsel, Amu teori, Teorilek., Privatkørsel, Diverse).
-- *Ydelse* = det der vælges ved planlægning/registrering (fx "Amu C", "C privat", "Aften Amu C/E"). Hver ydelse har én sats, én kategori (B, BE, C, CE, D, DE, A …) og én type (Kørsel, Teori, Manøvre, Glatbane, Køreprøve, Rybners …).
-- Pris pr. lektion sidder på ydelsen og har **gyldig-fra-dato** (prishistorik). En lærer kan have egen pris på en ydelse (override).
-- Prisberegning: låst pris hvis godkendt → ellers lærerens egen pris → ellers ydelsens pris gældende på lektionens dato.
-- En ydelse eller sats der er brugt kan kun **slås fra**, ikke slettes.
-- Ydelser, satser og priser vedligeholdes af skolen selv i systemet.
+**Ydelser og satser**
+- *Ydelse* = det der vælges ved planlægning/registrering (fx "Amu-teori", "C privat", "Aften Amu C/E"). En ydelse er kun **navn, sats og Dataløn-løndel**. Der er ingen kategorier eller typer (fjernet 11. nov. 2026 for at gøre det enkelt).
+- *Sats* = beløbet pr. lektion. Den sidder direkte på ydelsen og har **gyldig-fra-dato** (historik). Flere ydelser må gerne have samme sats. Der findes ingen separate sats-grupper.
+- En lærer kan have egen sats på en ydelse (override).
+- Beregning: låst sats hvis godkendt → ellers lærerens egen sats → ellers ydelsens sats gældende på lektionens dato.
+- En ydelse der er brugt kan kun **slås fra**, ikke slettes.
+- Ydelser og satser vedligeholdes af skolen selv i systemet.
 
 **Lønperiode og eksport**
 - Lønperiode: den 21. til den 20. (indstilling pr. skole).
 - En periode kan låses; derefter kan intet i den ændres. Kun `admin` kan låse op, og det logges.
-- Dataløn-eksport: CSV med én linje pr. lærer pr. ydelse: medarbejdernr., navn, løndel (fra satsen), tekst, antal, sats, beløb. Endeligt format afklares ud fra skolens importfil ("fleksible løndele").
+- Dataløn-eksport: CSV med én linje pr. lærer pr. ydelse: medarbejdernr., navn, løndel (fra ydelsen), tekst, antal, sats, beløb. Endeligt format afklares ud fra skolens importfil ("fleksible løndele").
 - Gæstelærere afregnes via faktura og er **ikke** med i Dataløn-eksporten.
 
-**Kompetencer og tilgængelighed**
-- Lærer har kompetencer: kategorier + typer. Man kan kun planlægge/registrere ydelser, læreren har kompetence til.
+**Tilgængelighed**
+- Lærere har ingen kompetencer i systemet: alle aktive lærere kan planlægges/registrere alle aktive ydelser. Skolen holder selv styr på, hvem der kan hvad. (Når elevdelen kommer, kobles elever på en lærer, der passer til kørekortet.)
 - Tilgængelighed: `fixed` (de fleste – tilgængelig alle dage) eller `on_request` ("Efter aftale"). Lærere på "Efter aftale" melder "Kan arbejde" på valgte datoer med tidsrum, og vises kun som ledige der.
-- "Find ledig underviser": dato, tid, antal, kategori, type → kun relevante lærere, ledige først.
+- "Find ledig underviser": dato, tid, antal → alle lærere, ledige først.
 
 **Fravær og ferie**
 - Fravær (kontoret): årsag (Syg, Fri, Andet), start, antal timer, note. Blokerer tiden. Tæller aldrig i lønnen.
 - Ferie: læreren anmoder, kontoret godkender/afviser. Godkendt ferie blokerer dagene og giver ingen påmindelser.
 
 **Lokaler og køretøjer**
-- Ressourcer pr. skole: lokaler og køretøjer (med type der matcher kategorier).
-- Kørselslektioner kan få et køretøj; optagede køretøjer kan ikke vælges. Flyttes/slettes lektionen, følger bookingen med.
+- Ressourcer pr. skole: lokaler og køretøjer (kun navn; ingen kategorier eller typer).
+- En lektion kan få et lokale eller køretøj; optagede kan ikke vælges. Flyttes/slettes lektionen, følger bookingen med.
 - Lærere kan booke ledige lokaler/køretøjer frit og kun rette/slette egne bookinger.
 
 **Elever (forberedt, ikke bygget)**

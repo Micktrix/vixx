@@ -29,7 +29,7 @@ export default async function AuditLogPage({ searchParams }: PageProps<"/kontor/
   const before = Number(one("foer")) || null;
   const supabase = await createClient();
 
-  const [{ data }, { data: instructors }, { data: services }, { data: types }, { data: groups }] = await Promise.all([
+  const [{ data }, { data: instructors }, { data: services }] = await Promise.all([
     supabase.rpc("search_audit", {
       p_school: membership.schoolId,
       p_query: query || null,
@@ -40,8 +40,6 @@ export default async function AuditLogPage({ searchParams }: PageProps<"/kontor/
     }),
     supabase.from("instructors").select("id, school_members(profiles(full_name))").eq("school_id", membership.schoolId),
     supabase.from("services").select("id, name").eq("school_id", membership.schoolId),
-    supabase.from("lesson_types").select("id, name").eq("school_id", membership.schoolId),
-    supabase.from("rate_groups").select("id, name").eq("school_id", membership.schoolId),
   ]);
 
   const names: Names = {
@@ -52,7 +50,7 @@ export default async function AuditLogPage({ searchParams }: PageProps<"/kontor/
       ]),
     ),
     services: new Map((services ?? []).map((s) => [s.id, s.name])),
-    other: new Map([...(types ?? []), ...(groups ?? [])].map((t) => [t.id, t.name])),
+    other: new Map(),
   };
 
   const entries = (data ?? []) as Entry[];

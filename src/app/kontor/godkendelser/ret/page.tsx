@@ -8,14 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 import { TeacherLessonForm } from "../../../laerer/lesson-form";
 import { officeSaveRegistration } from "../actions";
 
-type ServiceRow = {
-  id: string;
-  name: string;
-  lesson_type_id: string;
-  rate_groups: { name: string; active: boolean } | null;
-  service_categories: { category_code: string }[];
-};
-
 // Kontoret retter en registrering. Er den ikke godkendt, godkendes den samtidig ("Ret og godkend").
 export default async function OfficeEditRegistrationPage({ searchParams }: PageProps<"/kontor/godkendelser/ret">) {
   const { membership } = await requireRole(["admin", "office"]);
@@ -25,7 +17,7 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
   const { data: reg } = await supabase
     .from("registrations")
     .select(
-      "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, category_code, status, student_name, note, decision_comment, instructors(school_members(profiles(full_name)), instructor_categories(category_code), instructor_lesson_types(lesson_type_id))",
+      "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, status, student_name, note, decision_comment, instructors(school_members(profiles(full_name)))",
     )
     .eq("id", typeof sp.id === "string" ? sp.id : "")
     .eq("school_id", membership.schoolId)
@@ -34,16 +26,12 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
 
   const instructor = reg.instructors as unknown as {
     school_members: { profiles: { full_name: string } | null } | null;
-    instructor_categories: { category_code: string }[];
-    instructor_lesson_types: { lesson_type_id: string }[];
   };
-  const cats = instructor.instructor_categories.map((c) => c.category_code);
-  const types = instructor.instructor_lesson_types.map((t) => t.lesson_type_id);
 
   const [{ data: services }, { data: others }] = await Promise.all([
     supabase
       .from("services")
-      .select("id, name, lesson_type_id, rate_groups(name, active), service_categories(category_code)")
+      .select("id, name")
       .eq("school_id", membership.schoolId)
       .eq("active", true)
       .order("name"),
@@ -56,16 +44,6 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
       .neq("id", reg.id),
   ]);
 
-  // Kun ydelser, læreren har kompetence til (typen og mindst én af ydelsens kategorier).
-  const allowed = ((services ?? []) as unknown as ServiceRow[])
-    .filter((s) => s.rate_groups?.active && types.includes(s.lesson_type_id))
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      groupName: s.rate_groups?.name ?? "",
-      categories: s.service_categories.map((c) => c.category_code).filter((c) => cats.includes(c)),
-    }))
-    .filter((s) => s.categories.length);
 
   const approved = reg.status === "approved";
 
@@ -88,13 +66,12 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
         <TeacherLessonForm
           action={officeSaveRegistration}
           submitLabel={approved ? "Gem" : "Gem og godkend"}
-          services={allowed}
+          services={services ?? []}
           lessonMinutes={reg.lesson_minutes}
           busy={(others ?? []).map((o) => lessonSpan(o.start_time, o.lesson_count, o.lesson_minutes))}
           hiddenFields={{ id: reg.id }}
           initial={{
             serviceId: reg.service_id,
-            category: reg.category_code,
             count: reg.lesson_count,
             start: reg.start_time.slice(0, 5),
             studentName: reg.student_name ?? undefined,

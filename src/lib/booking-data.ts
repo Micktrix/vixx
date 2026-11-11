@@ -19,14 +19,14 @@ export type Booking = Span & {
   instructorId: string | null;
   instructorName: string | null;
   lessonId: string | null;
-  lessonLabel: string | null; // fx "Amu C · C" for en lektions booking (aldrig elevnavn)
+  lessonLabel: string | null; // fx "Amu C" for en lektions booking (aldrig elevnavn)
 };
 
 export async function loadResources(schoolId: string, includeInactive = false): Promise<Resource[]> {
   const supabase = await createClient();
   let q = supabase
     .from("resources")
-    .select("id, kind, name, active, resource_categories(category_code), resource_lesson_types(lesson_type_id, lesson_types(name))")
+    .select("id, kind, name, active")
     .eq("school_id", schoolId);
   if (!includeInactive) q = q.eq("active", true);
   const { data } = await q.order("name");
@@ -35,17 +35,12 @@ export async function loadResources(schoolId: string, includeInactive = false): 
     kind: ResourceKind;
     name: string;
     active: boolean;
-    resource_categories: { category_code: string }[];
-    resource_lesson_types: { lesson_type_id: string; lesson_types: { name: string } | null }[];
   };
   return ((data ?? []) as unknown as Row[]).map((r) => ({
     id: r.id,
     kind: r.kind,
     name: r.name,
     active: r.active,
-    categories: r.resource_categories.map((c) => c.category_code).sort(),
-    lessonTypeIds: r.resource_lesson_types.map((t) => t.lesson_type_id),
-    typeNames: r.resource_lesson_types.map((t) => t.lesson_types?.name ?? ""),
   }));
 }
 
@@ -59,7 +54,7 @@ type Row = {
   instructor_id: string | null;
   scheduled_lesson_id: string | null;
   instructors: { school_members: { profiles: { full_name: string } | null } | null } | null;
-  scheduled_lessons: { category_code: string; services: { name: string } | null } | null;
+  scheduled_lessons: { services: { name: string } | null } | null;
 };
 
 export async function loadBookings(schoolId: string, from: string, to: string): Promise<Booking[]> {
@@ -67,7 +62,7 @@ export async function loadBookings(schoolId: string, from: string, to: string): 
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, resource_id, booking_date, start_time, minutes, title, instructor_id, scheduled_lesson_id, instructors(school_members(profiles(full_name))), scheduled_lessons(category_code, services(name))",
+      "id, resource_id, booking_date, start_time, minutes, title, instructor_id, scheduled_lesson_id, instructors(school_members(profiles(full_name))), scheduled_lessons(services(name))",
     )
     .eq("school_id", schoolId)
     .gte("booking_date", from)
@@ -87,9 +82,7 @@ export async function loadBookings(schoolId: string, from: string, to: string): 
       instructorId: b.instructor_id,
       instructorName: b.instructors?.school_members?.profiles?.full_name ?? null,
       lessonId: b.scheduled_lesson_id,
-      lessonLabel: b.scheduled_lessons
-        ? `${b.scheduled_lessons.services?.name ?? "Lektion"} · ${b.scheduled_lessons.category_code}`
-        : null,
+      lessonLabel: b.scheduled_lessons ? (b.scheduled_lessons.services?.name ?? "Lektion") : null,
     };
   });
 }

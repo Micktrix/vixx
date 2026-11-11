@@ -4,7 +4,6 @@ import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { loadResources } from "@/lib/booking-data";
-import { resourceDetail } from "@/lib/resources";
 import { formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
 import { fromMinutes, TIME_SLOTS, toMinutes } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
@@ -79,7 +78,6 @@ export default async function OfficeBookingPage({ searchParams }: PageProps<"/ko
                 {resources.filter((r) => r.kind === "vehicle").map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
-                    {resourceDetail(r) ? ` (${resourceDetail(r)})` : ""}
                   </option>
                 ))}
               </optgroup>

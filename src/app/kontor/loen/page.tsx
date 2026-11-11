@@ -30,11 +30,9 @@ export default async function PayrollPage({ searchParams }: PageProps<"/kontor/l
   const summary = summarize(payroll.instructors, payroll.registrations);
   const lines = exportLines(payroll.instructors, payroll.registrations);
 
-  // Satser, der har godkendte lektioner i perioden, som kolonner.
-  const rateGroups = [
-    ...new Map(
-      payroll.registrations.filter((r) => r.status === "approved").map((r) => [r.rateGroupId, r.rateGroupName]),
-    ),
+  // Ydelser, der har godkendte lektioner i perioden, som kolonner.
+  const services = [
+    ...new Map(payroll.registrations.filter((r) => r.status === "approved").map((r) => [r.serviceId, r.serviceName])),
   ].sort((a, b) => a[1].localeCompare(b[1], "da"));
 
   const staff = summary.filter((s) => !s.instructor.isGuest);
@@ -135,7 +133,7 @@ export default async function PayrollPage({ searchParams }: PageProps<"/kontor/l
           <thead className="text-[12px] text-muted">
             <tr>
               <th className="py-2.5 pr-3 pl-[18px] font-semibold">Underviser</th>
-              {rateGroups.map(([id, name]) => (
+              {services.map(([id, name]) => (
                 <th key={id} className="px-3 py-2.5 text-right font-semibold">
                   {name}
                 </th>
@@ -153,8 +151,8 @@ export default async function PayrollPage({ searchParams }: PageProps<"/kontor/l
                     {s.instructor.isGuest ? "Gæst · faktura, ikke i Dataløn" : `Medarbejdernr. ${s.instructor.employeeNumber ?? "–"}`}
                   </span>
                 </td>
-                {rateGroups.map(([id]) => {
-                  const g = s.byRateGroup.get(id);
+                {services.map(([id]) => {
+                  const g = s.byService.get(id);
                   return (
                     <td key={id} className="px-3 py-3 text-right whitespace-nowrap">
                       {g ? (
@@ -179,7 +177,7 @@ export default async function PayrollPage({ searchParams }: PageProps<"/kontor/l
             ))}
             {!summary.length && (
               <tr>
-                <td colSpan={rateGroups.length + 3} className="px-[18px] py-4 text-muted">
+                <td colSpan={services.length + 3} className="px-[18px] py-4 text-muted">
                   Ingen lektioner i perioden.
                 </td>
               </tr>
@@ -200,7 +198,7 @@ export default async function PayrollPage({ searchParams }: PageProps<"/kontor/l
       </details>
 
       <p className="text-[13px] text-muted">
-        Kun godkendte lektioner tæller, med den pris der blev låst ved godkendelsen. Lektionerne er fordelt på satser. Timer er
+        Kun godkendte lektioner tæller, med den sats der blev låst ved godkendelsen. Lektionerne er fordelt på ydelser, og eksportfilen har én linje pr. lærer pr. ydelse med ydelsens løndel. Timer er
         lektioner à {school?.lesson_minutes ?? 45} min.
       </p>
     </>

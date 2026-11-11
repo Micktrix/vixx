@@ -5,7 +5,7 @@ import { formatDate, todayDk } from "@/lib/dates";
 
 // Rækker fra school_members med profil og lærerkort, som kontoret ser dem.
 export const PERSON_SELECT =
-  "user_id, role, active, profiles(full_name, phone, must_change_password), instructors(id, active, active_until, is_guest, guest_company, instructor_categories(category_code))";
+  "user_id, role, active, profiles(full_name, phone, must_change_password), instructors(id, active, active_until, is_guest, guest_company)";
 
 type InstructorRow = {
   id: string;
@@ -13,7 +13,6 @@ type InstructorRow = {
   active_until: string | null;
   is_guest: boolean;
   guest_company: string | null;
-  instructor_categories: { category_code: string }[];
 };
 
 export type PersonRow = {
@@ -35,7 +34,6 @@ export type Person = {
   teaches: boolean;
   expired: boolean;
   roles: string[];
-  categories: string[];
   status: { label: string; tone: "neutral" | "accent" | "ok" | "bad" };
 };
 
@@ -67,7 +65,6 @@ export function toPerson(row: PersonRow, today = todayDk()): Person {
     teaches,
     expired,
     roles,
-    categories: (instructor?.instructor_categories ?? []).map((c) => c.category_code),
     status,
   };
 }

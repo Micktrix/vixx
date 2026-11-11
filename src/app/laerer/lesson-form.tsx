@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CheckChip, Fieldset, ResultBox, TextField, useFormAction } from "@/components/form";
+import { ResultBox, TextField, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import type { FormAction } from "@/lib/action-state";
-import { resourceDetail, resourcesForLesson, type ResourceInfo } from "@/lib/resources";
+import type { ResourceInfo } from "@/lib/resources";
 import { fromMinutes, overlaps, slotIsFree, suggestStart, TIME_SLOTS, toMinutes, type Span } from "@/lib/schedule";
 
-type Service = { id: string; name: string; groupName: string; categories: string[]; lessonTypeId?: string };
+type Service = { id: string; name: string };
 type Resource = ResourceInfo;
 
 // Formular til at registrere en kørt lektion eller planlægge en lektion frem i tiden.
@@ -32,7 +32,6 @@ export function TeacherLessonForm({
   hiddenFields: Record<string, string>;
   initial: {
     serviceId?: string;
-    category?: string;
     count?: number;
     start?: string;
     studentName?: string;
@@ -52,12 +51,10 @@ export function TeacherLessonForm({
 
   const duration = count * lessonMinutes;
   const shownStart = start && slotIsFree(start, duration, busy) ? start : (suggestStart(duration, busy) ?? "");
-  const service = services.find((s) => s.id === serviceId);
 
-  // Kun ledige lokaler/køretøjer i lektionens tidsrum, der passer til ydelsen (kategori for biler, type for lokaler).
+  // Kun ledige lokaler/køretøjer i lektionens tidsrum.
   const span = shownStart ? { from: toMinutes(shownStart), to: toMinutes(shownStart) + duration } : null;
   const resourceFree = (id: string) => !span || !(resourceBusy[id] ?? []).some((b) => overlaps(b, span));
-  const offered = resourcesForLesson(resources ?? [], service ? { categories: service.categories, lessonTypeId: service.lessonTypeId } : null);
   const shownResourceId = resourceId && resourceFree(resourceId) ? resourceId : "";
 
   return (
@@ -70,39 +67,15 @@ export function TeacherLessonForm({
         Ydelse
         <select name="serviceId" value={serviceId} onChange={(e) => setServiceId(e.target.value)} required className={inputClass}>
           <option value="" disabled>
-            {services.length ? "Vælg ydelse" : "Du har ingen kompetencer, der passer til en ydelse"}
+            {services.length ? "Vælg ydelse" : "Der er ingen ydelser endnu"}
           </option>
-          {[...new Set(services.map((s) => s.groupName))].map((g) => (
-            <optgroup key={g} label={g}>
-              {services
-                .filter((s) => s.groupName === g)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-            </optgroup>
+          {services.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
           ))}
         </select>
       </label>
-
-      {service && service.categories.length > 1 ? (
-        <Fieldset legend="Kategori">
-          {service.categories.map((c) => (
-            <CheckChip
-              key={`${service.id}-${c}`}
-              type="radio"
-              name="category"
-              value={c}
-              label={c}
-              required
-              defaultChecked={c === initial.category && service.id === initial.serviceId}
-            />
-          ))}
-        </Fieldset>
-      ) : (
-        service && <input type="hidden" name="category" value={service.categories[0]} />
-      )}
 
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-bold">Antal lektioner</span>
@@ -160,13 +133,12 @@ export function TeacherLessonForm({
             {(["vehicle", "room"] as const).map((kind) => (
               <optgroup key={kind} label={kind === "vehicle" ? "Køretøjer" : "Lokaler"}>
                 {resources
-                  .filter((r) => r.kind === kind && offered.includes(r))
+                  .filter((r) => r.kind === kind)
                   .map((r) => {
                     const free = resourceFree(r.id);
                     return (
                       <option key={r.id} value={r.id} disabled={!free}>
                         {r.name}
-                        {resourceDetail(r) ? ` (${resourceDetail(r)})` : ""}
                         {free ? "" : " – optaget"}
                       </option>
                     );

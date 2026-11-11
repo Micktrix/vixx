@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { TextField } from "@/components/form";
 
-// Pris og "gælder fra". En dato bagud er tilladt, men ændrer ikke-godkendte lektioner, så vi advarer.
-export function PriceFields({ today, priceLabel = "Pris pr. lektion (kr.)" }: { today: string; priceLabel?: string }) {
+// Sats (kr. pr. lektion) og "gælder fra". En dato bagud er tilladt, men ændrer ikke-godkendte lektioner, så vi advarer.
+export function PriceFields({ today, priceLabel = "Sats pr. lektion (kr.)" }: { today: string; priceLabel?: string }) {
   const [validFrom, setValidFrom] = useState(today);
 
   return (
@@ -22,8 +22,8 @@ export function PriceFields({ today, priceLabel = "Pris pr. lektion (kr.)" }: { 
       </div>
       {validFrom && validFrom < today && (
         <p role="note" className="rounded-xl border border-accent-line bg-accent-bg px-3.5 py-2.5 text-sm">
-          Datoen ligger bagud. Prisen gælder også for lektioner fra datoen, der endnu ikke er godkendt. Godkendte
-          lektioner beholder deres pris.
+          Datoen ligger bagud. Satsen gælder også for lektioner fra datoen, der endnu ikke er godkendt. Godkendte
+          lektioner beholder deres sats.
         </p>
       )}
     </div>

@@ -62,7 +62,7 @@ select is(
   18000, 'Uden egen pris låses ydelsens pris på lektionens dato');
 
 -- Kontoret retter ydelsen på en godkendt registrering: prisen låses igen.
-update public.registrations set service_id = '00000000-0000-4000-a500-000000000006', category_code = 'B'
+update public.registrations set service_id = '00000000-0000-4000-a500-000000000006'
 where instructor_id = '00000000-0000-4000-a200-000000000014' and lesson_date = current_date - 1;
 select is(
   (select locked_unit_price_ore from public.registrations

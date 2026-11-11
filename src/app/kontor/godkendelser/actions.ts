@@ -124,7 +124,6 @@ export async function officeSaveRegistration(_prev: ActionState, formData: FormD
     .from("registrations")
     .update({
       service_id: text("serviceId"),
-      category_code: text("category") || null,
       lesson_count: count,
       start_time: start,
       student_name: text("studentName") || null,

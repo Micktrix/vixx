@@ -14,7 +14,6 @@ export type ApprovalRow = Span & {
   count: number;
   serviceId: string;
   serviceName: string;
-  category: string;
   studentName: string | null;
   note: string | null;
   status: Status;
@@ -35,7 +34,6 @@ type Row = {
   lesson_count: number;
   lesson_minutes: number;
   service_id: string;
-  category_code: string;
   student_name: string | null;
   note: string | null;
   status: Status;
@@ -50,7 +48,7 @@ type Row = {
 };
 
 const SELECT =
-  "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, category_code, student_name, note, status, decision_comment, decided_by, decided_at, office_edited_at, unit_price_ore, services(name), scheduled_lessons(lesson_count, service_id), instructors(school_members(profiles(full_name)))";
+  "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, student_name, note, status, decision_comment, decided_by, decided_at, office_edited_at, unit_price_ore, services(name), scheduled_lessons(lesson_count, service_id), instructors(school_members(profiles(full_name)))";
 
 export async function loadApprovals(schoolId: string, status: Status, instructorId: string | null) {
   const supabase = await createClient();
@@ -70,7 +68,6 @@ export async function loadApprovals(schoolId: string, status: Status, instructor
       count: r.lesson_count,
       serviceId: r.service_id,
       serviceName: r.services?.name ?? "",
-      category: r.category_code,
       studentName: r.student_name,
       note: r.note,
       status: r.status,

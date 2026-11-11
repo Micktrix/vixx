@@ -83,43 +83,37 @@ test("en deaktiveret lærer bliver logget ud og kan ikke komme ind", async ({ br
   await expect(teacher).toHaveURL("/laerer");
 });
 
-test("kontoret retter kompetencer og tilgængelighed, men ser ikke priser", async ({ page }) => {
+test("kontoret retter tilgængelighed, men ser ikke satser", async ({ page }) => {
   await loginOk(page, OFFICE, PASSWORD);
-  const { href } = await createMember(page, "E2E Kompetencer", { categories: ["B"] });
+  const { href } = await createMember(page, "E2E Tilgængelighed");
   await page.goto(href);
-  await expect(page.getByRole("heading", { name: "Priser pr. ydelse" })).toHaveCount(0);
-
-  await page.getByRole("checkbox", { name: "CE", exact: true }).locator("..").click();
-  await page.getByRole("button", { name: "Gem kompetencer" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Kompetencerne er gemt" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Satser pr. ydelse" })).toHaveCount(0);
 
   await page.getByLabel("Efter aftale").check();
   await page.getByRole("button", { name: "Gem", exact: true }).last().click();
   await expect(page.getByRole("status").filter({ hasText: "Efter aftale" })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("checkbox", { name: "CE", exact: true })).toBeChecked();
-  await expect(page.getByRole("checkbox", { name: "B", exact: true })).toBeChecked();
   await expect(page.getByLabel("Efter aftale")).toBeChecked();
 });
 
-test("admin sætter en egen pris, og tom pris betyder standardprisen", async ({ page }) => {
+test("admin sætter en egen sats, og tom betyder ydelsens sats", async ({ page }) => {
   await loginOk(page, ADMIN, PASSWORD);
-  const { href } = await createMember(page, "E2E Pris", { categories: ["B"] });
+  const { href } = await createMember(page, "E2E Pris");
   await page.goto(href);
 
-  const price = page.getByLabel("Egen pris for B privat");
+  const price = page.getByLabel("Egen sats for B privat");
   await price.fill("300,50");
-  await page.getByRole("button", { name: "Gem priser" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Priserne er gemt" })).toBeVisible();
+  await page.getByRole("button", { name: "Gem satser" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Satserne er gemt" })).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("Egen pris for B privat")).toHaveValue("300,5");
+  await expect(page.getByLabel("Egen sats for B privat")).toHaveValue("300,5");
 
-  await page.getByLabel("Egen pris for B privat").fill("");
-  await page.getByRole("button", { name: "Gem priser" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Priserne er gemt" })).toBeVisible();
+  await page.getByLabel("Egen sats for B privat").fill("");
+  await page.getByRole("button", { name: "Gem satser" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Satserne er gemt" })).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("Egen pris for B privat")).toHaveValue("");
+  await expect(page.getByLabel("Egen sats for B privat")).toHaveValue("");
 });
 
 test("læreren retter selv sine pårørende", async ({ page }) => {

@@ -17,9 +17,9 @@ Tre faser. Fase 1 er det, der skal i pilot. Hvert trin afsluttes med en kort sta
 Tabeller (alle med `school_id`, `created_at`, `updated_at`):
 - `schools` – navn, lektionslængde (min), lønperiode-startdag, indstillinger.
 - `profiles` – bruger (auth-id), skole, rolle (`admin`/`office`/`instructor`), navn, telefon (E.164, unik), `must_change_password`.
-- `instructors` – profil-id, medarbejdernr., gæst (ja/nej, firma, aktiv til), tilgængelighed (`fixed`/`on_request`), kategorier[], typer[], kontakt (e-mail, adresse, postnr., by), ansat fra, fødselsdato, kørelærergodkendelse udløber, pårørende (navn, relation, telefon).
-- `rate_groups` (satser) – navn, Dataløn-løndel, aktiv.
-- `services` (ydelser) – navn, sats, kategori, type, aktiv.
+- `instructors` – profil-id, medarbejdernr., gæst (ja/nej, firma, aktiv til), tilgængelighed (`fixed`/`on_request`), kontakt (e-mail, adresse, postnr., by), ansat fra, fødselsdato, kørelærergodkendelse udløber, pårørende (navn, relation, telefon).
+- `services` (ydelser) – navn, Dataløn-løndel, aktiv. Satsen (kr. pr. lektion med gyldig-fra) i `service_prices`.
+  (Ændret 11. nov. 2026: sats-grupper, kategorier og typer er fjernet overalt; satsen sidder på ydelsen.)
 - `service_prices` – ydelse, gyldig fra, beløb.
 - `instructor_prices` – lærer, ydelse, beløb (override).
 - `scheduled_lessons` – lærer, ydelse, dato, start, antal, elevnavn, `student_id` (null), note, oprettet af (kontor/lærer).
@@ -27,7 +27,7 @@ Tabeller (alle med `school_id`, `created_at`, `updated_at`):
 - `absences` – lærer, dato, start, timer, årsag, note.
 - `holidays` – lærer, fra, til, note, status.
 - `availability` – lærer, dato, start, slut ("Kan arbejde").
-- `resources` – type (`room`/`vehicle`), navn, køretøjstype, aktiv.
+- `resources` – type (`room`/`vehicle`), navn, aktiv.
 - `bookings` – ressource, dato, start, minutter, titel, lærer (null), lektion (null).
 - `pay_periods` – start, slut, låst, låst af/hvornår.
 - `messages` / `notifications` – til alle eller én lærer, læst.

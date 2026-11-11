@@ -46,53 +46,6 @@ export async function updateInstructorDetails(_prev: ActionState, formData: Form
   return { message: "Stamdata er gemt." };
 }
 
-export async function updateCompetences(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
-  const schoolId = membership.schoolId;
-  const instructorId = String(formData.get("instructorId") ?? "");
-  const categories = new Set(formData.getAll("categories").map(String));
-  const types = new Set(formData.getAll("lessonTypes").map(String));
-
-  const supabase = await createClient();
-  const [{ data: instructor }, { data: currentCats }, { data: currentTypes }] = await Promise.all([
-    supabase.from("instructors").select("id").eq("id", instructorId).eq("school_id", schoolId).maybeSingle(),
-    supabase.from("instructor_categories").select("category_code").eq("instructor_id", instructorId),
-    supabase.from("instructor_lesson_types").select("lesson_type_id").eq("instructor_id", instructorId),
-  ]);
-  if (!instructor) return { error: "Læreren findes ikke på skolen." };
-
-  // Kun forskellen skrives, så ændringsloggen viser præcis hvad der er slået til og fra.
-  const hadCats = new Set((currentCats ?? []).map((c) => c.category_code));
-  const hadTypes = new Set((currentTypes ?? []).map((t) => t.lesson_type_id));
-  const addCats = [...categories].filter((c) => !hadCats.has(c));
-  const removeCats = [...hadCats].filter((c) => !categories.has(c));
-  const addTypes = [...types].filter((t) => !hadTypes.has(t));
-  const removeTypes = [...hadTypes].filter((t) => !types.has(t));
-
-  const results = await Promise.all([
-    addCats.length
-      ? supabase.from("instructor_categories").insert(
-          addCats.map((code) => ({ school_id: schoolId, instructor_id: instructorId, category_code: code })),
-        )
-      : null,
-    removeCats.length
-      ? supabase.from("instructor_categories").delete().eq("instructor_id", instructorId).in("category_code", removeCats)
-      : null,
-    addTypes.length
-      ? supabase.from("instructor_lesson_types").insert(
-          addTypes.map((id) => ({ school_id: schoolId, instructor_id: instructorId, lesson_type_id: id })),
-        )
-      : null,
-    removeTypes.length
-      ? supabase.from("instructor_lesson_types").delete().eq("instructor_id", instructorId).in("lesson_type_id", removeTypes)
-      : null,
-  ]);
-  if (results.some((r) => r?.error)) return { error: "Kompetencerne kunne ikke gemmes. Prøv igen." };
-
-  refresh();
-  return { message: "Kompetencerne er gemt." };
-}
-
 export async function setAvailability(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { membership } = await requireRole(["admin", "office"]);
   const instructorId = String(formData.get("instructorId") ?? "");
@@ -145,8 +98,8 @@ export async function updateInstructorPrices(_prev: ActionState, formData: FormD
       ? supabase.from("instructor_prices").delete().eq("instructor_id", instructorId).in("service_id", removals)
       : null,
   ]);
-  if (results.some((r) => r?.error)) return { error: "Priserne kunne ikke gemmes. Prøv igen." };
+  if (results.some((r) => r?.error)) return { error: "Satserne kunne ikke gemmes. Prøv igen." };
 
   refresh();
-  return { message: upserts.length || removals.length ? "Priserne er gemt." : "Ingen ændringer." };
+  return { message: upserts.length || removals.length ? "Satserne er gemt." : "Ingen ændringer." };
 }

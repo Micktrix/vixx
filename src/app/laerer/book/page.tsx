@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { loadBookings, loadResources, type Booking } from "@/lib/booking-data";
-import { resourceDetail } from "@/lib/resources";
 import { addDays, formatDate, formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
 import { formatSpan } from "@/lib/schedule";
 import { Screen } from "../screen";
@@ -22,10 +21,7 @@ export default async function BookPage({ searchParams }: PageProps<"/laerer/book
     loadBookings(schoolId, date, date),
     loadBookings(schoolId, today, addDays(today, 60)),
   ]);
-  // Køretøjer i lærerens kategorier (eller uden kategori).
-  const list = resources.filter(
-    (r) => r.kind === kind && (kind === "room" || !r.categories.length || r.categories.some((c) => teacher.categories.includes(c))),
-  );
+  const list = resources.filter((r) => r.kind === kind);
   const mine = upcoming.filter((b) => b.instructorId === teacher.instructorId && !b.lessonId);
   const href = (p: { dato?: string; type?: string }) => `/laerer/book?dato=${p.dato ?? date}&type=${p.type ?? kind}`;
   const who = (b: Booking) => (b.instructorId === teacher.instructorId ? "Dig" : (b.instructorName ?? "Kontoret"));
@@ -90,7 +86,6 @@ export default async function BookPage({ searchParams }: PageProps<"/laerer/book
             <div className="flex items-center justify-between gap-2">
               <b>
                 {r.name}
-                {resourceDetail(r) ? <span className="font-normal text-muted"> · {resourceDetail(r)}</span> : null}
               </b>
               {date >= today && (
                 <Link

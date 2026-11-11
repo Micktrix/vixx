@@ -70,55 +70,33 @@ select '00000000-0000-4000-a000-000000000001', ('00000000-0000-4000-a100-0000000
 from seed_people;
 
 -- ---------------------------------------------------------------------------
--- Typer, satser og ydelser
+-- Ydelser (navn, sats og løndel)
 -- ---------------------------------------------------------------------------
--- Skolen har fået standardtyper automatisk; seed bruger faste id'er, så de lægges ind forfra.
-delete from public.lesson_types where school_id = '00000000-0000-4000-a000-000000000001';
-insert into public.lesson_types (id, school_id, name, sort_order) values
-  ('00000000-0000-4000-a300-000000000001', '00000000-0000-4000-a000-000000000001', 'Kørsel',    10),
-  ('00000000-0000-4000-a300-000000000002', '00000000-0000-4000-a000-000000000001', 'Teori',     20),
-  ('00000000-0000-4000-a300-000000000003', '00000000-0000-4000-a000-000000000001', 'Manøvre',   30),
-  ('00000000-0000-4000-a300-000000000004', '00000000-0000-4000-a000-000000000001', 'Glatbane',  40),
-  ('00000000-0000-4000-a300-000000000005', '00000000-0000-4000-a000-000000000001', 'Køreprøve', 50),
-  ('00000000-0000-4000-a300-000000000006', '00000000-0000-4000-a000-000000000001', 'Rybners',   60);
-
+-- (id-endelse, navn, løndel, testsats i kr.)
 -- Løndele er pladsholdere, indtil vi har skolens Dataløn-importfil.
-insert into public.rate_groups (id, school_id, name, payroll_code) values
-  ('00000000-0000-4000-a400-000000000001', '00000000-0000-4000-a000-000000000001', 'Amu kørsel',   'TEST-101'),
-  ('00000000-0000-4000-a400-000000000002', '00000000-0000-4000-a000-000000000001', 'Amu teori',    'TEST-102'),
-  ('00000000-0000-4000-a400-000000000003', '00000000-0000-4000-a000-000000000001', 'Teorilek.',    'TEST-103'),
-  ('00000000-0000-4000-a400-000000000004', '00000000-0000-4000-a000-000000000001', 'Privatkørsel', 'TEST-104'),
-  ('00000000-0000-4000-a400-000000000005', '00000000-0000-4000-a000-000000000001', 'Diverse',      'TEST-105');
-
--- (id-endelse, navn, sats, kategorier, type, testpris i kr.) En ydelse kan dække flere kategorier.
-create temporary table seed_services (nn text, name text, rate text, cats text[], typ text, kr int);
+create temporary table seed_services (nn text, name text, payroll text, kr int);
 insert into seed_services values
-  ('01', 'Amu C',          '1', '{C}',  '1', 260),
-  ('02', 'Amu CE',         '1', '{CE}', '1', 280),
-  ('03', 'Aften Amu C/E',  '1', '{C,CE}', '1', 310),
-  ('04', 'Amu teori C',    '2', '{C}',  '2', 230),
-  ('05', 'B teori',        '3', '{B}',  '2', 180),
-  ('06', 'B privat',       '4', '{B}',  '1', 220),
-  ('07', 'C privat',       '4', '{C}',  '1', 250),
-  ('08', 'Manøvre B',      '5', '{B}',  '3', 200),
-  ('09', 'Glatbane B',     '5', '{B}',  '4', 240),
-  ('10', 'Køreprøve B',    '5', '{B}',  '5', 220),
-  ('11', 'Rybners C',      '5', '{C}',  '6', 260);
+  ('01', 'Amu C',          'TEST-101', 260),
+  ('02', 'Amu CE',         'TEST-101', 280),
+  ('03', 'Aften Amu C/E',  'TEST-101', 310),
+  ('04', 'Amu teori C',    'TEST-102', 230),
+  ('05', 'B teori',        'TEST-103', 180),
+  ('06', 'B privat',       'TEST-104', 220),
+  ('07', 'C privat',       'TEST-104', 250),
+  ('08', 'Manøvre B',      'TEST-105', 200),
+  ('09', 'Glatbane B',     'TEST-105', 240),
+  ('10', 'Køreprøve B',    'TEST-105', 220),
+  ('11', 'Rybners C',      'TEST-105', 260);
 
-insert into public.services (id, school_id, name, rate_group_id, lesson_type_id)
+insert into public.services (id, school_id, name, payroll_code)
 select
   ('00000000-0000-4000-a500-0000000000' || nn)::uuid,
   '00000000-0000-4000-a000-000000000001',
   name,
-  ('00000000-0000-4000-a400-00000000000' || rate)::uuid,
-  ('00000000-0000-4000-a300-00000000000' || typ)::uuid
+  payroll
 from seed_services;
 
-insert into public.service_categories (school_id, service_id, category_code)
-select '00000000-0000-4000-a000-000000000001', ('00000000-0000-4000-a500-0000000000' || nn)::uuid, unnest(cats)
-from seed_services;
-
--- Pris gældende fra 1. januar i år, og en prisstigning fra næste måned på B privat.
+-- Sats gældende fra 1. januar i år, og en stigning fra næste måned på B privat.
 insert into public.service_prices (school_id, service_id, valid_from, amount_ore)
 select
   '00000000-0000-4000-a000-000000000001',
@@ -136,7 +114,7 @@ values (
 );
 
 -- ---------------------------------------------------------------------------
--- Lærere og kompetencer
+-- Lærere
 -- ---------------------------------------------------------------------------
 insert into public.instructors (
   id, school_id, user_id, employee_number, is_guest, guest_company, availability,
@@ -156,33 +134,7 @@ select
 from seed_people
 where role = 'instructor' or nn = '01';  -- Anne Admin underviser også (flere roller)
 
-insert into public.instructor_categories (school_id, instructor_id, category_code)
-select '00000000-0000-4000-a000-000000000001', ('00000000-0000-4000-a200-0000000000' || nn)::uuid, cat
-from (values
-  ('01', 'B'),
-  ('11', 'B'), ('11', 'C'), ('11', 'CE'),
-  ('12', 'B'), ('12', 'BE'),
-  ('13', 'C'), ('13', 'CE'),
-  ('14', 'B'),
-  ('15', 'B'), ('15', 'C'),
-  ('16', 'B'), ('16', 'BE'),
-  ('17', 'C'), ('17', 'CE'), ('17', 'D'),
-  ('18', 'B'),
-  ('19', 'C'), ('19', 'CE')
-) v(nn, cat);
-
--- Alle lærere kan kørsel og teori; nogle kan mere.
-insert into public.instructor_lesson_types (school_id, instructor_id, lesson_type_id)
-select '00000000-0000-4000-a000-000000000001', i.id, t.id
-from public.instructors i
-cross join public.lesson_types t
-where t.name in ('Kørsel', 'Teori')
-   or (t.name = 'Manøvre' and i.id in ('00000000-0000-4000-a200-000000000012', '00000000-0000-4000-a200-000000000014'))
-   or (t.name = 'Glatbane' and i.id = '00000000-0000-4000-a200-000000000016')
-   or (t.name = 'Køreprøve' and i.id in ('00000000-0000-4000-a200-000000000012', '00000000-0000-4000-a200-000000000015'))
-   or (t.name = 'Rybners' and i.id in ('00000000-0000-4000-a200-000000000013', '00000000-0000-4000-a200-000000000017'));
-
--- Lars har egen pris på Amu C.
+-- Lars har egen sats på Amu C.
 insert into public.instructor_prices (school_id, instructor_id, service_id, amount_ore)
 values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011', '00000000-0000-4000-a500-000000000001', 27000);
 
@@ -195,18 +147,6 @@ insert into public.resources (id, school_id, kind, name) values
   ('00000000-0000-4000-a600-000000000003', '00000000-0000-4000-a000-000000000001', 'vehicle', 'Personbil 1'),
   ('00000000-0000-4000-a600-000000000004', '00000000-0000-4000-a000-000000000001', 'vehicle', 'Lastbil 1'),
   ('00000000-0000-4000-a600-000000000005', '00000000-0000-4000-a000-000000000001', 'vehicle', 'Lastbil med trailer');
-
--- Et køretøj kan dække flere kategorier; personbilen bruges også til BE.
-insert into public.resource_categories (school_id, resource_id, category_code) values
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000003', 'B'),
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000003', 'BE'),
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000004', 'C'),
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000005', 'CE');
-
--- Lokalerne bruges til teori.
-insert into public.resource_lesson_types (school_id, resource_id, lesson_type_id) values
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000001', '00000000-0000-4000-a300-000000000002'),
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000002', '00000000-0000-4000-a300-000000000002');
 
 -- ---------------------------------------------------------------------------
 -- Lønperioder (21.–20.): forrige, nuværende og næste

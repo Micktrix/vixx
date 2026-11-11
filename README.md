@@ -56,18 +56,17 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - Beløb gemmes i øre (heltal). Dato og tid er dansk lokaltid.
 - Én person (telefonnummer) kan høre til flere skoler via `school_members`.
 - Hver lektion husker sin lektionslængde, så ændringer på skolen ikke flytter gamle lektioner.
-- Kategorier (B, C …) er fælles; typer (Kørsel, Rybners …) vedligeholdes pr. skole. Nye skoler får standardtyperne.
+- Ydelser, lærere, lokaler og køretøjer har ingen kategorier eller typer. Kørekortkategorierne (`license_categories`) står kun som opslagstabel til elevdelen.
 - Lærerrollen er `instructors.active`; rækken slettes aldrig, så historik bevares.
-- Priser: `public.unit_price_ore(registrering)` giver låst pris → lærerens egen pris → ydelsens pris på lektionens dato (`service_price_on`). Samme regel i `src/lib/prices.ts` til visning.
-- En ydelse kan dække flere kategorier (`service_categories`); prisen er én pr. ydelse, og lektionen gemmer kun ydelsen.
-- Planlægning: databasen afviser overlap for en lærer (lektion/lektion, lektion/fravær, fravær/fravær, lektion i godkendt ferie) med en lås pr. lærer (`private.instructor_conflict`). Kun ydelser, læreren har kompetence til (type + kategori). Lektionen gemmer kategorien. Ferie kan ikke godkendes med lektioner i perioden. Samme regler i `src/lib/schedule.ts` til visning.
+- Satser: `public.unit_price_ore(registrering)` giver låst sats → lærerens egen sats → ydelsens sats på lektionens dato (`service_price_on`; tabellen hedder `service_prices`). Løndelen til Dataløn er `services.payroll_code`. Samme regel i `src/lib/prices.ts` til visning.
+- Planlægning: databasen afviser overlap for en lærer (lektion/lektion, lektion/fravær, fravær/fravær, lektion i godkendt ferie) med en lås pr. lærer (`private.instructor_conflict`). Alle aktive lærere kan alle ydelser i brug (`private.check_service`). Ferie kan ikke godkendes med lektioner i perioden. Samme regler i `src/lib/schedule.ts` til visning.
 - Registreringer: en planlagt lektion kan kun registreres én gang; registreringer (ikke afviste) kan ikke overlappe; intet kan oprettes, rettes eller slettes i en låst lønperiode (gælder appens brugere).
 - Godkendelse: databasen låser prisen (lærerens egen → ydelsens pris på datoen) og gemmer hvem/hvornår; klienten kan ikke sende en pris. En afvisning kræver kommentar. Kontorets rettelser markeres, og læreren får besked i appen.
 - Lønperioder: kontor og admin kan låse; kun admin kan låse op (logges). Lønberegning og Dataløn-CSV i `src/lib/payroll.ts` (kolonner i `DATALON_COLUMNS`, tilpasses skolens importfil). Gæster er ikke med i eksporten.
 - Ændringslog: `public.search_audit` søger i ændringer, i hvem der ændrede og på lærerens navn; `src/lib/audit.ts` oversætter til dansk.
-- Lokaler og køretøjer: et køretøj dækker en eller flere kategorier (`resource_categories`), et lokale bruges til en eller flere typer (`resource_lesson_types`, fx Teori). Ved planlægning tilbydes lokaler til typer, et lokale bruges til, ellers køretøjer i lektionens kategori (`src/lib/resources.ts`). Ubrugte lokaler, køretøjer og typer kan slettes; brugte kun slås fra.
+- Lokaler og køretøjer: kun navn og "i brug". Alle kan bookes til alle lektioner. Ubrugte kan slettes; brugte kun slås fra.
 - Booking: et lokale/køretøj kan ikke dobbeltbookes (lås pr. ressource). En lektions booking følger lektionen (`private.follow_lesson_bookings`) og kan kun ændres af kontoret. Lærere booker kun til sig selv, fra i dag og frem.
-- En brugt ydelse kan få flere kategorier, men ikke miste nogen, skifte type eller slettes; en sats med ydelser kan ikke slettes. En ydelse har altid mindst én pris og én kategori.
+- En brugt ydelse kan skifte navn og løndel og slås fra, men ikke slettes. En ydelse har altid mindst én sats.
 - RLS er slået til på alle tabeller. Hjælpefunktioner ligger i skemaet `private`.
 - Alle ændringer logges automatisk i `audit_log` uden følsomme værdier.
 
@@ -83,8 +82,8 @@ Supabase Studio (databasen i browseren): http://127.0.0.1:54323
 - `/storskaerm` – dagens overblik til en skærm på kontoret (opdaterer sig selv hvert minut, ingen elevnavne)
 - Påmindelser: tal i kontorets menu (godkendelser, ferie), "Send påmindelse" under Godkendelser, og i lærer-appen "Du mangler at registrere" og afviste lektioner
 - `/kontor/undervisere` – undervisere og brugere; `/ny` opretter, `/<bruger-id>` er personens side
-- `/kontor/ydelser` – satser, ydelser og priser (kun admin retter)
-- `/kontor/indstillinger` – typer
+- `/kontor/ydelser` – ydelser med sats og løndel (kun admin retter)
+- `/kontor/indstillinger` – skolen, lokaler og køretøjer
 - `/laerer` – lærerens kalender for lønperioden med dagspanel ("Udført", tilføj, planlæg egen lektion)
 - `/laerer/registrer`, `/laerer/planlaeg`, `/laerer/kan-arbejde`, `/laerer/ferie`, `/laerer/overblik`, `/laerer/beskeder`, `/laerer/oplysninger`
 - Appen kan lægges på hjemmeskærmen (PWA): `src/app/manifest.ts`, ikoner i `src/app/app-icon/`
