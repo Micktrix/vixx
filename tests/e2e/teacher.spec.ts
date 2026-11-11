@@ -127,3 +127,36 @@ test("en låst lønperiode kan ikke ændres fra appen", async ({ page }) => {
   await expect(page.getByText("Lønperioden er låst")).toBeVisible();
   await expect(page.getByRole("link", { name: "+ Tilføj lektioner" })).toHaveCount(0);
 });
+
+test("læreren føjer sine lektioner til telefonens kalender, uden elevnavne", async ({ browser, request }) => {
+  const name = `E2E Kalender ${Date.now() % 100000}`;
+  const { page, instructorId } = await newTeacher(browser, name);
+  const date = daysFromToday(3);
+  await localAdmin().from("scheduled_lessons").insert({
+    school_id: SCHOOL, instructor_id: instructorId, service_id: B_PRIVAT, lesson_date: date,
+    start_time: "10:00", lesson_count: 2, student_name: "Hemmelig Elevsen", origin: "office",
+  });
+
+  await page.goto("/laerer/overblik");
+  await page.getByRole("link", { name: "Kalender i telefonen" }).click();
+  const box = page.getByTestId("calendar-box");
+  const webcal = (await box.getByRole("link", { name: "Føj til min kalender (iPhone)" }).getAttribute("href"))!;
+  expect(webcal).toMatch(/^webcal:\/\/.+\/kalender\/[0-9a-f-]{36}\.ics$/);
+  const url = webcal.replace(/^webcal:\/\/[^/]+/, "");
+
+  const res = await request.get(url);
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toContain("text/calendar");
+  const ics = await res.text();
+  expect(ics).toContain(`X-WR-CALNAME:Vixx – ${name}`);
+  expect(ics).toContain(`DTSTART;TZID=Europe/Copenhagen:${date.replaceAll("-", "")}T100000`);
+  expect(ics).toContain(`DTEND;TZID=Europe/Copenhagen:${date.replaceAll("-", "")}T113000`); // to lektioner efter lektionsplanen
+  expect(ics).toContain("SUMMARY:B privat");
+  expect(ics).not.toContain("Hemmelig Elevsen");
+
+  // Nyt link: det gamle virker ikke længere.
+  page.once("dialog", (d) => d.accept());
+  await box.getByRole("button", { name: "Lav nyt link" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Nyt link er lavet" })).toBeVisible();
+  expect((await request.get(url)).status()).toBe(404);
+});

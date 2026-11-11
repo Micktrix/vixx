@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { ActionForm, TextField } from "@/components/form";
 import { requireRole } from "@/lib/auth/session";
@@ -6,17 +7,23 @@ import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../screen";
 import { updateOwnDetails } from "./actions";
+import { CalendarBox } from "./calendar-box";
 
 export default async function OwnDetailsPage() {
   const { user, membership } = await requireRole(["instructor"]);
   const supabase = await createClient();
   const { data } = await supabase
     .from("instructors")
-    .select("email, address, postal_code, city, next_of_kin_name, next_of_kin_relation, next_of_kin_phone")
+    .select("email, address, postal_code, city, next_of_kin_name, next_of_kin_relation, next_of_kin_phone, calendar_token")
     .eq("school_id", membership.schoolId)
     .eq("user_id", user.id)
     .single();
   const values = (data ?? {}) as Record<string, string | null>;
+  // Adressen til kalenderfilen, på det domæne appen kører på (fx test.vixx.dk).
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "test.vixx.dk";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const calendarUrl = `${proto}://${host}/kalender/${values.calendar_token}.ics`;
 
   const back = (
     <Link href="/laerer/beskeder" className="text-sm font-semibold text-muted">
@@ -26,6 +33,7 @@ export default async function OwnDetailsPage() {
 
   return (
     <Screen title="Mine oplysninger" sub={user.fullName} action={back}>
+      {values.calendar_token && <CalendarBox httpsUrl={calendarUrl} />}
       <section className="rounded-[20px] border border-line bg-surface p-[18px]">
         <ActionForm action={updateOwnDetails} submitLabel="Gem oplysninger" className="flex flex-col gap-5">
           <Group legend="Kontakt" fields={CONTACT_FIELDS} values={values} />

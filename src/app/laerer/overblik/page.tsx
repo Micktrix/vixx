@@ -136,6 +136,14 @@ export default async function InstructorOverviewPage({ searchParams }: PageProps
           Anmod om ferie
         </Link>
       </section>
+
+      <Link
+        href="/laerer/oplysninger"
+        className="flex items-center justify-between rounded-[20px] border border-line bg-surface p-[18px] font-bold"
+      >
+        Kalender i telefonen
+        <span className="text-muted">›</span>
+      </Link>
     </Screen>
   );
 }
