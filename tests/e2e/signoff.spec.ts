@@ -45,6 +45,7 @@ test("læreren scanner elevens kode og kvitterer, eleven bekræfter, og kontoret
     await studentPage.getByTestId("student-waiting").getByRole("button", { name: "Bekræft" }).click();
     await expect(studentPage.getByTestId("student-waiting")).toHaveCount(0);
     await expect(studentPage.getByTestId("student-done")).toHaveText("2");
+    await expect(studentPage.getByTestId("lesson-instructor").first()).toContainText("E2E Kvittering");
 
     // Kontoret ser lektionerne som gennemført.
     const office = await browser.newPage();

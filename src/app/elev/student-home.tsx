@@ -152,6 +152,11 @@ function LessonStatus({ signoff }: { signoff: Signoff | undefined }) {
     <span className="shrink-0 text-right text-sm font-semibold text-ok">
       ✓ Gennemført
       <span className="block text-[12px] font-normal text-muted">{formatDate(signoff.lesson_date)}</span>
+      {signoff.instructor_name && (
+        <span className="block text-[12px] font-normal text-muted" data-testid="lesson-instructor">
+          {signoff.instructor_name}
+        </span>
+      )}
     </span>
   );
 }
