@@ -1,9 +1,9 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { ActionForm, TextField } from "@/components/form";
 import { requireRole } from "@/lib/auth/session";
 import { CONTACT_FIELDS, KIN_FIELDS, type FieldDef } from "@/lib/instructor-fields";
 import { formatPhone } from "@/lib/phone";
+import { siteOrigin } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../screen";
 import { updateOwnDetails } from "./actions";
@@ -20,10 +20,7 @@ export default async function OwnDetailsPage() {
     .single();
   const values = (data ?? {}) as Record<string, string | null>;
   // Adressen til kalenderfilen, på det domæne appen kører på (fx test.vixx.dk).
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "test.vixx.dk";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const calendarUrl = `${proto}://${host}/kalender/${values.calendar_token}.ics`;
+  const calendarUrl = `${await siteOrigin()}/kalender/${values.calendar_token}.ics`;
 
   const back = (
     <Link href="/laerer/beskeder" className="text-sm font-semibold text-muted">

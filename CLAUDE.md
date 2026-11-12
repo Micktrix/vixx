@@ -100,7 +100,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 **Elever (i gang, se Fase 3 i BYGGEPLAN)**
 - Lektioner og registreringer har et valgfrit fritekstfelt `student_name` og et nullable `student_id` til senere.
 - *Forløb* (`courses`, `course_lessons`): pr. kørekortkategori, bygget og rettet af **admin** under Indstillinger → Forløb (alle på skolen kan se). En lektion har nummer, antal × 45 min., type (kørsel/teori), sted, indhold (ét punkt pr. linje), noter og kontrolstof – som lektionsplanen på papir.
-- QR-kvittering (planlagt): læreren scanner elevens QR-kode og kvitterer (kørelærerens underskrift), eleven bekræfter (elevens underskrift). En kvittering kan aldrig slettes. Kørselslektioner registreres til lønnen i samme tryk; teorilektioner gør ikke.
+- QR-kvittering (`lesson_signoffs`): læreren scanner elevens QR-kode og kvitterer (kørelærerens underskrift), eleven bekræfter (elevens underskrift). En kvittering kan aldrig slettes. Kørselslektioner registreres til lønnen i samme tryk; teorilektioner gør ikke.
 
 **Log og privatliv**
 - Alle ændringer skrives i en ændringslog (hvem, hvornår, hvad). Følsomme værdier skrives ikke i loggen.

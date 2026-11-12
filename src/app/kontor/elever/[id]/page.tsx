@@ -4,6 +4,7 @@ import { Box } from "@/components/box";
 import { ActionForm, TextField } from "@/components/form";
 import { Pill } from "@/components/pill";
 import { requireRole } from "@/lib/auth/session";
+import { formatDate } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { resetStudentPassword, updateStudent } from "../actions";
@@ -43,17 +44,31 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         <Box title="Forløb" hint={`${p.done} af ${p.total} lektioner gennemført`}>
           <ProgressBar share={p.share} />
           <ol className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3" data-testid="student-lessons">
-            {course.lessons.map((l) => (
-              <li
-                key={l.id}
-                className={`flex items-center justify-between rounded-xl border px-3 py-2 text-[15px] ${
-                  student.done.has(l.id) ? "border-ok/30 bg-ok-bg text-ok" : "border-line"
-                }`}
-              >
-                <b>Lektion {l.number}</b>
-                <span className="text-sm">{student.done.has(l.id) ? "Gennemført" : `${l.count} × 45 min.`}</span>
-              </li>
-            ))}
+            {course.lessons.map((l) => {
+              const s = student.signoffs.get(l.id);
+              return (
+                <li
+                  key={l.id}
+                  className={`flex flex-col gap-0.5 rounded-xl border px-3 py-2 text-[15px] ${
+                    !s ? "border-line" : s.confirmed ? "border-ok/30 bg-ok-bg" : "border-accent-line bg-accent-bg"
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <b>Lektion {l.number}</b>
+                    <span className={`text-sm ${!s ? "text-muted" : s.confirmed ? "text-ok" : "text-accent-ink"}`}>
+                      {!s ? `${l.count} × 45 min.` : s.confirmed ? "Gennemført" : "Venter på eleven"}
+                    </span>
+                  </span>
+                  {s && (
+                    <span className="text-[13px] text-muted">
+                      {formatDate(s.date)}
+                      {s.instructor && ` · ${s.instructor}`}
+                      {s.skipped && ` · Ikke nået: ${s.skipped.split("\n").join(", ")}`}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         </Box>
       )}

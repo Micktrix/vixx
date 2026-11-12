@@ -1,8 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
-// Hold, elever og forløb til kontorets elevsider. Gennemførte lektioner kommer med QR-kvittering (trin E3);
-// indtil da er `done` tom.
+// Hold, elever og forløb til kontorets elevsider. En lektion er gennemført, når læreren har kvitteret
+// (QR-scanning), og eleven har bekræftet.
 
 export type CourseInfo = { id: string; name: string; category: string; lessons: { id: string; number: string; count: number }[] };
 export type StudentInfo = {
@@ -15,7 +15,10 @@ export type StudentInfo = {
   serviceId: string | null;
   active: boolean;
   done: Set<string>; // course_lesson-id'er, der er kvitteret og bekræftet
+  waiting: Set<string>; // kvitteret af læreren, venter på elevens bekræftelse
+  signoffs: Map<string, Signoff>;
 };
+export type Signoff = { date: string; instructor: string; confirmed: boolean; skipped: string | null };
 export type TeamInfo = { id: string; name: string; courseId: string | null; startsOn: string | null; active: boolean };
 
 export async function loadStudents(schoolId: string) {
@@ -24,7 +27,9 @@ export async function loadStudents(schoolId: string) {
     supabase.from("teams").select("id, name, course_id, starts_on, active").eq("school_id", schoolId).order("name"),
     supabase
       .from("students")
-      .select("id, user_id, team_id, course_id, service_id, active, profiles(full_name, phone)")
+      .select(
+        "id, user_id, team_id, course_id, service_id, active, profiles(full_name, phone), lesson_signoffs(course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items)",
+      )
       .eq("school_id", schoolId),
     supabase
       .from("courses")
@@ -46,6 +51,12 @@ export async function loadStudents(schoolId: string) {
   const studentList: StudentInfo[] = (students ?? [])
     .map((s) => {
       const p = s.profiles as unknown as { full_name: string; phone: string } | null;
+      const signoffs = new Map<string, Signoff>(
+        (s.lesson_signoffs ?? []).map((x) => [
+          x.course_lesson_id,
+          { date: x.lesson_date, instructor: x.instructor_name, confirmed: !!x.confirmed_at, skipped: x.skipped_items },
+        ]),
+      );
       return {
         id: s.id,
         userId: s.user_id,
@@ -55,7 +66,9 @@ export async function loadStudents(schoolId: string) {
         courseId: s.course_id,
         serviceId: s.service_id,
         active: s.active,
-        done: new Set<string>(),
+        done: new Set([...signoffs].filter(([, x]) => x.confirmed).map(([id]) => id)),
+        waiting: new Set([...signoffs].filter(([, x]) => !x.confirmed).map(([id]) => id)),
+        signoffs,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "da"));
