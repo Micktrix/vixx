@@ -262,6 +262,8 @@ insert into public.course_lessons (school_id, course_id, sort_order, number, kin
    E'7.1 Igangsætning og standsning v. kantsten
 7.2 Placering under ligeudkørsel', 'Lygter og bærende dele');
 
+update public.courses set theory_lessons = 8 where id = '00000000-0000-4000-ab00-000000000011';
+
 insert into public.teams (id, school_id, name, course_id, starts_on)
 values ('00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-a000-000000000001', 'C-hold uge 48',
         '00000000-0000-4000-ab00-000000000011', current_date - 3);

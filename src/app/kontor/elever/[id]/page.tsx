@@ -8,8 +8,8 @@ import { inputClass } from "@/components/styles";
 import { formatDate, todayDk } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { crossOffLesson, moveSignoff, resetStudentPassword, saveStudentTeachers, updateStudent } from "../actions";
-import { loadStudents, progress } from "../data";
+import { addTheory, correctTheory, crossOffLesson, moveSignoff, resetStudentPassword, saveStudentTeachers, updateStudent } from "../actions";
+import { loadStudents, progress, theoryProgress } from "../data";
 import { ProgressBar } from "../progress-bar";
 import { StudentFields } from "../student-fields";
 
@@ -22,7 +22,11 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
     loadStudents(membership.schoolId),
     supabase.from("services").select("id, name").eq("school_id", membership.schoolId).eq("active", true).order("sort_order").order("name"),
     supabase.from("instructors").select("id, active_until, school_members(active, profiles(full_name))").eq("school_id", membership.schoolId),
-    supabase.from("students").select("can_request, student_instructors(instructor_id)").eq("id", id).maybeSingle(),
+    supabase
+      .from("students")
+      .select("can_request, student_instructors(instructor_id), theory_signoffs(id, lesson_count, lesson_date, instructor_name, comment)")
+      .eq("id", id)
+      .maybeSingle(),
   ]);
   const student = students.find((s) => s.id === id);
   if (!student) notFound();
@@ -31,6 +35,10 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const p = progress(student, course);
   const missing = course?.lessons.filter((l) => !student.signoffs.has(l.id)) ?? [];
   const isAdmin = membership.role === "admin";
+  const theory = theoryProgress(student, course);
+  const theoryRows = ((booking?.theory_signoffs ?? []) as { id: string; lesson_count: number; lesson_date: string; instructor_name: string; comment: string | null }[]).sort(
+    (a, b) => b.lesson_date.localeCompare(a.lesson_date),
+  );
   const linked = new Set(((booking?.student_instructors ?? []) as { instructor_id: string }[]).map((l) => l.instructor_id));
   const teachers = (instructors ?? [])
     .map((i) => {
@@ -126,6 +134,58 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             </div>
             <p className="text-[13px] text-muted">Lektionen tæller som gennemført med det samme. Den kommer ikke med på lønnen og kan ikke slettes.</p>
           </ActionForm>
+        </Box>
+      )}
+
+      {course && theory.total > 0 && (
+        <Box title="Teori" hint={`${Math.min(theory.done, theory.total)} af ${theory.total} lektioner`}>
+          <ProgressBar share={Math.min(1, theory.done / theory.total)} />
+          <ul className="flex flex-col" data-testid="student-theory-rows">
+            {theoryRows.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-2 text-[15px] last:border-b-0">
+                <span>
+                  <b>
+                    {t.lesson_count} {t.lesson_count === 1 ? "lektion" : "lektioner"}
+                  </b>
+                  <span className="text-sm text-muted">
+                    {" "}
+                    · {formatDate(t.lesson_date)}
+                    {t.instructor_name && ` · ${t.instructor_name}`}
+                    {t.comment && ` · ${t.comment}`}
+                  </span>
+                </span>
+                {isAdmin && (
+                  <ActionForm action={correctTheory} submitLabel="Ret" pendingLabel="…" primary={false} className="flex items-center gap-2">
+                    <input type="hidden" name="id" value={t.id} />
+                    <select name="count" defaultValue={t.lesson_count} aria-label="Antal" className={`${inputClass} w-[80px]`}>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                        <option key={n}>{n}</option>
+                      ))}
+                    </select>
+                  </ActionForm>
+                )}
+              </li>
+            ))}
+            {!theoryRows.length && <li className="text-sm text-muted">Ingen teori endnu. Læreren scanner elevens QR-kode og vælger &quot;Teori&quot;.</li>}
+          </ul>
+          {isAdmin && (
+            <details className="text-sm">
+              <summary className="cursor-pointer font-semibold text-muted hover:text-ink">Tilføj teori (fx gæstelærer)</summary>
+              <ActionForm action={addTheory} submitLabel="Tilføj" className="mt-2 flex flex-wrap items-end gap-3">
+                <input type="hidden" name="studentId" value={student.id} />
+                <label className="flex flex-col gap-1.5 text-sm font-bold">
+                  Antal
+                  <select name="count" defaultValue="2" className={`${inputClass} w-[90px]`}>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                      <option key={n}>{n}</option>
+                    ))}
+                  </select>
+                </label>
+                <TextField label="Dato" name="date" type="date" required defaultValue={todayDk()} max={todayDk()} />
+                <TextField label="Kommentar" name="comment" required maxLength={500} placeholder="Fx teori med gæstelærer Per" className="min-w-[220px] flex-1" />
+              </ActionForm>
+            </details>
+          )}
         </Box>
       )}
 

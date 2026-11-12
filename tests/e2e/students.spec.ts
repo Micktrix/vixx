@@ -99,7 +99,8 @@ test("admin krydser en lektion af med kommentar; kontoret kan ikke", async ({ br
     await loginOk(page, ADMIN, PASSWORD);
     await page.goto(`/kontor/elever/${emil}`);
     await page.getByRole("combobox", { name: "Lektion", exact: true }).selectOption({ label: "Lektion 4" });
-    await page.getByLabel("Kommentar").fill("Kørt af gæstelærer Per Hansen");
+    const crossOff = page.locator("section").filter({ has: page.getByRole("heading", { name: "Kryds en lektion af" }) });
+    await crossOff.getByLabel("Kommentar").fill("Kørt af gæstelærer Per Hansen");
     page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Kryds af" }).click();
     await expect(page.getByText("1 af 3 lektioner gennemført")).toBeVisible();

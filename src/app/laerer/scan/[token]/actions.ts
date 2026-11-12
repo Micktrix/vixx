@@ -26,6 +26,7 @@ export async function signOffLesson(_prev: ActionState, formData: FormData): Pro
   const studentId = text("studentId");
   const courseLessonId = text("courseLessonId");
   if (!courseLessonId) return { error: "Vælg lektionen." };
+  if (courseLessonId === "theory") return signOffTheory(token, studentId, Number(text("theoryCount")));
   const skipped = formData.getAll("skipped").map(String).join("\n") || null;
 
   const supabase = await createClient();
@@ -89,4 +90,25 @@ export async function signOffLesson(_prev: ActionState, formData: FormData): Pro
   revalidatePath("/kontor", "layout");
   revalidatePath("/elev", "layout");
   redirect(`/laerer/scan/${token}?kvitteret=${encodeURIComponent(signed?.lesson_number ?? "")}`);
+}
+
+// Teori tælles op: lærerens scanning er nok, eleven bekræfter ikke, og det går ikke til lønnen.
+async function signOffTheory(token: string, studentId: string, count: number): Promise<ActionState> {
+  const { user, membership } = await requireRole(["instructor"]);
+  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Vælg antal teorilektioner." };
+  const supabase = await createClient();
+  const { data: instructor } = await supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single();
+  if (!instructor) return { error: "Du har ikke adgang til at kvittere." };
+  const { error } = await supabase.from("theory_signoffs").insert({
+    school_id: membership.schoolId,
+    student_id: studentId,
+    instructor_id: instructor.id,
+    lesson_count: count,
+  });
+  const failed = dbError(error, "Teorien kunne ikke kvitteres. Prøv igen.");
+  if (failed) return failed;
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/kontor", "layout");
+  revalidatePath("/elev", "layout");
+  redirect(`/laerer/scan/${token}?kvitteret=Teori`);
 }

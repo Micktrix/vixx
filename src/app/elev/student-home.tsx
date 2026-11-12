@@ -49,12 +49,12 @@ export async function StudentHome({
   const supabase = await createClient();
   const { data: student } = await supabase
     .from("students")
-    .select("id, teams(name), lesson_signoffs(id, course_lesson_id, lesson_number, instructor_name, lesson_date, skipped_items, confirmed_at), courses(name, course_lessons(id, number, kind, lesson_count, location, content, notes, control_topic, sort_order, active))")
+    .select("id, teams(name), lesson_signoffs(id, course_lesson_id, lesson_number, instructor_name, lesson_date, skipped_items, confirmed_at), theory_signoffs(lesson_count), courses(name, theory_lessons, course_lessons(id, number, kind, lesson_count, location, content, notes, control_topic, sort_order, active))")
     .eq("id", studentId)
     .maybeSingle();
   if (!student) return null;
 
-  const course = student.courses as unknown as { name: string; course_lessons: Lesson[] } | null;
+  const course = student.courses as unknown as { name: string; theory_lessons: number; course_lessons: Lesson[] } | null;
   const team = student.teams as unknown as { name: string } | null;
   const lessons = (course?.course_lessons ?? []).filter((l) => l.active).sort((a, b) => a.sort_order - b.sort_order);
   const signoffs = (student.lesson_signoffs ?? []) as Signoff[];
@@ -62,6 +62,11 @@ export async function StudentHome({
   const done = new Set(signoffs.filter((s) => s.confirmed_at).map((s) => s.course_lesson_id));
   const waiting = signoffs.filter((s) => !s.confirmed_at).sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
   const next = lessons.find((l) => !signoffFor.has(l.id));
+  // Teori: tælleren plus teorilektioner i forløbet, der er kvitteret som lektioner.
+  const theoryDone =
+    ((student.theory_signoffs ?? []) as { lesson_count: number }[]).reduce((n, t) => n + t.lesson_count, 0) +
+    lessons.filter((l) => l.kind === "theory" && signoffFor.has(l.id)).reduce((n, l) => n + l.lesson_count, 0);
+  const theoryTotal = course?.theory_lessons ?? 0;
 
   return (
     <Screen title={`Hej ${firstName}`} sub={schoolName} action={action}>
@@ -102,6 +107,17 @@ export async function StudentHome({
         </span>
         {next && <p className="text-sm">Næste: <b>Lektion {next.number}</b></p>}
       </section>
+
+      {theoryTotal > 0 && (
+        <section className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-[18px]" data-testid="student-theory">
+          <p className="text-[15px]">
+            <b>Teori:</b> {Math.min(theoryDone, theoryTotal)} af {theoryTotal} lektioner
+          </p>
+          <span className="h-2 overflow-hidden rounded-full bg-soft">
+            <span className="block h-full rounded-full bg-ok" style={{ width: `${Math.min(100, (theoryDone / theoryTotal) * 100)}%` }} />
+          </span>
+        </section>
+      )}
 
       <ol className="flex flex-col gap-2" data-testid="student-course">
         {lessons.map((l) => (

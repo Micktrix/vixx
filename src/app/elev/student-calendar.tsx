@@ -45,7 +45,7 @@ export async function StudentCalendar({
   const [{ data: student }, { data: items }, { data: slots }] = await Promise.all([
     supabase
       .from("students")
-      .select("can_request, student_instructors(instructor_id), lesson_signoffs(id, lesson_number, lesson_date, instructor_name)")
+      .select("can_request, student_instructors(instructor_id), lesson_signoffs(id, lesson_number, lesson_date, instructor_name), theory_signoffs(id, lesson_count, lesson_date, instructor_name)")
       .eq("id", studentId)
       .maybeSingle(),
     supabase.rpc("student_lessons", who),
@@ -57,9 +57,17 @@ export async function StudentCalendar({
   const upcoming = all.filter((i) => i.kind === "lesson" && i.lesson_date >= today);
   const requests = all.filter((i) => i.kind === "request");
   const open = (slots ?? []) as Slot[];
-  const driven = ((student?.lesson_signoffs ?? []) as { id: string; lesson_number: string; lesson_date: string; instructor_name: string }[]).sort(
-    (a, b) => b.lesson_date.localeCompare(a.lesson_date),
-  );
+  type Driven = { id: string; title: string; lesson_date: string; instructor_name: string };
+  const driven: Driven[] = [
+    ...((student?.lesson_signoffs ?? []) as { id: string; lesson_number: string; lesson_date: string; instructor_name: string }[]).map((d) => ({
+      ...d,
+      title: `Lektion ${d.lesson_number}`,
+    })),
+    ...((student?.theory_signoffs ?? []) as { id: string; lesson_count: number; lesson_date: string; instructor_name: string }[]).map((t) => ({
+      ...t,
+      title: `Teori · ${t.lesson_count} ${t.lesson_count === 1 ? "lektion" : "lektioner"}`,
+    })),
+  ].sort((a, b) => b.lesson_date.localeCompare(a.lesson_date));
   const now = new Date().toISOString();
 
   return (
@@ -158,7 +166,7 @@ export async function StudentCalendar({
         {driven.map((d) => (
           <div key={d.id} className="flex items-center justify-between rounded-[14px] border border-line bg-surface px-4 py-2.5 text-[15px]">
             <span>
-              <b>Lektion {d.lesson_number}</b>
+              <b>{d.title}</b>
               <span className="block text-[13px] text-muted">{d.instructor_name}</span>
             </span>
             <span className="text-sm text-muted">{formatShortDay(d.lesson_date)}</span>

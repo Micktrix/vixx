@@ -102,3 +102,37 @@ test("admin viser elevens skærm med en fiktiv demo-elev, scanner test-koden og 
     }
   }
 });
+
+test("læreren scanner og kvitterer for teori, som tæller op hos eleven og kontoret", async ({ browser }) => {
+  const admin = localAdmin();
+  const { data: student } = await admin.from("students").select("qr_token").eq("id", EMIL).single();
+  const teacher = await browser.newPage();
+  try {
+    await loginOk(teacher, "20000011", PASSWORD);
+    await teacher.goto(`/laerer/scan/${student!.qr_token}`);
+    await expect(teacher.getByTestId("scan-theory")).toContainText("Teori: 0 af 8");
+    await teacher.getByRole("radio", { name: /^Teori/ }).check();
+    await teacher.getByLabel("Antal teorilektioner").selectOption("3");
+    await teacher.getByRole("button", { name: "Kvittér for teori" }).click();
+    await expect(teacher.getByTestId("signoff-done")).toContainText("Teorien er kvitteret");
+    await expect(teacher.getByTestId("scan-theory")).toContainText("Teori: 3 af 8");
+
+    const studentPage = await browser.newPage();
+    await loginOk(studentPage, "20000031", PASSWORD);
+    await expect(studentPage.getByTestId("student-theory")).toContainText("3 af 8");
+
+    // Admin retter antallet til 2 på elevens side.
+    const office = await browser.newPage();
+    await loginOk(office, ADMIN, PASSWORD);
+    await office.goto(`/kontor/elever/${EMIL}`);
+    const rows = office.getByTestId("student-theory-rows");
+    await expect(rows).toContainText("3 lektioner");
+    await rows.getByLabel("Antal").selectOption("2");
+    await rows.getByRole("button", { name: "Ret" }).click();
+    await expect(rows).toContainText("2 lektioner");
+    await office.goto("/kontor/elever/hold/00000000-0000-4000-ac00-000000000001");
+    await expect(office.getByTestId("board-student").filter({ hasText: "Emil Elev" }).getByTestId("board-theory")).toContainText("2/8");
+  } finally {
+    await admin.from("theory_signoffs").delete().eq("student_id", EMIL);
+  }
+});

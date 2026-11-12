@@ -19,7 +19,7 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
   const isAdmin = membership.role === "admin";
   const supabase = await createClient();
   const [{ data: course }, { data: lessonData }, { data: categories }] = await Promise.all([
-    supabase.from("courses").select("id, name, category_code, active").eq("id", id).eq("school_id", membership.schoolId).maybeSingle(),
+    supabase.from("courses").select("id, name, category_code, theory_lessons, active").eq("id", id).eq("school_id", membership.schoolId).maybeSingle(),
     supabase
       .from("course_lessons")
       .select("id, number, kind, lesson_count, location, content, notes, control_topic, active")
@@ -41,6 +41,7 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
         <h1 className="text-[30px] font-bold">{course.name}</h1>
         <p className="flex flex-wrap items-center gap-1.5 text-muted">
           Kategori {course.category_code} · {active.length} lektioner · {active.reduce((n, l) => n + l.lesson_count, 0)} × 45 min.
+          {course.theory_lessons > 0 && ` · Teori: ${course.theory_lessons} lektioner`}
           {course.active ? <Pill tone="ok">Aktiv</Pill> : <Pill>Slået fra</Pill>}
         </p>
       </header>
@@ -60,7 +61,19 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
                 </select>
               </label>
               <TextField label="Navn" name="name" required maxLength={80} defaultValue={course.name} className="min-w-[240px] flex-1" />
+              <TextField
+                label="Teori: antal lektioner"
+                name="theoryLessons"
+                type="number"
+                min={0}
+                max={200}
+                defaultValue={course.theory_lessons}
+                className="w-[180px]"
+              />
             </div>
+            <p className="text-[13px] text-muted">
+              Teori tælles op, når læreren scanner elevens QR-kode og vælger &quot;Teori&quot;. 0 = ingen teori i forløbet.
+            </p>
             <label className="flex items-center gap-2.5 text-[15px]">
               <input type="checkbox" name="active" defaultChecked={course.active} className="size-[18px] accent-accent" />
               I brug (kan vælges, når en elev oprettes)

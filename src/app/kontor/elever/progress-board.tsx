@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { progress, type CourseInfo, type StudentInfo } from "./data";
+import { progress, theoryProgress, type CourseInfo, type StudentInfo } from "./data";
 
 // Forløbstavle: én række pr. elev og én kolonne pr. lektion i forløbet. Grøn = gennemført og bekræftet,
 // orange = kvitteret af læreren, venter på eleven.
@@ -19,6 +19,7 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
                 {l.number}
               </th>
             ))}
+            {course.theory > 0 && <th className="px-3 py-2 text-right font-semibold">Teori</th>}
             <th className="px-[18px] py-2 text-right font-semibold">I alt</th>
           </tr>
         </thead>
@@ -43,6 +44,12 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
                     />
                   </td>
                 ))}
+                {course.theory > 0 && (
+                  <td className="px-3 py-2 text-right whitespace-nowrap" data-testid="board-theory">
+                    {Math.min(theoryProgress(s, course).done, course.theory)}
+                    <span className="text-muted">/{course.theory}</span>
+                  </td>
+                )}
                 <td className="px-[18px] py-2 text-right whitespace-nowrap">
                   <b>{p.done}</b>
                   <span className="text-muted">/{p.total}</span>

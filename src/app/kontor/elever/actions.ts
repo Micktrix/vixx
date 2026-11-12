@@ -137,6 +137,42 @@ export async function saveStudentTeachers(_prev: ActionState, formData: FormData
   return { message: "Gemt." };
 }
 
+// Teori: admin giver teorilektioner med en kommentar (fx gæstelærer) eller retter antallet på en kvittering.
+export async function addTheory(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const count = Number(text(formData, "count"));
+  const date = parseDateInput(text(formData, "date"));
+  const comment = text(formData, "comment");
+  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Antal skal være mellem 1 og 12." };
+  if (!date || date > todayDk()) return { error: "Vælg en dato, der ikke ligger frem i tiden." };
+  if (!comment) return { error: "Skriv en kommentar, fx hvem der underviste." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("theory_signoffs").insert({
+    school_id: membership.schoolId,
+    student_id: text(formData, "studentId"),
+    instructor_id: null,
+    lesson_count: count,
+    lesson_date: date,
+    comment,
+  });
+  if (error) return { error: error.code === "23514" ? error.message : "Teorien kunne ikke gemmes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/elev", "layout");
+  return { message: "Teorien er tilføjet." };
+}
+
+export async function correctTheory(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["admin"]);
+  const count = Number(text(formData, "count"));
+  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Antal skal være mellem 1 og 12." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("theory_signoffs").update({ lesson_count: count }).eq("id", text(formData, "id")).select("id");
+  if (error || !data?.length) return { error: "Antallet kunne ikke rettes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/elev", "layout");
+  return { message: "Rettet." };
+}
+
 function readStudent(formData: FormData) {
   const courseId = text(formData, "courseId");
   if (!courseId) return { error: "Vælg et forløb." } as const;

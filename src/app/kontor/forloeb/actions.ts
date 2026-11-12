@@ -37,10 +37,12 @@ export async function updateCourse(_prev: ActionState, formData: FormData): Prom
   const name = text(formData, "name");
   if (!name) return { error: "Skriv et navn." };
   if (name.length > 80) return { error: "Navnet er for langt." };
+  const theory = Number(text(formData, "theoryLessons") || 0);
+  if (!Number.isInteger(theory) || theory < 0 || theory > 200) return { error: "Antal teorilektioner skal være mellem 0 og 200." };
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("courses")
-    .update({ name, category_code: text(formData, "category"), active: formData.get("active") === "on" })
+    .update({ name, category_code: text(formData, "category"), theory_lessons: theory, active: formData.get("active") === "on" })
     .eq("id", text(formData, "id"))
     .eq("school_id", membership.schoolId)
     .select("id");

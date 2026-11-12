@@ -7,6 +7,9 @@ import { inputClass } from "@/components/styles";
 import { fromMinutes, planSlotIsFree, planSpan, suggestPlanStart, type LessonPlan, type Span } from "@/lib/schedule";
 import { signOffLesson } from "./actions";
 
+// Teori vælges som "lektionen" THEORY og tælles op med et antal lektioner.
+export const THEORY = "theory";
+
 export type SignoffLesson = { id: string; number: string; kind: "driving" | "theory"; lesson_count: number; content: string | null };
 
 const box = "flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-4";
@@ -25,6 +28,7 @@ export function SignoffForm({
   planned,
   defaultStart,
   demo,
+  theory,
 }: {
   token: string;
   studentId: string;
@@ -36,10 +40,16 @@ export function SignoffForm({
   planned: { id: string; label: string }[]; // dagens planlagte lektioner, der ikke er registreret
   defaultStart: string;
   demo: boolean; // admins demo-elev: kommer aldrig på lønnen
+  theory: { done: number; total: number } | null; // forløbets teori, hvis det har teori
 }) {
   const { state, onSubmit, pending } = useFormAction(signOffLesson);
-  const [lessonId, setLessonId] = useState(lessons[0].id);
-  const lesson = lessons.find((l) => l.id === lessonId) ?? lessons[0];
+  const choices: SignoffLesson[] = [
+    ...(theory ? [{ id: THEORY, number: "Teori", kind: "theory" as const, lesson_count: 2, content: null }] : []),
+    ...lessons,
+  ];
+  const [lessonId, setLessonId] = useState(lessons[0]?.id ?? THEORY);
+  const lesson = choices.find((l) => l.id === lessonId) ?? choices[0];
+  const isTheory = lesson.id === THEORY;
   const [pay, setPay] = useState(true);
   const [scheduledId, setScheduledId] = useState(planned[0]?.id ?? "");
   const [serviceId, setServiceId] = useState(defaultServiceId);
@@ -61,18 +71,27 @@ export function SignoffForm({
         <legend className="sr-only">Lektion</legend>
         <span className="text-sm font-bold">Hvilken lektion?</span>
         <div className="flex flex-col gap-1.5">
-          {lessons.map((l) => (
+          {choices.map((l) => (
             <label
               key={l.id}
               className={`flex items-center gap-3 rounded-[14px] border px-3 py-2.5 ${l.id === lessonId ? "border-accent bg-accent-bg" : "border-line"}`}
             >
               <input type="radio" name="courseLessonId" value={l.id} checked={l.id === lessonId} onChange={() => setLessonId(l.id)} className={check} />
-              <span>
-                <b>Lektion {l.number}</b>
-                <span className="block text-[13px] text-muted">
-                  {l.lesson_count} × 45 min. · {l.kind === "theory" ? "Teori" : "Kørsel"}
+              {l.id === THEORY ? (
+                <span>
+                  <b>Teori</b>
+                  <span className="block text-[13px] text-muted">
+                    {theory!.done} af {theory!.total} lektioner · tæller op
+                  </span>
                 </span>
-              </span>
+              ) : (
+                <span>
+                  <b>Lektion {l.number}</b>
+                  <span className="block text-[13px] text-muted">
+                    {l.lesson_count} × 45 min. · {l.kind === "theory" ? "Teori" : "Kørsel"}
+                  </span>
+                </span>
+              )}
             </label>
           ))}
         </div>
@@ -93,7 +112,23 @@ export function SignoffForm({
         </fieldset>
       )}
 
-      {demo ? (
+      {isTheory && (
+        <section className={box}>
+          <label className="flex flex-col gap-1.5 text-sm font-bold">
+            Antal teorilektioner
+            <select name="theoryCount" defaultValue="2" className={inputClass}>
+              {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-[13px] text-muted">Teori kommer ikke med på lønnen herfra. Registrér selv timerne i kalenderen.</p>
+        </section>
+      )}
+
+      {isTheory ? null : demo ? (
         <p className="rounded-[16px] bg-soft px-4 py-3 text-sm">Demo-elev: lektionen kommer ikke på lønnen.</p>
       ) : lesson.kind === "theory" ? (
         <p className="rounded-[16px] bg-soft px-4 py-3 text-sm">Teori kommer ikke med på lønnen herfra. Registrér selv timerne i kalenderen.</p>
@@ -169,7 +204,7 @@ export function SignoffForm({
         disabled={pending}
         className="flex h-12 w-full items-center justify-center rounded-[14px] border border-accent bg-accent text-[15px] font-bold text-ink disabled:opacity-60"
       >
-        {pending ? "Kvitterer …" : `Kvittér for lektion ${lesson.number}`}
+        {pending ? "Kvitterer …" : isTheory ? "Kvittér for teori" : `Kvittér for lektion ${lesson.number}`}
       </button>
       <ResultBox state={state} />
     </form>

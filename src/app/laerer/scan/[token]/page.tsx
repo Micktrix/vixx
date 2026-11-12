@@ -22,7 +22,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, is_demo, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), courses(name, course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
+      "id, service_id, active, is_demo, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), theory_signoffs(lesson_count), courses(name, theory_lessons, course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
@@ -45,10 +45,15 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
 
   const name = (student.profiles as unknown as { full_name: string } | null)?.full_name ?? "";
   const team = student.teams as unknown as { name: string } | null;
-  const course = student.courses as unknown as { name: string; course_lessons: LessonRow[] } | null;
+  const course = student.courses as unknown as { name: string; theory_lessons: number; course_lessons: LessonRow[] } | null;
   const lessons = (course?.course_lessons ?? []).filter((l) => l.active).sort((a, b) => a.sort_order - b.sort_order);
   const signoffs = new Map(((student.lesson_signoffs ?? []) as SignoffRow[]).map((s) => [s.course_lesson_id, s]));
   const missing = lessons.filter((l) => !signoffs.has(l.id));
+  // Teori: tælleren plus teorilektioner i forløbet, der er kvitteret som lektioner.
+  const theoryDone =
+    ((student.theory_signoffs ?? []) as { lesson_count: number }[]).reduce((n, t) => n + t.lesson_count, 0) +
+    lessons.filter((l) => l.kind === "theory" && signoffs.has(l.id)).reduce((n, l) => n + l.lesson_count, 0);
+  const theory = course?.theory_lessons ? { done: theoryDone, total: course.theory_lessons } : null;
 
   // Dagens skema: optagede tider og planlagte lektioner, der ikke er registreret endnu.
   const today = todayDk();
@@ -63,13 +68,24 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
     <Screen title={name} sub={[team?.name, course?.name].filter(Boolean).join(" · ")} action={close}>
       {signed && (
         <p role="status" className="rounded-[16px] border border-ok/30 bg-ok-bg px-4 py-3 text-[15px]" data-testid="signoff-done">
-          <b className="text-ok">✓ Lektion {signed} er kvitteret.</b> Eleven bekræfter nu i sin app.
+          {signed === "Teori" ? (
+            <b className="text-ok">✓ Teorien er kvitteret.</b>
+          ) : (
+            <>
+              <b className="text-ok">✓ Lektion {signed} er kvitteret.</b> Eleven bekræfter nu i sin app.
+            </>
+          )}
         </p>
       )}
 
       <section className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-4">
         <p className="text-[15px]">
           <b>{lessons.length - missing.length}</b> af {lessons.length} lektioner kvitteret
+          {theory && (
+            <span className="block text-sm text-muted" data-testid="scan-theory">
+              Teori: {theory.done} af {theory.total} lektioner
+            </span>
+          )}
         </p>
         <ol className="flex flex-wrap gap-1.5" data-testid="scan-lessons">
           {lessons.map((l) => {
@@ -91,13 +107,14 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
 
       {isLocked(period, today) ? (
         <p className="rounded-[16px] bg-soft px-4 py-3 text-sm">Lønperioden er låst, så der kan ikke kvitteres i dag.</p>
-      ) : missing.length === 0 ? (
+      ) : missing.length === 0 && !theory ? (
         <p className="rounded-[16px] bg-ok-bg px-4 py-3 text-[15px] text-ok">Eleven har fået kvitteret for alle lektioner i forløbet.</p>
       ) : (
         <SignoffForm
           token={token}
           studentId={student.id}
           demo={student.is_demo}
+          theory={theory}
           lessons={missing}
           services={services}
           defaultServiceId={student.service_id ?? ""}

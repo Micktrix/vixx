@@ -3,7 +3,7 @@
 -- fast lærer og må anmode. Freja (ad00-…32, bruger a100-…32) har ingen faste lærere.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 create temporary table ids (slot uuid, request uuid, lesson uuid);
 insert into ids values (null, null, null);
@@ -42,6 +42,8 @@ select is((select count(*) from public.open_slots), 0::bigint, 'Eleven kan ikke 
 -- Emil ser Lars' tid og anmoder.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000031", "role": "authenticated"}', true);
 select is((select instructor_name from public.student_open_slots('00000000-0000-4000-a000-000000000001')), 'Lars Jensen', 'Emil ser Lars'' åbne tid');
+select is((select count(*) from public.student_contacts('00000000-0000-4000-a000-000000000001') where not is_school and phone is not null),
+  0::bigint, 'Eleven ser ikke lærernes telefonnumre');
 update ids set request = public.request_open_slot('00000000-0000-4000-a000-000000000001', (select slot from ids));
 select is((select count(*) from public.student_open_slots('00000000-0000-4000-a000-000000000001')), 0::bigint, 'En anmodet tid er ikke længere åben');
 
