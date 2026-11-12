@@ -76,6 +76,12 @@ export default async function PayrollPage({ searchParams }: PageProps<"/kontor/l
                   <input type="hidden" name="start" value={period.start} />
                 </ActionForm>
               )}
+          <Link
+            href={`/timeseddel?visning=uge&dato=${period.start <= todayDk() && todayDk() <= period.end ? todayDk() : period.start}`}
+            className="inline-flex h-11 items-center rounded-xl border border-line2 bg-surface px-4 text-[15px] font-bold"
+          >
+            Print ugeseddel
+          </Link>
           <a
             href={`/kontor/loen/eksport?periode=${period.start}`}
             download
