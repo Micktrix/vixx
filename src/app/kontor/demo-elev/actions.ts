@@ -36,7 +36,7 @@ export async function createDemoStudent(_prev: ActionState, formData: FormData):
   const supabase = await createClient();
   const { error: studentError } = profileError
     ? { error: profileError }
-    : await supabase.from("students").insert({ school_id: membership.schoolId, user_id: userId, course_id: courseId, is_demo: true });
+    : await supabase.from("students").insert({ school_id: membership.schoolId, user_id: userId, course_id: courseId, is_demo: true, can_request: true });
   if (studentError) {
     await admin.auth.admin.deleteUser(userId);
     return { error: "Demo-eleven kunne ikke oprettes. Prøv igen." };
@@ -62,14 +62,19 @@ export async function confirmDemoSignoff(_prev: ActionState, formData: FormData)
   return { message: "Tak! Lektionen er bekræftet." };
 }
 
-// Start forfra: fjern demo-elevens kvitteringer (og skift evt. forløb). Kun demo-eleven; rigtige
+// Start forfra: fjern demo-elevens kvitteringer, anmodninger og lektioner (og skift evt. forløb). Kun demo-eleven; rigtige
 // kvitteringer kan aldrig slettes.
 export async function resetDemoStudent(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { membership } = await requireRole(["admin"]);
   const demo = await demoStudent(membership.schoolId);
   if (!demo) return { error: "Der er ingen demo-elev." };
-  const { error } = await createAdminClient().from("lesson_signoffs").delete().eq("student_id", demo.id);
-  if (error) return { error: "Demo-eleven kunne ikke nulstilles. Prøv igen." };
+  const admin = createAdminClient();
+  const results = await Promise.all([
+    admin.from("lesson_signoffs").delete().eq("student_id", demo.id),
+    admin.from("lesson_requests").delete().eq("student_id", demo.id),
+    admin.from("scheduled_lessons").delete().eq("student_id", demo.id),
+  ]);
+  if (results.some((r) => r.error)) return { error: "Demo-eleven kunne ikke nulstilles. Prøv igen." };
   const courseId = String(formData.get("courseId") ?? "");
   if (courseId) await (await createClient()).from("students").update({ course_id: courseId }).eq("id", demo.id);
   revalidatePath(PAGE);

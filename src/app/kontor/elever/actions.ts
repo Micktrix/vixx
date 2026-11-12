@@ -133,6 +133,7 @@ export async function saveStudentTeachers(_prev: ActionState, formData: FormData
   }
   revalidatePath(PAGE, "layout");
   revalidatePath("/elev", "layout");
+  revalidatePath("/kontor/demo-elev");
   return { message: "Gemt." };
 }
 

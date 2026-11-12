@@ -4,7 +4,7 @@
 -- Ole kontor (a100-…02).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(12);
 
 create temporary table lesson4 as
 select id from public.course_lessons where course_id = '00000000-0000-4000-ab00-000000000011' and number = '4';
@@ -64,6 +64,15 @@ select throws_ok(
   $$insert into public.students (school_id, user_id, course_id, is_demo)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000002', '00000000-0000-4000-ab00-000000000011', true)$$,
   '23505', null, 'Højst én demo-elev pr. skole');
+
+-- Admin kan handle for demo-eleven, men ikke for en rigtig elev; kontoret kan ingen af delene.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);
+select is((select count(*) from public.student_contacts('00000000-0000-4000-a000-000000000001',
+  (select id from public.students where is_demo))), 1::bigint, 'Admin ser demo-elevens kontakter');
+select is((select count(*) from public.student_contacts('00000000-0000-4000-a000-000000000001',
+  '00000000-0000-4000-ad00-000000000031')), 0::bigint, 'Admin kan ikke handle for en rigtig elev');
+reset role;
 
 select * from finish();
 rollback;

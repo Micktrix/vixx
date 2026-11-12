@@ -25,15 +25,23 @@ export async function confirmSignoff(_prev: ActionState, formData: FormData): Pr
 
 function refresh() {
   revalidatePath("/elev", "layout");
+  revalidatePath("/kontor/demo-elev");
   revalidatePath("/laerer", "layout");
   revalidatePath("/kontor", "layout");
 }
 
 // Anmod om en åben tid hos en af elevens faste lærere. Databasen tjekker, at eleven må, og at tiden er ledig.
+// Demo-eleven: admin handler på elevens vegne (databasen tjekker, at det er skolens demo-elev).
+async function actingStudent(formData: FormData) {
+  const demo = String(formData.get("student") ?? "") || null;
+  const { membership } = await requireRole(demo ? ["admin"] : ["student"]);
+  return { schoolId: membership.schoolId, who: demo ? { p_student: demo } : {} };
+}
+
 export async function requestSlot(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["student"]);
+  const { schoolId, who } = await actingStudent(formData);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("request_open_slot", { p_school: membership.schoolId, p_slot: String(formData.get("id") ?? "") });
+  const { error } = await supabase.rpc("request_open_slot", { p_school: schoolId, p_slot: String(formData.get("id") ?? ""), ...who });
   if (error) return { error: ["23505", "23514", "42501"].includes(error.code ?? "") ? error.message : "Tiden kunne ikke anmodes. Prøv igen." };
   refresh();
   return { message: "Anmodningen er sendt. Du får svar her i appen." };
@@ -41,9 +49,9 @@ export async function requestSlot(_prev: ActionState, formData: FormData): Promi
 
 // Træk en anmodning tilbage, eller meld afbud på en booket lektion inden skolens frist.
 export async function cancelRequest(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["student"]);
+  const { schoolId, who } = await actingStudent(formData);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("cancel_lesson_request", { p_school: membership.schoolId, p_request: String(formData.get("id") ?? "") });
+  const { error } = await supabase.rpc("cancel_lesson_request", { p_school: schoolId, p_request: String(formData.get("id") ?? ""), ...who });
   if (error) return { error: error.code === "23514" ? error.message : "Det lykkedes ikke. Prøv igen." };
   refresh();
   return { message: "Det er registreret." };

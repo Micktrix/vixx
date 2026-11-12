@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { INSTRUCTOR, OFFICE, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, loginOk } from "./helpers";
 
 const LARS = "00000000-0000-4000-a200-000000000011";
 const FREJA = "00000000-0000-4000-ad00-000000000032";
@@ -79,5 +79,49 @@ test("kontoret giver en elev faste lærere og lov til at anmode", async ({ page 
   } finally {
     await localAdmin().from("student_instructors").delete().eq("student_id", FREJA);
     await localAdmin().from("students").update({ can_request: false }).eq("id", FREJA);
+  }
+});
+
+test("demo-eleven har hele elevens app: kalender med lærerens åbne tider, anmodning og Mere", async ({ page }) => {
+  const admin = localAdmin();
+  const date = inDays(6);
+  try {
+    await loginOk(page, ADMIN, PASSWORD);
+    await page.goto("/kontor/demo-elev");
+    await page.getByRole("button", { name: "Opret demo-elev" }).click();
+    const phone = page.getByTestId("demo-phone");
+    await expect(phone.getByRole("navigation", { name: "Elevmenu" })).toBeVisible();
+
+    // Lars er demo-elevens faste lærer og har en åben tid.
+    await page.getByTestId("demo-teachers").getByText("Lars Jensen").click();
+    await page.getByRole("button", { name: "Gem" }).click();
+    await expect(page.getByText("Gemt.")).toBeVisible();
+    await admin.from("open_slots").insert({
+      school_id: "00000000-0000-4000-a000-000000000001",
+      instructor_id: LARS,
+      slot_date: date,
+      start_time: "12:00",
+      lesson_count: 2,
+      lesson_minutes: 45,
+    });
+
+    await phone.getByRole("link", { name: "Kalender" }).click();
+    const slot = phone.getByTestId("open-slot").filter({ hasText: "Lars Jensen" });
+    await expect(slot).toContainText("12:00");
+    await slot.getByRole("button", { name: "Anmod" }).click();
+    await expect(phone.getByTestId("student-request")).toContainText("Venter på svar");
+
+    await phone.getByRole("link", { name: "Mere" }).click();
+    await expect(phone.getByTestId("student-contacts")).toContainText("Lars Jensen");
+    await phone.getByRole("link", { name: "QR-kode" }).click();
+    await expect(phone.getByTestId("student-qr").locator("svg")).toBeVisible();
+  } finally {
+    // Demo-eleven først (anmodningen følger med), så kan den åbne tid fjernes.
+    const { data: demos } = await admin.from("students").select("id, user_id").eq("is_demo", true);
+    for (const d of demos ?? []) {
+      await admin.from("students").delete().eq("id", d.id);
+      await admin.auth.admin.deleteUser(d.user_id);
+    }
+    await admin.from("open_slots").delete().eq("instructor_id", LARS).eq("slot_date", date);
   }
 });
