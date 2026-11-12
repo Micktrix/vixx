@@ -8,8 +8,18 @@ import { inputClass } from "@/components/styles";
 import { formatDate, todayDk } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { addTheory, correctTheory, crossOffLesson, moveSignoff, resetStudentPassword, saveStudentTeachers, updateStudent } from "../actions";
-import { loadStudents, progress, theoryProgress } from "../data";
+import {
+  addTheory,
+  correctTheory,
+  crossOffLesson,
+  finishStudent,
+  moveSignoff,
+  reopenStudent,
+  resetStudentPassword,
+  saveStudentTeachers,
+  updateStudent,
+} from "../actions";
+import { FINISH_LABEL, loadStudents, progress, theoryProgress } from "../data";
 import { ProgressBar } from "../progress-bar";
 import { StudentFields } from "../student-fields";
 
@@ -57,7 +67,13 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         <h1 className="text-[30px] font-bold">{student.name}</h1>
         <p className="flex flex-wrap items-center gap-1.5 text-muted">
           {formatPhone(student.phone)} · {course?.name ?? "Intet forløb"}
-          {!student.active && <Pill>Ikke aktiv</Pill>}
+          {student.finished ? (
+            <Pill tone="ok">
+              {FINISH_LABEL[student.finished.reason]} · {formatDate(student.finished.on)}
+            </Pill>
+          ) : (
+            !student.active && <Pill>Ikke aktiv</Pill>
+          )}
         </p>
       </header>
 
@@ -220,12 +236,51 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             services={services ?? []}
             value={{ courseId: student.courseId, teamId: student.teamId, serviceId: student.serviceId }}
           />
-          <label className="flex items-center gap-2.5 text-[15px]">
-            <input type="checkbox" name="active" defaultChecked={student.active} className="size-[18px] accent-accent" />
-            Aktiv elev (kan logge ind)
-          </label>
         </ActionForm>
       </Box>
+
+      {student.finished || !student.active ? (
+        <Box title="Forløbet er afsluttet">
+          <ActionForm action={reopenStudent} submitLabel="Genåbn eleven" primary={false} confirmText="Gør eleven aktiv igen?">
+            <input type="hidden" name="id" value={student.id} />
+            <p className="text-[15px]" data-testid="student-finished">
+              {student.finished ? `${FINISH_LABEL[student.finished.reason]} ${formatDate(student.finished.on)}.` : "Eleven er ikke aktiv."}
+              {student.finished?.note && ` ${student.finished.note}`}
+            </p>
+            <p className="text-[13px] text-muted">
+              Eleven kan ikke logge ind og vises ikke på holdtavlen. Kvitteringer og lektioner er gemt og kan ses her.
+            </p>
+          </ActionForm>
+        </Box>
+      ) : (
+        <Box title="Afslut forløb" hint="Fx når eleven har bestået køreprøven">
+          <ActionForm
+            action={finishStudent}
+            submitLabel="Afslut forløb"
+            primary={false}
+            confirmText="Afslut forløbet? Eleven kan ikke længere logge ind."
+            className="flex flex-col gap-3"
+          >
+            <input type="hidden" name="id" value={student.id} />
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1.5 text-sm font-bold">
+                Årsag
+                <select name="reason" defaultValue="passed" className={`${inputClass} w-[220px]`}>
+                  <option value="passed">Bestået køreprøve</option>
+                  <option value="stopped">Stoppet</option>
+                  <option value="other">Andet</option>
+                </select>
+              </label>
+              <TextField label="Dato" name="date" type="date" required defaultValue={todayDk()} max={todayDk()} />
+              <TextField label="Note (valgfri)" name="note" maxLength={300} className="min-w-[220px] flex-1" />
+            </div>
+            <p className="text-[13px] text-muted">
+              Eleven bliver inaktiv og logges ud. Intet slettes: kvitteringer, teori og lektioner gemmes til dokumentation, og eleven kan
+              findes med søgningen.
+            </p>
+          </ActionForm>
+        </Box>
+      )}
 
       <Box title="Login">
         <ActionForm

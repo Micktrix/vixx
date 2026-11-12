@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { busyByResource, loadBookings, loadResources } from "@/lib/booking-data";
 import { addDays, formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
+import { loadStudentOptions } from "@/lib/student-options";
 import { createClient } from "@/lib/supabase/server";
 import { saveOwnLesson } from "../lesson-actions";
 import { TeacherLessonForm } from "../lesson-form";
@@ -11,6 +12,7 @@ import { allowedServices, getTeacher, loadTeacherPeriod } from "../teacher-data"
 // Læreren planlægger selv en lektion frem i tiden. Den blokerer tiden, men tæller først i lønnen ved "Udført".
 export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/laerer/planlaeg">) {
   const teacher = await getTeacher();
+  const students = await loadStudentOptions(teacher.membership.schoolId, teacher.instructorId);
   const sp = await searchParams;
   const supabase = await createClient();
   const today = todayDk();
@@ -19,7 +21,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
   const { data: lesson } = id
     ? await supabase
         .from("scheduled_lessons")
-        .select("id, lesson_date, start_time, lesson_count, service_id, student_name, note")
+        .select("id, lesson_date, start_time, lesson_count, service_id, student_id, student_name, note")
         .eq("id", id)
         .eq("origin", "instructor")
         .maybeSingle()
@@ -60,6 +62,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
           submitLabel={lesson ? "Gem ændringer" : "Planlæg"}
           services={services}
           plan={teacher.plan}
+          students={students}
           busy={busy}
           hiddenFields={{ date, ...(lesson ? { id: lesson.id } : {}) }}
           resources={resources}
@@ -68,6 +71,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
             serviceId: lesson?.service_id,
             count: lesson?.lesson_count,
             start: lesson?.start_time.slice(0, 5),
+            studentId: lesson?.student_id ?? undefined,
             studentName: lesson?.student_name ?? undefined,
             note: lesson?.note ?? undefined,
             resourceId: lessonBooking?.resourceId,

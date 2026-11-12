@@ -126,6 +126,7 @@ export async function officeSaveRegistration(_prev: ActionState, formData: FormD
       service_id: text("serviceId"),
       lesson_count: count,
       start_time: start,
+      student_id: text("studentId") || null,
       student_name: text("studentName") || null,
       note: text("note") || null,
       status: "approved",

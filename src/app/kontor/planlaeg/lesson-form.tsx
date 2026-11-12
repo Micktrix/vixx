@@ -2,9 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { ResultBox, TextField, useFormAction } from "@/components/form";
+import { StudentPicker } from "@/components/student-picker";
 import { ServiceOptions, type ServiceOption } from "@/components/service-options";
 import { inputClass, primaryButtonClass } from "@/components/styles";
 import type { ResourceInfo } from "@/lib/resources";
+import type { StudentOption } from "@/lib/student-options";
 import { availability, formatDuration, fromMinutes, overlaps, planSlotIsFree, planSpan, suggestPlanStart, type DayInfo, type LessonPlan, type Span } from "@/lib/schedule";
 import { getDay, getResourceBusy, saveLesson } from "./actions";
 
@@ -19,6 +21,7 @@ type Initial = {
   start?: string;
   count: number;
   serviceId?: string;
+  studentId?: string;
   studentName?: string;
   note?: string;
   resourceId?: string;
@@ -33,11 +36,13 @@ export function LessonForm({
   initialDay,
   resources,
   initialResourceBusy,
+  students,
 }: {
   instructors: FormInstructor[];
   services: FormService[];
   plan: LessonPlan; // skolens lektionsplan; kun dens starttider kan vælges
   today: string;
+  students: StudentOption[]; // skolens elever til valg af elev
   initial: Initial;
   initialDay: DayInfo | null;
   resources: FormResource[];
@@ -206,8 +211,8 @@ export function LessonForm({
         </label>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <TextField label="Elev (valgfri)" name="studentName" defaultValue={initial.studentName} maxLength={80} />
+      <div className="grid items-start gap-3 sm:grid-cols-2">
+        <StudentPicker students={students} initialId={initial.studentId} initialName={initial.studentName} />
         <TextField label="Note (valgfri)" name="note" defaultValue={initial.note} maxLength={300} />
       </div>
 

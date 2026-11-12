@@ -155,3 +155,34 @@ test("kontoret søger en elev frem på tværs af hold, på navn eller telefon", 
   await results.getByRole("link", { name: "Emil Elev" }).click();
   await expect(page.getByRole("heading", { name: "Emil Elev" })).toBeVisible();
 });
+
+test("kontoret afslutter en elevs forløb: eleven kan ikke logge ind, er væk fra lærerens liste, men kan findes", async ({ browser, page }) => {
+  const freja = "00000000-0000-4000-ad00-000000000032";
+  try {
+    await loginOk(page, OFFICE, PASSWORD);
+    await page.goto(`/kontor/elever/${freja}`);
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Afslut forløb" }).click();
+    await expect(page.getByTestId("student-finished")).toContainText("Bestået køreprøve");
+
+    // Lærerens liste over elever viser kun aktive elever.
+    const teacher = await browser.newPage();
+    await loginOk(teacher, "20000011", PASSWORD);
+    await teacher.goto("/laerer/planlaeg");
+    const picker = teacher.getByLabel("Elev (valgfri)");
+    await expect(picker.locator("option", { hasText: "Emil Elev" })).toHaveCount(1);
+    await expect(picker.locator("option", { hasText: "Freja Elev" })).toHaveCount(0);
+
+    // Søgningen finder stadig eleven med mærket.
+    await page.goto("/kontor/elever?q=freja");
+    await expect(page.getByTestId("search-results")).toContainText("Bestået køreprøve");
+
+    // Genåbn.
+    await page.goto(`/kontor/elever/${freja}`);
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Genåbn eleven" }).click();
+    await expect(page.getByRole("heading", { name: "Afslut forløb" })).toBeVisible();
+  } finally {
+    await localAdmin().from("students").update({ active: true, finished_on: null, finish_reason: null, finish_note: null }).eq("id", freja);
+  }
+});

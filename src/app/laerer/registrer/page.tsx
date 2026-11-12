@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ActionForm } from "@/components/form";
 import { formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
 import { formatSpan } from "@/lib/schedule";
+import { loadStudentOptions } from "@/lib/student-options";
 import { createClient } from "@/lib/supabase/server";
 import { deleteRegistration, saveRegistration } from "../lesson-actions";
 import { TeacherLessonForm } from "../lesson-form";
@@ -12,6 +13,7 @@ import { allowedServices, getTeacher, isLocked, loadTeacherPeriod } from "../tea
 // Tilføj kørte lektioner (i dag eller tidligere), eller ret en registrering, der ikke er godkendt.
 export default async function RegisterPage({ searchParams }: PageProps<"/laerer/registrer">) {
   const teacher = await getTeacher();
+  const students = await loadStudentOptions(teacher.membership.schoolId, teacher.instructorId);
   const sp = await searchParams;
   const supabase = await createClient();
   const today = todayDk();
@@ -20,7 +22,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
   const { data: reg } = id
     ? await supabase
         .from("registrations")
-        .select("id, lesson_date, start_time, lesson_count, service_id, status, student_name, note, decision_comment")
+        .select("id, lesson_date, start_time, lesson_count, service_id, status, student_id, student_name, note, decision_comment")
         .eq("id", id)
         .maybeSingle()
     : { data: null };
@@ -64,12 +66,14 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
           submitLabel={reg ? (reg.status === "rejected" ? "Send igen" : "Gem ændringer") : "Gem lektioner"}
           services={services}
           plan={teacher.plan}
+          students={students}
           busy={busy}
           hiddenFields={{ date, ...(reg ? { id: reg.id } : {}) }}
           initial={{
             serviceId: reg?.service_id,
             count: reg?.lesson_count,
             start: reg?.start_time.slice(0, 5) ?? "08:00",
+            studentId: reg?.student_id ?? undefined,
             studentName: reg?.student_name ?? undefined,
             note: reg?.note ?? undefined,
           }}

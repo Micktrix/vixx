@@ -20,11 +20,15 @@ export type StudentInfo = {
   courseId: string;
   serviceId: string | null;
   active: boolean;
+  finished: Finished | null; // forløbet er afsluttet (fx bestået køreprøve); eleven er inaktiv
   done: Set<string>; // course_lesson-id'er, der er kvitteret og bekræftet
   waiting: Set<string>; // kvitteret af læreren, venter på elevens bekræftelse
   signoffs: Map<string, Signoff>;
   theoryCount: number; // teorilektioner talt op (scannet eller givet af admin)
 };
+export const FINISH_LABEL = { passed: "Bestået køreprøve", stopped: "Stoppet", other: "Afsluttet" } as const;
+export type Finished = { on: string; reason: keyof typeof FINISH_LABEL; note: string | null };
+
 export type Signoff = { id: string; date: string; instructor: string; confirmed: boolean; skipped: string | null; comment: string | null };
 export type TeamInfo = { id: string; name: string; courseId: string | null; startsOn: string | null; active: boolean };
 
@@ -35,7 +39,7 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, active, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count)",
+        "id, user_id, team_id, course_id, service_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
@@ -75,6 +79,7 @@ export async function loadStudents(schoolId: string) {
         courseId: s.course_id,
         serviceId: s.service_id,
         active: s.active,
+        finished: s.finished_on ? { on: s.finished_on, reason: s.finish_reason as Finished["reason"], note: s.finish_note } : null,
         done: new Set([...signoffs].filter(([, x]) => x.confirmed).map(([id]) => id)),
         waiting: new Set([...signoffs].filter(([, x]) => !x.confirmed).map(([id]) => id)),
         signoffs,

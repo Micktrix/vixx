@@ -125,3 +125,26 @@ test("demo-eleven har hele elevens app: kalender med lærerens åbne tider, anmo
     await admin.from("open_slots").delete().eq("instructor_id", LARS).eq("slot_date", date);
   }
 });
+
+test("læreren planlægger en lektion med en elev fra listen, og den kommer i elevens kalender", async ({ browser }) => {
+  const date = inDays(7);
+  const teacher = await browser.newPage();
+  const student = await browser.newPage();
+  try {
+    await loginOk(teacher, INSTRUCTOR, PASSWORD);
+    await teacher.goto(`/laerer/planlaeg?dato=${date}`);
+    await teacher.getByLabel("Ydelse").selectOption({ label: "Amu C" });
+    const picker = teacher.getByLabel("Elev (valgfri)");
+    await expect(picker.locator("optgroup[label='Dine elever'] option")).toHaveText(["Emil Elev"]);
+    await picker.selectOption({ label: "Emil Elev" });
+    await expect(teacher.getByText("Lektionen kommer i elevens kalender.")).toBeVisible();
+    await teacher.getByRole("button", { name: "Planlæg" }).click();
+    await teacher.waitForURL(/\/laerer\?dag=/);
+
+    await loginOk(student, "20000031", PASSWORD);
+    await student.goto("/elev/kalender");
+    await expect(student.getByTestId("student-upcoming").filter({ hasText: "Lars Jensen" })).toBeVisible();
+  } finally {
+    await localAdmin().from("scheduled_lessons").delete().eq("student_id", "00000000-0000-4000-ad00-000000000031").eq("lesson_date", date);
+  }
+});

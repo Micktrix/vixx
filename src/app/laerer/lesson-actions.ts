@@ -27,6 +27,7 @@ function readLesson(formData: FormData) {
       start_time: start,
       lesson_count: count,
       service_id: text("serviceId"),
+      student_id: text("studentId") || null,
       student_name: text("studentName") || null,
       note: text("note") || null,
     },

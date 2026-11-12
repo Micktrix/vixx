@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ResultBox, TextField, useFormAction } from "@/components/form";
+import { ResultBox, useFormAction } from "@/components/form";
+import { StudentPicker } from "@/components/student-picker";
 import { ServiceOptions, type ServiceOption } from "@/components/service-options";
 import { inputClass } from "@/components/styles";
 import type { FormAction } from "@/lib/action-state";
 import type { ResourceInfo } from "@/lib/resources";
+import type { StudentOption } from "@/lib/student-options";
 import { fromMinutes, overlaps, planSlotIsFree, planSpan, suggestPlanStart, type LessonPlan, type Span } from "@/lib/schedule";
 
 type Service = ServiceOption;
@@ -20,6 +22,7 @@ export function TeacherLessonForm({
   plan,
   busy,
   hiddenFields,
+  students,
   initial,
   resources,
   resourceBusy = {},
@@ -31,10 +34,12 @@ export function TeacherLessonForm({
   plan: LessonPlan; // skolens lektionsplan; kun dens starttider kan vælges
   busy: Span[];
   hiddenFields: Record<string, string>;
+  students: StudentOption[]; // skolens elever til valg af elev
   initial: {
     serviceId?: string;
     count?: number;
     start?: string;
+    studentId?: string;
     studentName?: string;
     note?: string;
     resourceId?: string;
@@ -147,7 +152,7 @@ export function TeacherLessonForm({
         </label>
       )}
 
-      <TextField label="Elev (valgfri)" name="studentName" defaultValue={initial.studentName} maxLength={80} placeholder="Navn eller elevnr." />
+      <StudentPicker students={students} initialId={initial.studentId} initialName={initial.studentName} />
       <label className="flex flex-col gap-1.5 text-sm font-bold">
         Note (valgfri)
         <textarea

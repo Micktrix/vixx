@@ -4,6 +4,7 @@ import { TextField } from "@/components/form";
 import { requireRole } from "@/lib/auth/session";
 import { formatLongDate } from "@/lib/dates";
 import { storedSpan, toPlan } from "@/lib/schedule";
+import { loadStudentOptions } from "@/lib/student-options";
 import { createClient } from "@/lib/supabase/server";
 import { TeacherLessonForm } from "../../../laerer/lesson-form";
 import { officeSaveRegistration } from "../actions";
@@ -17,7 +18,7 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
   const { data: reg } = await supabase
     .from("registrations")
     .select(
-      "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, status, student_name, note, decision_comment, instructors(school_members(profiles(full_name)))",
+      "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, status, student_id, student_name, note, decision_comment, instructors(school_members(profiles(full_name)))",
     )
     .eq("id", typeof sp.id === "string" ? sp.id : "")
     .eq("school_id", membership.schoolId)
@@ -76,10 +77,12 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
           plan={plan}
           busy={(others ?? []).map((o) => storedSpan(o.start_time, o.span_minutes))}
           hiddenFields={{ id: reg.id }}
+          students={await loadStudentOptions(membership.schoolId, reg.instructor_id)}
           initial={{
             serviceId: reg.service_id,
             count: reg.lesson_count,
             start: reg.start_time.slice(0, 5),
+            studentId: reg.student_id ?? undefined,
             studentName: reg.student_name ?? undefined,
             note: reg.note ?? undefined,
           }}

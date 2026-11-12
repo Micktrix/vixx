@@ -8,7 +8,7 @@ import { formatDate } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { matchesStudent } from "@/lib/student-search";
 import { saveTeam, setTeamActive } from "./actions";
-import { loadStudents, progress } from "./data";
+import { FINISH_LABEL, loadStudents, progress } from "./data";
 import { ProgressBar } from "./progress-bar";
 
 const linkButton = "inline-flex h-11 items-center rounded-xl border border-accent bg-accent px-4 text-[15px] font-bold text-ink";
@@ -74,7 +74,7 @@ export default async function StudentsPage({ searchParams }: PageProps<"/kontor/
                     <span className="flex items-center gap-1.5 text-sm">
                       {team ? team.name : "Intet hold"}
                       {team && !team.active && <Pill>Afsluttet</Pill>}
-                      {!s.active && <Pill>Ikke aktiv</Pill>}
+                      {s.finished ? <Pill tone="ok">{FINISH_LABEL[s.finished.reason]}</Pill> : !s.active && <Pill>Ikke aktiv</Pill>}
                     </span>
                     <span className="text-sm text-muted">{course?.name}</span>
                     <span className="ml-auto w-[160px]">

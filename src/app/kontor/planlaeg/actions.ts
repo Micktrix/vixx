@@ -59,6 +59,7 @@ export async function saveLesson(_prev: ActionState, formData: FormData): Promis
     start_time: start,
     lesson_count: count,
     service_id: serviceId,
+    student_id: text("studentId") || null,
     student_name: text("studentName") || null,
     note: text("note") || null,
   };

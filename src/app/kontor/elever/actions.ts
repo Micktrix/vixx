@@ -173,6 +173,43 @@ export async function correctTheory(_prev: ActionState, formData: FormData): Pro
   return { message: "Rettet." };
 }
 
+// Afslut elevens forløb (fx bestået køreprøve): eleven bliver inaktiv og logges ud. Intet slettes, så
+// kvitteringer og lektioner kan findes til dokumentation.
+export async function finishStudent(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin", "office"]);
+  const reason = text(formData, "reason");
+  const date = parseDateInput(text(formData, "date"));
+  const note = text(formData, "note") || null;
+  if (!["passed", "stopped", "other"].includes(reason)) return { error: "Vælg en årsag." };
+  if (!date || date > todayDk()) return { error: "Vælg en dato, der ikke ligger frem i tiden." };
+  if (note && note.length > 300) return { error: "Noten er for lang." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("students")
+    .update({ active: false, finished_on: date, finish_reason: reason, finish_note: note })
+    .eq("id", text(formData, "id"))
+    .eq("school_id", membership.schoolId)
+    .select("user_id")
+    .single();
+  if (error || !data) return { error: "Forløbet kunne ikke afsluttes. Prøv igen." };
+  await createAdminClient().rpc("revoke_user_sessions", { p_user: data.user_id });
+  revalidatePath(PAGE, "layout");
+  return { message: "Forløbet er afsluttet. Eleven kan ikke længere logge ind." };
+}
+
+export async function reopenStudent(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin", "office"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("students")
+    .update({ active: true, finished_on: null, finish_reason: null, finish_note: null })
+    .eq("id", text(formData, "id"))
+    .eq("school_id", membership.schoolId);
+  if (error) return { error: "Eleven kunne ikke genåbnes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  return { message: "Eleven er aktiv igen og kan logge ind." };
+}
+
 function readStudent(formData: FormData) {
   const courseId = text(formData, "courseId");
   if (!courseId) return { error: "Vælg et forløb." } as const;
@@ -249,7 +286,7 @@ export async function updateStudent(_prev: ActionState, formData: FormData): Pro
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("students")
-    .update({ ...values, active: formData.get("active") === "on" })
+    .update(values)
     .eq("id", text(formData, "id"))
     .eq("school_id", membership.schoolId)
     .select("user_id")

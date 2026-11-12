@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth/session";
 import { busyByResource, loadBookings, loadResources } from "@/lib/booking-data";
 import { formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
 import { toPlan } from "@/lib/schedule";
+import { loadStudentOptions } from "@/lib/student-options";
 import { createClient } from "@/lib/supabase/server";
 import { calendarHref } from "../calendar/params";
 import { dayInfo, loadSchedule } from "../schedule-data";
@@ -22,7 +23,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
   const { data: lesson } = lessonId
     ? await supabase
         .from("scheduled_lessons")
-        .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, student_name, note, origin")
+        .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, student_id, student_name, note, origin")
         .eq("id", lessonId)
         .eq("school_id", membership.schoolId)
         .maybeSingle()
@@ -30,7 +31,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
   if (lessonId && !lesson) notFound();
 
   const date = lesson?.lesson_date ?? parseDateInput(one("dato") ?? "") ?? today;
-  const [schedule, { data: services }, { data: school }, resources, bookings] = await Promise.all([
+  const [schedule, { data: services }, { data: school }, resources, bookings, students] = await Promise.all([
     loadSchedule(membership.schoolId, date, date),
     supabase
       .from("services")
@@ -42,6 +43,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
     supabase.from("schools").select("lesson_minutes, lesson_starts").eq("id", membership.schoolId).single(),
     loadResources(membership.schoolId),
     loadBookings(membership.schoolId, date, date),
+    loadStudentOptions(membership.schoolId),
   ]);
   const lessonBooking = lesson ? bookings.find((b) => b.lessonId === lesson.id) : undefined;
 
@@ -70,6 +72,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
           services={formServices}
           plan={plan}
           today={today}
+          students={students}
           initialDay={instructor ? dayInfo(schedule, instructor, date, lesson?.id) : null}
           resources={resources}
           initialResourceBusy={busyByResource(bookings, lesson?.id)}
@@ -80,6 +83,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
             start: lesson?.start_time.slice(0, 5) ?? one("start"),
             count: lesson?.lesson_count ?? 1,
             serviceId: lesson?.service_id,
+            studentId: lesson?.student_id ?? undefined,
             studentName: lesson?.student_name ?? undefined,
             note: lesson?.note ?? undefined,
             resourceId: lessonBooking?.resourceId,
