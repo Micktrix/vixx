@@ -5,20 +5,30 @@ import { Pill } from "@/components/pill";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
+import { formatPhone } from "@/lib/phone";
+import { matchesStudent } from "@/lib/student-search";
 import { saveTeam, setTeamActive } from "./actions";
 import { loadStudents, progress } from "./data";
 import { ProgressBar } from "./progress-bar";
 
 const linkButton = "inline-flex h-11 items-center rounded-xl border border-accent bg-accent px-4 text-[15px] font-bold text-ink";
 
-// Kontor → Elever: nyt hold øverst, så holdene som liste (aktive først, afsluttede nederst) med
-// elevernes fremskridt i forløbet.
-export default async function StudentsPage() {
+// Kontor → Elever: søgning efter en elev på tværs af hold, nyt hold, og holdene som liste (aktive først,
+// afsluttede nederst) med elevernes fremskridt i forløbet.
+export default async function StudentsPage({ searchParams }: PageProps<"/kontor/elever">) {
   const { membership } = await requireRole(["admin", "office"]);
+  const sp = await searchParams;
+  const query = typeof sp.q === "string" ? sp.q.trim() : "";
   const { teams, students, courses } = await loadStudents(membership.schoolId);
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const withoutTeam = students.filter((s) => !s.teamId && s.active);
   const sorted = [...teams].sort((a, b) => Number(b.active) - Number(a.active));
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+  // Aktive elever på aktive hold først; elever på afsluttede hold og inaktive elever nederst.
+  const current = (s: (typeof students)[number]) => s.active && (!s.teamId || !!teamById.get(s.teamId)?.active);
+  const found = query
+    ? students.filter((s) => matchesStudent(query, s.name, s.phone)).sort((a, b) => Number(current(b)) - Number(current(a)))
+    : [];
 
   return (
     <>
@@ -27,10 +37,61 @@ export default async function StudentsPage() {
           <p className="text-sm text-muted">Kontor</p>
           <h1 className="text-[30px] font-bold">Elever</h1>
         </div>
-        <Link href="/kontor/elever/ny" className={linkButton}>
-          + Ny elev
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <form action="/kontor/elever" role="search" className="flex gap-2">
+            <input
+              type="search"
+              name="q"
+              defaultValue={query}
+              aria-label="Søg elev"
+              placeholder="Søg elev (navn eller telefon)"
+              className={`${inputClass} w-[260px]`}
+            />
+            <button type="submit" className="inline-flex h-11 items-center rounded-xl border border-line2 bg-surface px-4 text-[15px] font-bold">
+              Søg
+            </button>
+          </form>
+          <Link href="/kontor/elever/ny" className={linkButton}>
+            + Ny elev
+          </Link>
+        </div>
       </header>
+
+      {query && (
+        <Box title={`Søgning: "${query}"`} hint={found.length === 1 ? "1 elev" : `${found.length} elever`}>
+          {found.length ? (
+            <ul className="flex flex-col" data-testid="search-results">
+              {found.map((s) => {
+                const team = s.teamId ? teamById.get(s.teamId) : undefined;
+                const course = courseById.get(s.courseId);
+                const p = progress(s, course);
+                return (
+                  <li key={s.id} className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line py-2.5 last:border-b-0 ${current(s) ? "" : "text-muted"}`}>
+                    <Link href={`/kontor/elever/${s.id}`} className="min-w-[180px] font-bold text-ink hover:text-accent-ink hover:underline">
+                      {s.name}
+                    </Link>
+                    <span className="text-sm">{formatPhone(s.phone)}</span>
+                    <span className="flex items-center gap-1.5 text-sm">
+                      {team ? team.name : "Intet hold"}
+                      {team && !team.active && <Pill>Afsluttet</Pill>}
+                      {!s.active && <Pill>Ikke aktiv</Pill>}
+                    </span>
+                    <span className="text-sm text-muted">{course?.name}</span>
+                    <span className="ml-auto w-[160px]">
+                      <ProgressBar share={p.share} />
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-muted">Ingen elever matcher søgningen.</p>
+          )}
+          <Link href="/kontor/elever" className="text-sm font-semibold text-muted hover:text-ink">
+            Ryd søgning
+          </Link>
+        </Box>
+      )}
 
       {!courses.length && (
         <p className="rounded-xl border border-accent-line bg-accent-bg px-3.5 py-2.5 text-sm">

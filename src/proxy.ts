@@ -7,6 +7,12 @@ const PROTECTED = ["/kontor", "/laerer", "/elev", "/timeseddel", "/storskaerm", 
 // Fornyer Supabase-sessionen ved hver navigation og sender ikke-indloggede til forsiden.
 // Rollerne tjekkes i layouts på serveren (src/lib/auth/session.ts) og i databasen (RLS).
 export async function proxy(request: NextRequest) {
+  // vixx.dk og www.vixx.dk viser den offentlige forside; selve appen ligger på sit eget domæne.
+  const host = (request.headers.get("host") ?? "").split(":")[0];
+  if ((host === "vixx.dk" || host === "www.vixx.dk") && request.nextUrl.pathname === "/") {
+    return NextResponse.rewrite(new URL("/om", request.url));
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(supabaseUrl(), supabasePublishableKey(), {

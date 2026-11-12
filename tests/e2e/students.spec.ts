@@ -138,3 +138,19 @@ test("admin retter en kvittering til den lektion, der blev kørt", async ({ page
     await admin.from("lesson_signoffs").delete().eq("student_id", emil);
   }
 });
+
+test("kontoret søger en elev frem på tværs af hold, på navn eller telefon", async ({ page }) => {
+  await loginOk(page, OFFICE, PASSWORD);
+  await page.goto("/kontor/elever");
+  await page.getByRole("searchbox", { name: "Søg elev" }).fill("freja");
+  await page.getByRole("button", { name: "Søg" }).click();
+  const results = page.getByTestId("search-results");
+  await expect(results.getByRole("listitem")).toHaveCount(1);
+  await expect(results).toContainText("Freja Elev");
+
+  await page.getByRole("searchbox", { name: "Søg elev" }).fill("20 00 00 31");
+  await page.getByRole("button", { name: "Søg" }).click();
+  await expect(results).toContainText("Emil Elev");
+  await results.getByRole("link", { name: "Emil Elev" }).click();
+  await expect(page.getByRole("heading", { name: "Emil Elev" })).toBeVisible();
+});
