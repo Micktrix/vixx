@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { authFieldsForPhone, firstPassword } from "@/lib/auth/login-identity";
 import { requireRole } from "@/lib/auth/session";
-import { parseDateInput } from "@/lib/dates";
+import { parseDateInput, todayDk } from "@/lib/dates";
 import { normalizePhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -40,6 +40,48 @@ export async function saveTeam(_prev: ActionState, formData: FormData): Promise<
   revalidatePath(PAGE, "layout");
   if (!id) redirect(`${PAGE}/hold/${data.id}`);
   return { message: "Holdet er gemt." };
+}
+
+// Afslut eller genåbn et hold. Et afsluttet hold kan ikke få nye elever (databasen).
+export async function setTeamActive(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin", "office"]);
+  const active = text(formData, "active") === "true";
+  const supabase = await createClient();
+  const { error } = await supabase.from("teams").update({ active }).eq("id", text(formData, "id")).eq("school_id", membership.schoolId);
+  if (error) return { error: "Holdet kunne ikke gemmes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  return undefined;
+}
+
+// Admin krydser en lektion af i elevens forløb, fx når en gæstelærer uden adgang til appen har kørt den.
+// Den tæller som gennemført med det samme, går ikke til lønnen og kan ikke slettes (databasen).
+export async function crossOffLesson(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const lessonId = text(formData, "courseLessonId");
+  const comment = text(formData, "comment");
+  const date = parseDateInput(text(formData, "date"));
+  if (!lessonId) return { error: "Vælg lektionen." };
+  if (!date) return { error: "Vælg datoen." };
+  if (date > todayDk()) return { error: "Datoen kan ikke ligge frem i tiden." };
+  if (!comment) return { error: "Skriv en kommentar, fx hvem der kørte lektionen." };
+  if (comment.length > 500) return { error: "Kommentaren er for lang." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("lesson_signoffs").insert({
+    school_id: membership.schoolId,
+    student_id: text(formData, "studentId"),
+    course_lesson_id: lessonId,
+    lesson_number: "", // sættes af databasen fra forløbet
+    instructor_id: null,
+    lesson_date: date,
+    comment,
+  });
+  if (error?.code === "23505") return { error: "Lektionen er allerede kvitteret." };
+  if (error?.code === "23514") return { error: error.message };
+  if (error) return { error: "Lektionen kunne ikke krydses af. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/elev", "layout");
+  return { message: "Lektionen er krydset af." };
 }
 
 function readStudent(formData: FormData) {

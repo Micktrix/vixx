@@ -24,7 +24,7 @@ export default async function InstructorLayout({ children }: LayoutProps<"/laere
       >
         {isStaff(membership) && (
           <div className="px-5 pt-[calc(12px+env(safe-area-inset-top))]">
-            <PartSwitch current="laerer" />
+            <PartSwitch teaches demo={membership.role === "admin"} />
           </div>
         )}
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>

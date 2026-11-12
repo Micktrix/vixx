@@ -14,6 +14,7 @@ type Props = {
   userName: string;
   canSwitchSchool: boolean;
   teaches: boolean;
+  isAdmin: boolean;
   badges: Record<string, number>; // antal der venter pr. menupunkt (slug)
   isPlatformOwner: boolean;
 };
@@ -35,7 +36,7 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, badges, isPlatformOwner }: Props) {
+export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, isAdmin, badges, isPlatformOwner }: Props) {
   const pathname = usePathname();
   const isCurrent = (s: OfficeSection) => {
     const href = officeHref(s);
@@ -58,7 +59,7 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, 
             <span className="text-[13px] text-muted">{schoolName}</span>
           </div>
         </div>
-        {teaches && <PartSwitch current="kontor" className="w-full min-[860px]:mb-3" />}
+        {(teaches || isAdmin) && <PartSwitch teaches={teaches} demo={isAdmin} className="w-full min-[860px]:mb-3" />}
         {officeSections.map((s) => {
           if (!s.children) {
             const current = isCurrent(s);

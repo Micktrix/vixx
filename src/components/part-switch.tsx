@@ -1,10 +1,15 @@
-import Link from "next/link";
+"use client";
 
-// Skifter mellem kontoret og lærer-appen for personer med begge roller.
-export function PartSwitch({ current, className = "" }: { current: "kontor" | "laerer"; className?: string }) {
-  const item = (part: "kontor" | "laerer", label: string) => (
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+// Skifter mellem kontoret, lærer-appen og (for admin) demo-eleven, der viser elevens skærm.
+export function PartSwitch({ teaches, demo, className = "" }: { teaches: boolean; demo: boolean; className?: string }) {
+  const pathname = usePathname();
+  const current = pathname.startsWith("/kontor/demo-elev") ? "elev" : pathname.startsWith("/laerer") ? "laerer" : "kontor";
+  const item = (part: "kontor" | "laerer" | "elev", href: string, label: string) => (
     <Link
-      href={`/${part}`}
+      href={href}
       aria-current={current === part ? "page" : undefined}
       className={`flex-1 rounded-lg px-3 py-1.5 text-center text-sm font-bold ${
         current === part ? "bg-accent text-ink" : "text-muted hover:text-ink"
@@ -14,9 +19,10 @@ export function PartSwitch({ current, className = "" }: { current: "kontor" | "l
     </Link>
   );
   return (
-    <nav aria-label="Skift mellem kontor og lærer" className={`flex rounded-[10px] border border-line2 bg-surface p-0.5 ${className}`}>
-      {item("kontor", "Kontor")}
-      {item("laerer", "Lærer")}
+    <nav aria-label="Skift mellem kontor, lærer og elev" className={`flex rounded-[10px] border border-line2 bg-surface p-0.5 ${className}`}>
+      {item("kontor", "/kontor", "Kontor")}
+      {teaches && item("laerer", "/laerer", "Lærer")}
+      {demo && item("elev", "/kontor/demo-elev", "Elev")}
     </nav>
   );
 }

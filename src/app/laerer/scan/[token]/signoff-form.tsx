@@ -24,6 +24,7 @@ export function SignoffForm({
   busy,
   planned,
   defaultStart,
+  demo,
 }: {
   token: string;
   studentId: string;
@@ -34,6 +35,7 @@ export function SignoffForm({
   busy: Span[];
   planned: { id: string; label: string }[]; // dagens planlagte lektioner, der ikke er registreret
   defaultStart: string;
+  demo: boolean; // admins demo-elev: kommer aldrig på lønnen
 }) {
   const { state, onSubmit, pending } = useFormAction(signOffLesson);
   const [lessonId, setLessonId] = useState(lessons[0].id);
@@ -91,7 +93,9 @@ export function SignoffForm({
         </fieldset>
       )}
 
-      {lesson.kind === "theory" ? (
+      {demo ? (
+        <p className="rounded-[16px] bg-soft px-4 py-3 text-sm">Demo-elev: lektionen kommer ikke på lønnen.</p>
+      ) : lesson.kind === "theory" ? (
         <p className="rounded-[16px] bg-soft px-4 py-3 text-sm">Teori kommer ikke med på lønnen herfra. Registrér selv timerne i kalenderen.</p>
       ) : (
         <section className={box}>

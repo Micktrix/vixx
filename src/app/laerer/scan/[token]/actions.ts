@@ -31,7 +31,7 @@ export async function signOffLesson(_prev: ActionState, formData: FormData): Pro
   const supabase = await createClient();
   const [{ data: instructor }, { data: student }, { data: lesson }] = await Promise.all([
     supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single(),
-    supabase.from("students").select("id, profiles(full_name)").eq("id", studentId).eq("school_id", membership.schoolId).maybeSingle(),
+    supabase.from("students").select("id, is_demo, profiles(full_name)").eq("id", studentId).eq("school_id", membership.schoolId).maybeSingle(),
     supabase.from("course_lessons").select("kind").eq("id", courseLessonId).maybeSingle(),
   ]);
   if (!instructor || !student || !lesson) return { error: "Eleven eller lektionen findes ikke." };
@@ -39,7 +39,7 @@ export async function signOffLesson(_prev: ActionState, formData: FormData): Pro
 
   // Til lønnen: en planlagt lektion fra dagens skema præcis som planlagt, ellers den valgte tid og ydelse.
   let registrationId: string | null = null;
-  if (lesson.kind === "driving" && formData.get("pay") === "on") {
+  if (lesson.kind === "driving" && formData.get("pay") === "on" && !student.is_demo) {
     const base = { school_id: membership.schoolId, instructor_id: instructor.id, student_id: student.id, student_name: studentName, created_by: user.id };
     const scheduledId = text("scheduledLessonId");
     let values;

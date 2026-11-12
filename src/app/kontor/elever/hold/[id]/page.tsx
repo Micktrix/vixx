@@ -37,12 +37,14 @@ export default async function TeamPage({ params }: PageProps<"/kontor/elever/hol
             {!team.active && <Pill>Afsluttet</Pill>}
           </p>
         </div>
-        <Link
-          href={`/kontor/elever/ny?hold=${team.id}`}
-          className="inline-flex h-11 items-center rounded-xl border border-accent bg-accent px-4 text-[15px] font-bold text-ink"
-        >
-          + Elev på holdet
-        </Link>
+        {team.active && (
+          <Link
+            href={`/kontor/elever/ny?hold=${team.id}`}
+            className="inline-flex h-11 items-center rounded-xl border border-accent bg-accent px-4 text-[15px] font-bold text-ink"
+          >
+            + Elev på holdet
+          </Link>
+        )}
       </header>
 
       {groups.map((g) => (

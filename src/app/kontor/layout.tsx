@@ -20,6 +20,7 @@ export default async function OfficeLayout({ children }: LayoutProps<"/kontor">)
         userName={user.fullName}
         canSwitchSchool={user.memberships.length > 1}
         teaches={membership.teaches}
+        isAdmin={membership.role === "admin"}
         badges={badges}
         isPlatformOwner={user.isPlatformOwner}
       />

@@ -22,7 +22,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), courses(name, course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
+      "id, service_id, active, is_demo, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), courses(name, course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
@@ -43,7 +43,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
     );
   }
 
-  const name = (student.profiles as unknown as { full_name: string } | null)?.full_name ?? "";
+  const name = student.is_demo ? "Demo-elev" : ((student.profiles as unknown as { full_name: string } | null)?.full_name ?? "");
   const team = student.teams as unknown as { name: string } | null;
   const course = student.courses as unknown as { name: string; course_lessons: LessonRow[] } | null;
   const lessons = (course?.course_lessons ?? []).filter((l) => l.active).sort((a, b) => a.sort_order - b.sort_order);
@@ -97,6 +97,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
         <SignoffForm
           token={token}
           studentId={student.id}
+          demo={student.is_demo}
           lessons={missing}
           services={services}
           defaultServiceId={student.service_id ?? ""}

@@ -4,10 +4,11 @@ import { Box } from "@/components/box";
 import { ActionForm, TextField } from "@/components/form";
 import { Pill } from "@/components/pill";
 import { requireRole } from "@/lib/auth/session";
-import { formatDate } from "@/lib/dates";
+import { inputClass } from "@/components/styles";
+import { formatDate, todayDk } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { resetStudentPassword, updateStudent } from "../actions";
+import { crossOffLesson, resetStudentPassword, updateStudent } from "../actions";
 import { loadStudents, progress } from "../data";
 import { ProgressBar } from "../progress-bar";
 import { StudentFields } from "../student-fields";
@@ -26,6 +27,8 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const course = courses.find((c) => c.id === student.courseId);
   const team = teams.find((t) => t.id === student.teamId);
   const p = progress(student, course);
+  const missing = course?.lessons.filter((l) => !student.signoffs.has(l.id)) ?? [];
+  const isAdmin = membership.role === "admin";
 
   return (
     <>
@@ -64,12 +67,36 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
                       {formatDate(s.date)}
                       {s.instructor && ` · ${s.instructor}`}
                       {s.skipped && ` · Ikke nået: ${s.skipped.split("\n").join(", ")}`}
+                      {s.comment && ` · ${s.comment}`}
                     </span>
                   )}
                 </li>
               );
             })}
           </ol>
+        </Box>
+      )}
+
+      {course && isAdmin && missing.length > 0 && (
+        <Box title="Kryds en lektion af" hint="Fx når en gæstelærer uden adgang til appen har kørt lektionen">
+          <ActionForm action={crossOffLesson} submitLabel="Kryds af" confirmText="Kryds lektionen af? Det kan ikke fortrydes." className="flex flex-col gap-3">
+            <input type="hidden" name="studentId" value={student.id} />
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex min-w-[160px] flex-col gap-1.5 text-sm font-bold">
+                Lektion
+                <select name="courseLessonId" required defaultValue={missing[0].id} className={inputClass}>
+                  {missing.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      Lektion {l.number}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <TextField label="Dato" name="date" type="date" required defaultValue={todayDk()} max={todayDk()} />
+              <TextField label="Kommentar" name="comment" required maxLength={500} placeholder="Fx kørt af gæstelærer Per Hansen" className="min-w-[260px] flex-1" />
+            </div>
+            <p className="text-[13px] text-muted">Lektionen tæller som gennemført med det samme. Den kommer ikke med på lønnen og kan ikke slettes.</p>
+          </ActionForm>
         </Box>
       )}
 

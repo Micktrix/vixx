@@ -18,7 +18,7 @@ export type StudentInfo = {
   waiting: Set<string>; // kvitteret af læreren, venter på elevens bekræftelse
   signoffs: Map<string, Signoff>;
 };
-export type Signoff = { date: string; instructor: string; confirmed: boolean; skipped: string | null };
+export type Signoff = { date: string; instructor: string; confirmed: boolean; skipped: string | null; comment: string | null };
 export type TeamInfo = { id: string; name: string; courseId: string | null; startsOn: string | null; active: boolean };
 
 export async function loadStudents(schoolId: string) {
@@ -28,9 +28,10 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, active, profiles(full_name, phone), lesson_signoffs(course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items)",
+        "id, user_id, team_id, course_id, service_id, active, profiles(full_name, phone), lesson_signoffs(course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment)",
       )
-      .eq("school_id", schoolId),
+      .eq("school_id", schoolId)
+      .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
     supabase
       .from("courses")
       .select("id, name, category_code, course_lessons(id, number, lesson_count, sort_order, active)")
@@ -54,7 +55,7 @@ export async function loadStudents(schoolId: string) {
       const signoffs = new Map<string, Signoff>(
         (s.lesson_signoffs ?? []).map((x) => [
           x.course_lesson_id,
-          { date: x.lesson_date, instructor: x.instructor_name, confirmed: !!x.confirmed_at, skipped: x.skipped_items },
+          { date: x.lesson_date, instructor: x.instructor_name, confirmed: !!x.confirmed_at, skipped: x.skipped_items, comment: x.comment },
         ]),
       );
       return {

@@ -11,7 +11,7 @@ test("en person med både kontor og lærer skifter med knappen, og Vixx husker v
   await chooseOwnPassword(page, "kontor-og-laerer");
   await expect(page).toHaveURL("/kontor");
 
-  const parts = page.getByRole("navigation", { name: "Skift mellem kontor og lærer" });
+  const parts = page.getByRole("navigation", { name: "Skift mellem kontor, lærer og elev" });
   await parts.getByRole("link", { name: "Lærer" }).click();
   await expect(page).toHaveURL("/laerer");
 
@@ -21,7 +21,7 @@ test("en person med både kontor og lærer skifter med knappen, og Vixx husker v
   await loginOk(page, phone, "kontor-og-laerer");
   await expect(page).toHaveURL("/laerer");
 
-  await page.getByRole("navigation", { name: "Skift mellem kontor og lærer" }).getByRole("link", { name: "Kontor" }).click();
+  await page.getByRole("navigation", { name: "Skift mellem kontor, lærer og elev" }).getByRole("link", { name: "Kontor" }).click();
   await expect(page).toHaveURL("/kontor");
 });
 

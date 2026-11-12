@@ -5,18 +5,20 @@ import { Pill } from "@/components/pill";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
-import { saveTeam } from "./actions";
+import { saveTeam, setTeamActive } from "./actions";
 import { loadStudents, progress } from "./data";
 import { ProgressBar } from "./progress-bar";
 
 const linkButton = "inline-flex h-11 items-center rounded-xl border border-accent bg-accent px-4 text-[15px] font-bold text-ink";
 
-// Kontor → Elever: hold med elever og deres fremskridt i forløbet.
+// Kontor → Elever: nyt hold øverst, så holdene som liste (aktive først, afsluttede nederst) med
+// elevernes fremskridt i forløbet.
 export default async function StudentsPage() {
   const { membership } = await requireRole(["admin", "office"]);
   const { teams, students, courses } = await loadStudents(membership.schoolId);
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const withoutTeam = students.filter((s) => !s.teamId && s.active);
+  const sorted = [...teams].sort((a, b) => Number(b.active) - Number(a.active));
 
   return (
     <>
@@ -36,35 +38,6 @@ export default async function StudentsPage() {
         </p>
       )}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="teams">
-        {teams.map((t) => {
-          const members = students.filter((s) => s.teamId === t.id && s.active);
-          const course = t.courseId ? courseById.get(t.courseId) : undefined;
-          const avg = members.length
-            ? members.reduce((n, s) => n + progress(s, courseById.get(s.courseId)).share, 0) / members.length
-            : 0;
-          return (
-            <Link
-              key={t.id}
-              href={`/kontor/elever/hold/${t.id}`}
-              className={`flex flex-col gap-2 rounded-[18px] border border-line bg-surface p-4 hover:border-accent ${t.active ? "" : "opacity-60"}`}
-              data-testid="team-card"
-            >
-              <span className="flex items-center justify-between gap-2">
-                <b className="text-[17px]">{t.name}</b>
-                {!t.active && <Pill>Afsluttet</Pill>}
-              </span>
-              <span className="text-sm text-muted">
-                {members.length} {members.length === 1 ? "elev" : "elever"}
-                {course ? ` · ${course.name}` : ""}
-                {t.startsOn ? ` · start ${formatDate(t.startsOn)}` : ""}
-              </span>
-              <ProgressBar share={avg} />
-            </Link>
-          );
-        })}
-      </section>
-
       <Box title="Nyt hold">
         <ActionForm action={saveTeam} submitLabel="Opret hold" className="flex flex-wrap items-end gap-3">
           <TextField label="Navn" name="name" required maxLength={80} placeholder="Fx C-hold uge 48" className="min-w-[200px] flex-1" />
@@ -82,6 +55,65 @@ export default async function StudentsPage() {
           <TextField label="Start (valgfri)" name="startsOn" type="date" />
         </ActionForm>
       </Box>
+
+      {teams.length > 0 && (
+        <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="teams">
+          <table className="w-full text-left text-[15px]">
+            <thead className="text-[13px] text-muted">
+              <tr>
+                <th className="px-[18px] py-2.5 font-semibold">Hold</th>
+                <th className="px-3 py-2.5 font-semibold">Forløb</th>
+                <th className="px-3 py-2.5 font-semibold">Start</th>
+                <th className="px-3 py-2.5 font-semibold">Elever</th>
+                <th className="w-[180px] px-3 py-2.5 font-semibold">Fremskridt</th>
+                <th className="px-[18px] py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((t) => {
+                const members = students.filter((s) => s.teamId === t.id && s.active);
+                const course = t.courseId ? courseById.get(t.courseId) : undefined;
+                const avg = members.length
+                  ? members.reduce((n, s) => n + progress(s, courseById.get(s.courseId)).share, 0) / members.length
+                  : 0;
+                return (
+                  <tr key={t.id} className={`border-t border-line ${t.active ? "" : "bg-bg text-muted"}`} data-testid="team-row">
+                    <td className="px-[18px] py-2.5">
+                      <Link href={`/kontor/elever/hold/${t.id}`} className="font-bold text-ink hover:text-accent-ink hover:underline">
+                        {t.name}
+                      </Link>
+                      {!t.active && (
+                        <span className="ml-2">
+                          <Pill>Afsluttet</Pill>
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">{course?.name ?? "–"}</td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">{t.startsOn ? formatDate(t.startsOn) : "–"}</td>
+                    <td className="px-3 py-2.5">{members.length}</td>
+                    <td className="px-3 py-2.5">
+                      <ProgressBar share={avg} />
+                    </td>
+                    <td className="px-[18px] py-2 text-right">
+                      <ActionForm
+                        action={setTeamActive}
+                        submitLabel={t.active ? "Afslut" : "Genåbn"}
+                        pendingLabel="…"
+                        primary={false}
+                        confirmText={t.active ? `Afslut ${t.name}? Holdet kan ikke få nye elever, før det genåbnes.` : undefined}
+                      >
+                        <input type="hidden" name="id" value={t.id} />
+                        <input type="hidden" name="active" value={String(!t.active)} />
+                      </ActionForm>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      )}
+
 
       {withoutTeam.length > 0 && (
         <Box title={`Elever uden hold (${withoutTeam.length})`}>

@@ -15,7 +15,7 @@ export default async function NewStudentPage({ searchParams }: PageProps<"/konto
     supabase.from("services").select("id, name").eq("school_id", membership.schoolId).eq("active", true).order("sort_order").order("name"),
   ]);
   const teamId = typeof sp.hold === "string" ? sp.hold : null;
-  const team = teams.find((t) => t.id === teamId);
+  const team = teams.find((t) => t.id === teamId && t.active);
 
   return (
     <>
