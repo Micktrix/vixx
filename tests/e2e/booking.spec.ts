@@ -167,15 +167,20 @@ test("storskærmen viser dagens lektioner pr. lærer med lokale, og de ledige lo
   const free = `E2E Ledig ${Date.now() % 100000}`;
   const { instructorId } = await newTeacher(browser, name);
   await newTeacher(browser, free);
-  await localAdmin().from("scheduled_lessons").insert({
-    school_id: SCHOOL, instructor_id: instructorId, service_id: B_PRIVAT, lesson_date: day(0),
-    start_time: start, lesson_count: 2, student_name: "Hemmelig Elevsen", origin: "office",
-  });
-  // Et nyt lokale, der er booket lige nu.
+  const { data: lesson } = await localAdmin()
+    .from("scheduled_lessons")
+    .insert({
+      school_id: SCHOOL, instructor_id: instructorId, service_id: B_PRIVAT, lesson_date: day(0),
+      start_time: start, lesson_count: 2, student_name: "Hemmelig Elevsen", origin: "office",
+    })
+    .select("id, span_minutes")
+    .single();
+  // Et nyt lokale, der er booket til lektionen lige nu.
   const room = `E2E Lokale ${Date.now() % 100000}`;
   const { data: resource } = await localAdmin().from("resources").insert({ school_id: SCHOOL, kind: "room", name: room }).select("id").single();
   await localAdmin().from("bookings").insert({
-    school_id: SCHOOL, resource_id: resource!.id, booking_date: day(0), start_time: start, minutes: 60, title: "Teori", instructor_id: instructorId,
+    school_id: SCHOOL, resource_id: resource!.id, booking_date: day(0), start_time: start, minutes: lesson!.span_minutes,
+    instructor_id: instructorId, scheduled_lesson_id: lesson!.id,
   });
 
   await loginOk(page, OFFICE, PASSWORD);
@@ -185,8 +190,8 @@ test("storskærmen viser dagens lektioner pr. lærer med lokale, og de ledige lo
   await expect(teacherRow).toContainText("B privat");
   // En lærer uden noget i dag har ingen række.
   await expect(page.getByTestId("dashboard-row").filter({ hasText: free })).toHaveCount(0);
-  // Lokalet er booket af læreren: det står på lærerens række og ikke blandt de ledige.
-  await expect(teacherRow).toContainText(`Teori · ${room}`);
+  // Lokalet hører til lektionen: det står i lektionens blok og ikke blandt de ledige.
+  await expect(teacherRow).toContainText(`B privat · ${room}`);
   await expect(page.getByTestId("free-rooms")).not.toContainText(room);
   await expect(page.getByTestId("free-rooms")).toContainText("Lokale 2");
   await expect(page.getByTestId("kpis")).toContainText("lektioner i dag");

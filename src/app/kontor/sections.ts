@@ -22,6 +22,7 @@ export const officeSections: OfficeSection[] = [
       { slug: "indstillinger", label: "Generelt", icon: "settings" },
       { slug: "undervisere", label: "Undervisere", icon: "user" },
       { slug: "ydelser", label: "Ydelser og satser", icon: "tag" },
+      { slug: "forloeb", label: "Forløb", icon: "list" },
       { slug: "ferie", label: "Ferie", icon: "sun" },
       { slug: "log", label: "Ændringslog", icon: "list" },
     ],

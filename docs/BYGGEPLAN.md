@@ -105,10 +105,35 @@ Tabeller (alle med `school_id`, `created_at`, `updated_at`):
 - "Jeg er syg" fra appen, helligdage i kalenderen.
 - Registrering uden net (synkroniseres senere), hvis piloten viser behov.
 
-## Fase 3 – elever
-- Elevkonti, tilknytning til lærere, elevbooking af ledige tider.
-- Elevens forløb (teori, praktik, prøver) mod lektionsplanens krav.
-- Teoriundervisning og prøver i systemet.
+## Fase 3 – elever (startet 12. nov. 2026)
+Idé: eleven har sin egen profil og ser sit forløb. Eleven viser en QR-kode, læreren scanner den i lærer-appen og
+kvitterer for lektionen (kørelærerens underskrift), og eleven bekræfter i sin app (elevens underskrift). Det
+erstatter papirets lektionsplan med dato og to underskrifter.
+
+### Trin E1 – Forløb (Indstillinger → Forløb)
+- Admin bygger selv forløb pr. kategori (B, C, D, CE …) og kan rette dem, når ministeriet ændrer noget.
+- Lektion: nummer, længde (antal × 45 min.), type (kørsel/teori), sted (fx øvelsesstrækning), indhold (punkter
+  som "7.1 Igangsætning og standsning v. kantsten"), noter og kontrolstof. Rækkefølge kan ændres.
+- En lektion, der er kvitteret for, kan kun slås fra, ikke slettes. Kvitteringer gemmer lektionens nummer og titel.
+- Kun admin retter; alle på skolen kan se.
+- **Færdig når:** C-forløbet fra papiret kan ses og rettes, og kontoret ikke kan rette.
+
+### Trin E2 – Elever og hold (Kontor → Elever)
+- Hold med elever. Elev oprettes med telefonnummer (login som lærerne), forløb og ydelse (til lønnen).
+- Kontoret ser hold og elever med fremskridt i forløbet på en overskuelig måde.
+- Elevens app: forløbet med gennemførte og manglende lektioner.
+
+### Trin E3 – QR-kvittering
+- Eleven viser en QR-kode; læreren scanner, ser hvad eleven mangler, vælger lektionen og kvitterer.
+- Kørselslektioner: samme tryk registrerer timen til lønnen (ydelse fra elevens forløb, tid fra planlagt lektion
+  eller lektionsplanen; kan rettes eller fravælges). Teorilektioner går ikke til lønnen.
+- Eleven bekræfter i sin app. En kvittering kan aldrig slettes; den står som "afventer elev", til eleven bekræfter.
+
+### Trin E4 – Push-beskeder
+- Eleven får en påmindelse, hvis en lektion ikke er bekræftet. Senere også beskeder til lærerne.
+
+### Senere
+- Elevbooking af ledige tider, teoriundervisning og prøver i systemet.
 
 ---
 
