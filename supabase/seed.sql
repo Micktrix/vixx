@@ -7,6 +7,8 @@
 --   brugere          00000000-0000-4000-a100-0000000000NN  (01 admin, 02 kontor, 11–19 lærere)
 --   lærere           00000000-0000-4000-a200-0000000000NN  (01 og 11–19, samme NN som brugeren;
 --                    Anne Admin er både admin og lærer, og platform-ejer)
+--   elever           brugere 31–32; elev-id'er 00000000-0000-4000-ad00-0000000000NN, hold …ac00-…01,
+--                    forløb …ab00-…11 (C)
 
 -- ---------------------------------------------------------------------------
 -- Brugere (auth) og profiler
@@ -23,7 +25,10 @@ insert into seed_people values
   ('16', 'Hanne Christensen', '+4520000016', 'instructor'),
   ('17', 'Mads Larsen',       '+4520000017', 'instructor'),
   ('18', 'Karin Sørensen',    '+4520000018', 'instructor'),
-  ('19', 'Bo Rasmussen',      '+4520000019', 'instructor');
+  ('19', 'Bo Rasmussen',      '+4520000019', 'instructor'),
+  -- Elever (ingen rolle på skolen; de ligger i tabellen students).
+  ('31', 'Emil Elev',         '+4520000031', null),
+  ('32', 'Freja Elev',        '+4520000032', null);
 
 -- Login sker med telefon + kode via en intern adresse (se src/lib/auth/login-identity.ts):
 -- +4520000011 -> 4520000011@login.vixx.dk. Telefonnummeret gemmes også, så SMS-kode kan slås til senere.
@@ -67,7 +72,8 @@ values ('00000000-0000-4000-a000-000000000001', 'Testkøreskolen', 45, 21);
 
 insert into public.school_members (school_id, user_id, role)
 select '00000000-0000-4000-a000-000000000001', ('00000000-0000-4000-a100-0000000000' || nn)::uuid, role
-from seed_people;
+from seed_people
+where role is not null;
 
 -- ---------------------------------------------------------------------------
 -- Ydelser (navn, sats og løndel)
@@ -238,3 +244,30 @@ insert into public.platform_owners (user_id) values ('00000000-0000-4000-a100-00
 truncate public.audit_log;
 
 drop table seed_people, seed_services;
+
+-- ---------------------------------------------------------------------------
+-- Elevdelen: et C-forløb, et hold og to elever
+-- ---------------------------------------------------------------------------
+insert into public.courses (id, school_id, category_code, name)
+values ('00000000-0000-4000-ab00-000000000011', '00000000-0000-4000-a000-000000000001', 'C', 'C – kørselsundervisning');
+
+insert into public.course_lessons (school_id, course_id, sort_order, number, kind, lesson_count, location, content, control_topic) values
+  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ab00-000000000011', 10, '1', 'theory', 2, 'Teorilokale',
+   E'1.1 Køretøjets indretning
+1.2 Kontrol af lygter', null),
+  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ab00-000000000011', 20, '2', 'driving', 2, 'Øvelsesstrækning',
+   E'2.1 Forberedelse til kørsel
+2.2 Lastbilens spejle', 'Bremser og styretøj'),
+  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ab00-000000000011', 30, '4', 'driving', 2, 'Øvelsesstrækning',
+   E'7.1 Igangsætning og standsning v. kantsten
+7.2 Placering under ligeudkørsel', 'Lygter og bærende dele');
+
+insert into public.teams (id, school_id, name, course_id, starts_on)
+values ('00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-a000-000000000001', 'C-hold uge 48',
+        '00000000-0000-4000-ab00-000000000011', current_date - 3);
+
+insert into public.students (id, school_id, user_id, team_id, course_id, service_id) values
+  ('00000000-0000-4000-ad00-000000000031', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000031',
+   '00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-ab00-000000000011', '00000000-0000-4000-a500-000000000001'),
+  ('00000000-0000-4000-ad00-000000000032', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000032',
+   '00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-ab00-000000000011', '00000000-0000-4000-a500-000000000001');

@@ -40,6 +40,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
   - `admin`: alt, inkl. ydelser og satser, kontorbrugere, oplåsning af lønperioder.
   - `office`: planlægge, godkende/afvise/rette registreringer, fravær, ferie, lokaler/køretøjer, undervisere (ikke priser).
   - `instructor`: egne data – skema, registreringer, ferieanmodning, "Kan arbejde", egne bookinger, egne kontakt- og pårørendeoplysninger.
+  - `student` (elev): ligger i tabellen `students`, ikke i `school_members`, så eleven ikke rammer "medlemmer ser …"-reglerne. Eleven ser kun sig selv, sit hold, sin skole og forløbene, og lander i elevens app (`/elev`). Kontoret opretter hold og elever; lærerne kan se skolens elever.
 - Skriv RLS-politikker og test dem. Ingen forretningslogik der kun er sikret i frontend.
 
 ## Login

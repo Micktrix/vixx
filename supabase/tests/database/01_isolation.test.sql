@@ -49,7 +49,8 @@ select is((select count(*) from public.instructor_prices), 1::bigint, 'Lærer se
 select is((select count(*) from public.services where school_id = '00000000-0000-4000-b000-000000000001'), 0::bigint,
   'Lærer ser ikke en anden skoles ydelser');
 select ok((select count(*) from public.services) >= 11, 'Lærer ser egen skoles ydelser');
-select is((select count(*) from public.profiles), 1::bigint, 'Lærer ser kun sin egen profil');
+select is((select count(*) from public.profiles p where not exists (select 1 from public.students s where s.user_id = p.id)), 1::bigint,
+  'Lærer ser kun sin egen profil blandt de ansatte (og skolens elever, til QR-kvittering)');
 reset role;
 
 -- ---------------------------------------------------------------------------

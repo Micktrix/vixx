@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import { todayDk } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
-export type Role = "admin" | "office" | "instructor";
+export type Role = "admin" | "office" | "instructor" | "student";
 
 // En person kan have flere roller på samme skole: `role` giver adgang til kontoret
 // ("admin" eller "office"; "instructor" betyder kun lærer), og `teaches` er lærerrollen.
+// "student" er en elev (tabellen students, ikke school_members) og har kun adgang til elevens app.
 export type Membership = {
   schoolId: string;
   schoolName: string;
@@ -40,7 +41,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const { data: active } = await supabase.rpc("session_is_active");
   if (!active) return null;
 
-  const [{ data: profile }, { data: members }, { data: owner }] = await Promise.all([
+  const [{ data: profile }, { data: members }, { data: owner }, { data: studentRows }] = await Promise.all([
     supabase.from("profiles").select("full_name, phone, must_change_password").eq("id", userId).single(),
     supabase
       .from("school_members")
@@ -48,6 +49,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       .eq("user_id", userId)
       .eq("active", true),
     supabase.from("platform_owners").select("user_id").eq("user_id", userId).maybeSingle(),
+    supabase.from("students").select("school_id, schools(name)").eq("user_id", userId).eq("active", true),
   ]);
   if (!profile) return null;
 
@@ -64,6 +66,16 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     })
     // Kun lærer, men lærerrollen er slået fra eller udløbet (gæst): ingen adgang. Samme regel som i RLS.
     .filter((m) => m.role !== "instructor" || m.teaches);
+  // Elev på en skole, hvor man ikke i forvejen er ansat.
+  for (const s of studentRows ?? []) {
+    if (memberships.some((m) => m.schoolId === s.school_id)) continue;
+    memberships.push({
+      schoolId: s.school_id,
+      schoolName: (s.schools as unknown as { name: string } | null)?.name ?? "",
+      role: "student",
+      teaches: false,
+    });
+  }
 
   return {
     id: userId,
@@ -91,6 +103,7 @@ export async function getActiveMembership(user: CurrentUser): Promise<Membership
 // Har man både kontor og lærer, lander man der, hvor man sidst var. Første gang afgør enheden:
 // telefon → lærer-appen, computer → kontoret.
 export async function homeFor(membership: Membership): Promise<string> {
+  if (membership.role === "student") return "/elev";
   if (!isStaff(membership)) return "/laerer";
   if (!membership.teaches) return "/kontor";
   const last = (await cookies()).get(PART_COOKIE)?.value;

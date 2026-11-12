@@ -10,6 +10,7 @@ export const officeSections: OfficeSection[] = [
   { slug: null, label: "Kalender", icon: "calendar" },
   { slug: "lokaler", label: "Lokaler", icon: "room" },
   { slug: "koeretoejer", label: "Køretøjer", icon: "car" },
+  { slug: "elever", label: "Elever", icon: "user" },
   { slug: "godkendelser", label: "Godkendelser", icon: "check" },
   { slug: "loen", label: "Lønoverblik", icon: "chart" },
   { slug: "beskeder", label: "Beskeder", icon: "message" },

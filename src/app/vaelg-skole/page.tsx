@@ -3,7 +3,7 @@ import { AuthShell } from "@/components/auth-shell";
 import { chooseSchool, signOut } from "@/lib/auth/actions";
 import { getCurrentUser } from "@/lib/auth/session";
 
-const roleLabel = { admin: "Admin", office: "Kontor", instructor: "Lærer" } as const;
+const roleLabel = { admin: "Admin", office: "Kontor", instructor: "Lærer", student: "Elev" } as const;
 
 export default async function ChooseSchoolPage() {
   const user = await getCurrentUser();
