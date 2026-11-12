@@ -129,11 +129,33 @@ erstatter papirets lektionsplan med dato og to underskrifter.
   eller lektionsplanen; kan rettes eller fravælges). Teorilektioner går ikke til lønnen.
 - Eleven bekræfter i sin app. En kvittering kan aldrig slettes; den står som "afventer elev", til eleven bekræfter.
 
+### Trin E5 – Eleven anmoder om kørelektioner (aftalt 12. nov. 2026)
+- Kontoret kobler eleven på én eller flere faste lærere og sætter fluebenet "Må selv anmode om kørelektioner"
+  (pr. elev, uanset hold og forløb – typisk B-elever, men også fx en aftenelev, der vil køre i dagtimerne).
+- Læreren åbner tider i lærer-appen (dato, starttid fra lektionsplanen, antal lektioner). En åben tid gør ikke
+  læreren optaget; man kan ikke åbne en tid, hvor man er optaget.
+- Eleven ser kun åbne tider hos sine egne lærere og anmoder. Én anmodning pr. åben tid.
+- Læreren godkender eller afviser. Godkendt = planlagt lektion med elevens navn og ydelse (læreren er optaget).
+  Afvist = tiden er åben igen.
+- Eleven kan melde afbud på en booket lektion indtil en frist før (indstilling pr. skole, standard 24 timer).
+  Tiden bliver åben igen. Efter fristen kun via kontoret.
+- Elevens app får bundmenu: Kalender (bookede lektioner, anmodninger og åbne tider), Forløb, QR og Mere
+  (oplysninger, kode, kalender-abonnement, kontakt til skolen og de faste lærere, log ud).
+- Kalender-abonnement (iCal) pr. elev med hemmeligt link, som lærernes.
+- Kontoret ser åbne tider og anmodninger.
+
+### Trin E6 – Beskeder til elever
+- Kontoret sender beskeder til alle elever, et hold eller én elev. Eleven ser dem i appen.
+
+### Trin E7 – Prøver og tjekliste
+- Dato for teori- og køreprøve pr. elev. Tjekliste før prøven (fx lægeerklæring, førstehjælp).
+
 ### Trin E4 – Push-beskeder
-- Eleven får en påmindelse, hvis en lektion ikke er bekræftet. Senere også beskeder til lærerne.
+- Påmindelse dagen før en lektion og om lektioner, der ikke er bekræftet. Besked ved godkendt/afvist anmodning.
+  Senere også beskeder til lærerne.
 
 ### Senere
-- Elevbooking af ledige tider, teoriundervisning og prøver i systemet.
+- Teoriundervisning i systemet. Betaling og saldo pr. elev (venter, aftalt 12. nov. 2026).
 
 ---
 

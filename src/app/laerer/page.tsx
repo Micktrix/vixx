@@ -4,6 +4,7 @@ import { formatDate, isWeekend, parseDateInput, todayDk, weekdayIndex } from "@/
 import { daysIn, nextPeriod, periodFor, previousPeriod } from "@/lib/pay-period";
 import { DayPanel } from "./day-panel";
 import { Screen } from "./screen";
+import { createClient } from "@/lib/supabase/server";
 import { getTeacher, isLocked, loadTeacherPeriod, type TeacherPeriod } from "./teacher-data";
 
 const WEEKDAYS = ["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"];
@@ -28,10 +29,17 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
   const selected = parseDateInput(typeof sp.dag === "string" ? sp.dag : "") ?? today;
   const range = periodFor(selected, teacher.periodStartDay);
   const days = daysIn(range);
-  const [period, resources, dayBookings] = await Promise.all([
+  const supabase = await createClient();
+  const [period, resources, dayBookings, { count: requests }] = await Promise.all([
     loadTeacherPeriod(teacher, range.start, range.end),
     loadResources(teacher.membership.schoolId),
     loadBookings(teacher.membership.schoolId, selected, selected),
+    // Elevers anmodninger om lærerens åbne tider, der venter på svar.
+    supabase
+      .from("lesson_requests")
+      .select("id, open_slots!inner(instructor_id)", { count: "exact", head: true })
+      .eq("status", "pending")
+      .eq("open_slots.instructor_id", teacher.instructorId),
   ]);
   // Bil eller lokale pr. lektion på den valgte dag.
   const lessonResources = Object.fromEntries(
@@ -54,6 +62,17 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
 
   return (
     <Screen title="Kalender" sub={`Hej ${teacher.user.fullName.split(" ")[0]}`} action={nav}>
+      {(requests ?? 0) > 0 && (
+        <Link
+          href="/laerer/aabne-tider"
+          className="flex items-center justify-between rounded-[16px] border border-accent-line bg-accent-bg px-4 py-3"
+          data-testid="requests-note"
+        >
+          <b>{requests === 1 ? "1 elev" : `${requests} elever`} vil gerne have en kørelektion</b>
+          <span className="text-sm font-semibold text-accent-ink">Svar ›</span>
+        </Link>
+      )}
+
       {missing.length > 0 && (
         <section className="flex flex-col gap-2 rounded-[16px] border border-bad/30 bg-bad-bg px-4 py-3">
           <b className="text-bad">Du mangler at registrere {missing.length === 1 ? "1 dag" : `${missing.length} dage`}</b>
@@ -144,6 +163,10 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
           <span className="flex items-center gap-1"><i className="size-2 rounded-full bg-bad" />Afvist</span>
         </p>
       </section>
+
+      <Link href="/laerer/aabne-tider" className="text-center text-sm font-semibold text-accent-ink underline underline-offset-[3px]">
+        Åbne tider til elever
+      </Link>
 
       <DayPanel teacher={teacher} period={period} date={selected} today={today} lessonResources={lessonResources} />
     </Screen>

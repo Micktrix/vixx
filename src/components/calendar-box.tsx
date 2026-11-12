@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { ActionForm } from "@/components/form";
 import { buttonClass, primaryButtonClass } from "@/components/styles";
-import { newCalendarLink } from "./actions";
+import type { FormAction } from "@/lib/action-state";
 
-// Kalender i telefonen: et abonnement på lærerens egen kalenderfil. iPhone åbner webcal-linket direkte;
+// Kalender i telefonen: et abonnement på lærerens eller elevens egen kalenderfil. iPhone åbner webcal-linket direkte;
 // til Google Kalender kopieres linket og tilføjes under "Fra webadresse".
-export function CalendarBox({ httpsUrl }: { httpsUrl: string }) {
+export function CalendarBox({ httpsUrl, intro, newLink }: { httpsUrl: string; intro: string; newLink: FormAction }) {
   const [copied, setCopied] = useState(false);
   const webcal = httpsUrl.replace(/^https?:/, "webcal:");
 
@@ -24,10 +24,7 @@ export function CalendarBox({ httpsUrl }: { httpsUrl: string }) {
   return (
     <section className="flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-[18px]" data-testid="calendar-box">
       <h2 className="font-bold">Kalender i telefonen</h2>
-      <p className="text-sm text-muted">
-        Dine lektioner, bookinger, fravær og ferie vises i telefonens egen kalender og opdateres af sig selv. Godkendelse og
-        registrering sker stadig her i appen.
-      </p>
+      <p className="text-sm text-muted">{intro}</p>
       <a href={webcal} className={`${primaryButtonClass} justify-center`}>
         Føj til min kalender (iPhone)
       </a>
@@ -42,7 +39,7 @@ export function CalendarBox({ httpsUrl }: { httpsUrl: string }) {
         </p>
       </details>
       <ActionForm
-        action={newCalendarLink}
+        action={newLink}
         submitLabel="Lav nyt link"
         pendingLabel="…"
         primary={false}

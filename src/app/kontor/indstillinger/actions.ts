@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/lib/action-state";
 import { requireRole } from "@/lib/auth/session";
 import { sendMail, sendSchoolBackup } from "@/lib/backup-send";
+import { normalizePhone } from "@/lib/phone";
 import { parsePlanStarts } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 
@@ -77,11 +78,23 @@ export async function updateSchool(_prev: ActionState, formData: FormData): Prom
   if (!Number.isInteger(startDay) || startDay < 1 || startDay > 28) return { error: "Lønperioden skal starte mellem den 1. og den 28." };
   const starts = parsePlanStarts(String(formData.get("lessonStarts") ?? ""));
   if (!starts) return { error: "Skriv lektionsplanens starttider som fx 08:00, 08:45, 10:00." };
+  const phoneInput = String(formData.get("contactPhone") ?? "").trim();
+  const contactPhone = phoneInput ? normalizePhone(phoneInput) : null;
+  if (phoneInput && !contactPhone) return { error: "Skriv et gyldigt telefonnummer, fx 20 45 67 89." };
+  const cancelHours = Number(formData.get("cancelHours") ?? 24);
+  if (!Number.isInteger(cancelHours) || cancelHours < 0 || cancelHours > 168) return { error: "Fristen for afbud skal være mellem 0 og 168 timer." };
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("schools")
-    .update({ name, lesson_minutes: minutes, pay_period_start_day: startDay, lesson_starts: starts })
+    .update({
+      name,
+      lesson_minutes: minutes,
+      pay_period_start_day: startDay,
+      lesson_starts: starts,
+      contact_phone: contactPhone,
+      cancel_hours: cancelHours,
+    })
     .eq("id", membership.schoolId)
     .select("id");
   if (error?.code === "23514") return { error: error.message }; // fx lektioner i planen, der overlapper

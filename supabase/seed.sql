@@ -67,8 +67,8 @@ from seed_people;
 -- ---------------------------------------------------------------------------
 -- Skole og medlemskaber
 -- ---------------------------------------------------------------------------
-insert into public.schools (id, name, lesson_minutes, pay_period_start_day)
-values ('00000000-0000-4000-a000-000000000001', 'Testkøreskolen', 45, 21);
+insert into public.schools (id, name, lesson_minutes, pay_period_start_day, contact_phone)
+values ('00000000-0000-4000-a000-000000000001', 'Testkøreskolen', 45, 21, '+4570000000');
 
 insert into public.school_members (school_id, user_id, role)
 select '00000000-0000-4000-a000-000000000001', ('00000000-0000-4000-a100-0000000000' || nn)::uuid, role
@@ -271,3 +271,8 @@ insert into public.students (id, school_id, user_id, team_id, course_id, service
    '00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-ab00-000000000011', '00000000-0000-4000-a500-000000000001'),
   ('00000000-0000-4000-ad00-000000000032', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000032',
    '00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-ab00-000000000011', '00000000-0000-4000-a500-000000000001');
+
+-- Emil har Lars som fast lærer og må selv anmode om kørelektioner (trin E5). Freja har ingen.
+update public.students set can_request = true where id = '00000000-0000-4000-ad00-000000000031';
+insert into public.student_instructors (school_id, student_id, instructor_id)
+values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000031', '00000000-0000-4000-a200-000000000011');

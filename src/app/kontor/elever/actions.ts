@@ -104,6 +104,38 @@ export async function moveSignoff(_prev: ActionState, formData: FormData): Promi
   return { message: "Kvitteringen er rettet." };
 }
 
+// Elevens faste lærere og om eleven selv må anmode om kørelektioner hos dem.
+export async function saveStudentTeachers(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin", "office"]);
+  const studentId = text(formData, "id");
+  const chosen = new Set(formData.getAll("instructors").map(String));
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("students")
+    .update({ can_request: formData.get("canRequest") === "on" })
+    .eq("id", studentId)
+    .eq("school_id", membership.schoolId);
+  if (error) return { error: "Eleven kunne ikke gemmes. Prøv igen." };
+
+  const { data: current } = await supabase.from("student_instructors").select("instructor_id").eq("student_id", studentId);
+  const had = new Set((current ?? []).map((c) => c.instructor_id));
+  const removed = [...had].filter((id) => !chosen.has(id));
+  const added = [...chosen].filter((id) => !had.has(id));
+  if (removed.length) {
+    const { error: e } = await supabase.from("student_instructors").delete().eq("student_id", studentId).in("instructor_id", removed);
+    if (e) return { error: "De faste lærere kunne ikke gemmes. Prøv igen." };
+  }
+  if (added.length) {
+    const { error: e } = await supabase
+      .from("student_instructors")
+      .insert(added.map((instructor_id) => ({ school_id: membership.schoolId, student_id: studentId, instructor_id })));
+    if (e) return { error: "De faste lærere kunne ikke gemmes. Prøv igen." };
+  }
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/elev", "layout");
+  return { message: "Gemt." };
+}
+
 function readStudent(formData: FormData) {
   const courseId = text(formData, "courseId");
   if (!courseId) return { error: "Vælg et forløb." } as const;

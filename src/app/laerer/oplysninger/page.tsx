@@ -6,8 +6,8 @@ import { formatPhone } from "@/lib/phone";
 import { siteOrigin } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../screen";
-import { updateOwnDetails } from "./actions";
-import { CalendarBox } from "./calendar-box";
+import { newCalendarLink, updateOwnDetails } from "./actions";
+import { CalendarBox } from "@/components/calendar-box";
 
 export default async function OwnDetailsPage() {
   const { user, membership } = await requireRole(["instructor"]);
@@ -30,7 +30,11 @@ export default async function OwnDetailsPage() {
 
   return (
     <Screen title="Mine oplysninger" sub={user.fullName} action={back}>
-      {values.calendar_token && <CalendarBox httpsUrl={calendarUrl} />}
+      {values.calendar_token && <CalendarBox
+          httpsUrl={calendarUrl}
+          intro="Dine lektioner, bookinger, fravær og ferie vises i telefonens egen kalender og opdateres af sig selv. Godkendelse og registrering sker stadig her i appen."
+          newLink={newCalendarLink}
+        />}
       <section className="rounded-[20px] border border-line bg-surface p-[18px]">
         <ActionForm action={updateOwnDetails} submitLabel="Gem oplysninger" className="flex flex-col gap-5">
           <Group legend="Kontakt" fields={CONTACT_FIELDS} values={values} />

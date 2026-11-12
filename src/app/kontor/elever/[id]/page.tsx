@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Box } from "@/components/box";
-import { ActionForm, TextField } from "@/components/form";
+import { ActionForm, CheckChip, TextField } from "@/components/form";
 import { Pill } from "@/components/pill";
 import { requireRole } from "@/lib/auth/session";
 import { inputClass } from "@/components/styles";
 import { formatDate, todayDk } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { crossOffLesson, moveSignoff, resetStudentPassword, updateStudent } from "../actions";
+import { crossOffLesson, moveSignoff, resetStudentPassword, saveStudentTeachers, updateStudent } from "../actions";
 import { loadStudents, progress } from "../data";
 import { ProgressBar } from "../progress-bar";
 import { StudentFields } from "../student-fields";
@@ -18,9 +18,11 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const { id } = await params;
   const { membership } = await requireRole(["admin", "office"]);
   const supabase = await createClient();
-  const [{ teams, students, courses }, { data: services }] = await Promise.all([
+  const [{ teams, students, courses }, { data: services }, { data: instructors }, { data: booking }] = await Promise.all([
     loadStudents(membership.schoolId),
     supabase.from("services").select("id, name").eq("school_id", membership.schoolId).eq("active", true).order("sort_order").order("name"),
+    supabase.from("instructors").select("id, active_until, school_members(active, profiles(full_name))").eq("school_id", membership.schoolId),
+    supabase.from("students").select("can_request, student_instructors(instructor_id)").eq("id", id).maybeSingle(),
   ]);
   const student = students.find((s) => s.id === id);
   if (!student) notFound();
@@ -29,6 +31,14 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const p = progress(student, course);
   const missing = course?.lessons.filter((l) => !student.signoffs.has(l.id)) ?? [];
   const isAdmin = membership.role === "admin";
+  const linked = new Set(((booking?.student_instructors ?? []) as { instructor_id: string }[]).map((l) => l.instructor_id));
+  const teachers = (instructors ?? [])
+    .map((i) => {
+      const m = i.school_members as unknown as { active: boolean; profiles: { full_name: string } | null } | null;
+      return { id: i.id, name: m?.profiles?.full_name ?? "", active: !!m?.active && (!i.active_until || i.active_until >= todayDk()) };
+    })
+    .filter((t) => t.active || linked.has(t.id))
+    .sort((a, b) => a.name.localeCompare(b.name, "da"));
 
   return (
     <>
@@ -118,6 +128,27 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
           </ActionForm>
         </Box>
       )}
+
+      <Box title="Kørelektioner" hint="Faste lærere og anmodning om tider">
+        <ActionForm action={saveStudentTeachers} submitLabel="Gem" className="flex flex-col gap-3">
+          <input type="hidden" name="id" value={student.id} />
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-sm font-bold">Faste lærere</legend>
+            <div className="flex flex-wrap gap-2" data-testid="student-teachers">
+              {teachers.map((t) => (
+                <CheckChip key={t.id} name="instructors" value={t.id} label={t.name} defaultChecked={linked.has(t.id)} />
+              ))}
+            </div>
+          </fieldset>
+          <label className="flex items-center gap-2.5 text-[15px]">
+            <input type="checkbox" name="canRequest" defaultChecked={!!booking?.can_request} className="size-[18px] accent-accent" />
+            Må selv anmode om kørelektioner hos de faste lærere
+          </label>
+          <p className="text-[13px] text-muted">
+            Alle elever ser deres lektioner i appen. Med fluebenet ser eleven også de faste læreres åbne tider og kan anmode om dem.
+          </p>
+        </ActionForm>
+      </Box>
 
       <Box title="Oplysninger">
         <ActionForm action={updateStudent} submitLabel="Gem" className="flex flex-col gap-4">

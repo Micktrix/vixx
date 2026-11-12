@@ -3,6 +3,7 @@ import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
+import { formatPhone } from "@/lib/phone";
 import { toPlan } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { loadResources, type Resource } from "@/lib/booking-data";
@@ -18,7 +19,7 @@ export default async function OfficeSettingsPage() {
 
   const [resources, { data: school }, { data: backup }] = await Promise.all([
     loadResources(membership.schoolId, true),
-    supabase.from("schools").select("name, lesson_minutes, lesson_starts, pay_period_start_day").eq("id", membership.schoolId).single(),
+    supabase.from("schools").select("name, lesson_minutes, lesson_starts, pay_period_start_day, contact_phone, cancel_hours").eq("id", membership.schoolId).single(),
     // Kun admin kan se adressen (RLS); for kontoret er svaret tomt.
     supabase.from("school_backups").select("email, last_sent_at, last_error").eq("school_id", membership.schoolId).maybeSingle(),
   ]);
@@ -48,6 +49,24 @@ export default async function OfficeSettingsPage() {
         />
       </div>
       <PlanEditor starts={plan.starts} minutes={plan.minutes} />
+      <div className="grid items-end gap-3 sm:grid-cols-3">
+        <TextField
+          label="Telefon til kontoret (vises for eleverne)"
+          name="contactPhone"
+          type="tel"
+          defaultValue={school?.contact_phone ? formatPhone(school.contact_phone) : ""}
+          placeholder="12 34 56 78"
+        />
+        <TextField
+          label="Elevens frist for afbud (timer før)"
+          name="cancelHours"
+          type="number"
+          min={0}
+          max={168}
+          defaultValue={school?.cancel_hours ?? 24}
+          required
+        />
+      </div>
       <p className="text-[13px] font-normal text-muted">
         Lektionslængde og lektionsplan gælder nye lektioner. Lønperioden går fx fra den 21. til den 20.; skift helst ikke
         midt i en periode.
