@@ -84,6 +84,26 @@ export async function crossOffLesson(_prev: ActionState, formData: FormData): Pr
   return { message: "Lektionen er krydset af." };
 }
 
+// Admin retter en kvittering, der er givet for den forkerte lektion, til den lektion, der blev kørt.
+// Databasen sikrer, at kun admin kan, og at lektionen hører til elevens forløb. Rettelsen logges.
+export async function moveSignoff(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["admin"]);
+  const lessonId = text(formData, "courseLessonId");
+  if (!lessonId) return { error: "Vælg lektionen." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lesson_signoffs")
+    .update({ course_lesson_id: lessonId })
+    .eq("id", text(formData, "id"))
+    .select("id");
+  if (error?.code === "23505") return { error: "Den lektion er allerede kvitteret." };
+  if (error?.code === "23514") return { error: error.message };
+  if (error || !data?.length) return { error: "Kvitteringen kunne ikke rettes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/elev", "layout");
+  return { message: "Kvitteringen er rettet." };
+}
+
 function readStudent(formData: FormData) {
   const courseId = text(formData, "courseId");
   if (!courseId) return { error: "Vælg et forløb." } as const;

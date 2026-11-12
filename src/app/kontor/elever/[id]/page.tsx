@@ -8,7 +8,7 @@ import { inputClass } from "@/components/styles";
 import { formatDate, todayDk } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { crossOffLesson, resetStudentPassword, updateStudent } from "../actions";
+import { crossOffLesson, moveSignoff, resetStudentPassword, updateStudent } from "../actions";
 import { loadStudents, progress } from "../data";
 import { ProgressBar } from "../progress-bar";
 import { StudentFields } from "../student-fields";
@@ -52,6 +52,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               return (
                 <li
                   key={l.id}
+                  data-lesson={l.number}
                   className={`flex flex-col gap-0.5 rounded-xl border px-3 py-2 text-[15px] ${
                     !s ? "border-line" : s.confirmed ? "border-ok/30 bg-ok-bg" : "border-accent-line bg-accent-bg"
                   }`}
@@ -69,6 +70,24 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
                       {s.skipped && ` · Ikke nået: ${s.skipped.split("\n").join(", ")}`}
                       {s.comment && ` · ${s.comment}`}
                     </span>
+                  )}
+                  {s && isAdmin && missing.length > 0 && (
+                    <details className="text-sm">
+                      <summary className="cursor-pointer font-semibold text-muted hover:text-ink">Ret lektion</summary>
+                      <ActionForm action={moveSignoff} submitLabel="Flyt" pendingLabel="…" primary={false} className="mt-2 flex items-end gap-2">
+                        <input type="hidden" name="id" value={s.id} />
+                        <label className="flex flex-1 flex-col gap-1 text-[13px] font-bold">
+                          Var i stedet
+                          <select name="courseLessonId" required defaultValue={missing[0].id} className={inputClass}>
+                            {missing.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                Lektion {m.number}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </ActionForm>
+                    </details>
                   )}
                 </li>
               );

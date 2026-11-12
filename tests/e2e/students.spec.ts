@@ -108,3 +108,33 @@ test("admin krydser en lektion af med kommentar; kontoret kan ikke", async ({ br
     await localAdmin().from("lesson_signoffs").delete().eq("student_id", emil);
   }
 });
+
+test("admin retter en kvittering til den lektion, der blev kørt", async ({ page }) => {
+  const emil = "00000000-0000-4000-ad00-000000000031";
+  const admin = localAdmin();
+  const { data: lessons } = await admin.from("course_lessons").select("id, number").eq("course_id", "00000000-0000-4000-ab00-000000000011");
+  const id = (n: string) => lessons!.find((l) => l.number === n)!.id;
+  await admin.from("lesson_signoffs").insert({
+    school_id: "00000000-0000-4000-a000-000000000001",
+    student_id: emil,
+    course_lesson_id: id("2"),
+    lesson_number: "2",
+    instructor_id: "00000000-0000-4000-a200-000000000011",
+    instructor_name: "Lars Jensen",
+    signed_by: "00000000-0000-4000-a100-000000000011",
+  });
+  try {
+    await loginOk(page, ADMIN, PASSWORD);
+    await page.goto(`/kontor/elever/${emil}`);
+    const lesson2 = page.locator('[data-lesson="2"]');
+    await expect(lesson2).toContainText("Venter på eleven");
+    await lesson2.getByText("Ret lektion").click();
+    await lesson2.getByLabel("Var i stedet").selectOption({ label: "Lektion 4" });
+    await lesson2.getByRole("button", { name: "Flyt" }).click();
+
+    await expect(page.locator('[data-lesson="4"]')).toContainText("Venter på eleven");
+    await expect(lesson2).toContainText("2 × 45 min.");
+  } finally {
+    await admin.from("lesson_signoffs").delete().eq("student_id", emil);
+  }
+});
