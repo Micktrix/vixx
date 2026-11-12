@@ -35,7 +35,7 @@ export default async function StudentsPage({ searchParams }: PageProps<"/kontor/
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm text-muted">Kontor</p>
-          <h1 className="text-[30px] font-bold">Elever</h1>
+          <h1 className="text-[30px] font-bold">Elever/hold</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <form action="/kontor/elever" role="search" className="flex gap-2">

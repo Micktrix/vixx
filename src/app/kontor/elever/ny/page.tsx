@@ -21,7 +21,7 @@ export default async function NewStudentPage({ searchParams }: PageProps<"/konto
     <>
       <header className="flex flex-col gap-1">
         <Link href={team ? `/kontor/elever/hold/${team.id}` : "/kontor/elever"} className="text-sm font-semibold text-muted hover:text-ink">
-          ‹ {team ? team.name : "Elever"}
+          ‹ {team ? team.name : "Elever/hold"}
         </Link>
         <h1 className="text-[30px] font-bold">Ny elev</h1>
         <p className="text-muted">Telefonnummeret bliver både brugernavn og første kode. Ved første login vælger eleven sin egen kode.</p>

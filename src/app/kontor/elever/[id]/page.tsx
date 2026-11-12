@@ -34,7 +34,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
     <>
       <header className="flex flex-col gap-1">
         <Link href={team ? `/kontor/elever/hold/${team.id}` : "/kontor/elever"} className="text-sm font-semibold text-muted hover:text-ink">
-          ‹ {team ? team.name : "Elever"}
+          ‹ {team ? team.name : "Elever/hold"}
         </Link>
         <h1 className="text-[30px] font-bold">{student.name}</h1>
         <p className="flex flex-wrap items-center gap-1.5 text-muted">

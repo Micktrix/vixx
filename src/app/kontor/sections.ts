@@ -8,10 +8,10 @@ export type OfficeSection = {
 
 export const officeSections: OfficeSection[] = [
   { slug: null, label: "Kalender", icon: "calendar" },
+  { slug: "elever", label: "Elever/hold", icon: "user" },
+  { slug: "godkendelser", label: "Godkendelser", icon: "check" },
   { slug: "lokaler", label: "Lokaler", icon: "room" },
   { slug: "koeretoejer", label: "Køretøjer", icon: "car" },
-  { slug: "elever", label: "Elever", icon: "user" },
-  { slug: "godkendelser", label: "Godkendelser", icon: "check" },
   { slug: "loen", label: "Lønoverblik", icon: "chart" },
   { slug: "beskeder", label: "Beskeder", icon: "message" },
   { slug: "storskaerm", label: "Storskærm", icon: "screen" },

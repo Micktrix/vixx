@@ -28,7 +28,7 @@ export default async function TeamPage({ params }: PageProps<"/kontor/elever/hol
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
           <Link href="/kontor/elever" className="text-sm font-semibold text-muted hover:text-ink">
-            ‹ Elever
+            ‹ Elever/hold
           </Link>
           <h1 className="text-[30px] font-bold">{team.name}</h1>
           <p className="flex flex-wrap items-center gap-1.5 text-muted">
