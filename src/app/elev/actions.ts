@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 // Eleven bekræfter, at lektionen er gennemført (elevens underskrift). Databasen tjekker, at det er
 // elevens egen kvittering, og at den kun bekræftes én gang.
 export async function confirmSignoff(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole(["student", "admin"]); // admin bekræfter for sin demo-elev
+  await requireRole(["student"]);
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -19,6 +19,5 @@ export async function confirmSignoff(_prev: ActionState, formData: FormData): Pr
     .select("id");
   if (error || !data?.length) return { error: "Lektionen kunne ikke bekræftes. Prøv igen." };
   revalidatePath("/elev", "layout");
-  revalidatePath("/kontor/demo-elev");
   return { message: "Tak! Lektionen er bekræftet." };
 }

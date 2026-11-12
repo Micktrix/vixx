@@ -101,7 +101,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 - Lektioner og registreringer har et valgfrit fritekstfelt `student_name` og et nullable `student_id` til senere.
 - *Forløb* (`courses`, `course_lessons`): pr. kørekortkategori, bygget og rettet af **admin** under Indstillinger → Forløb (alle på skolen kan se). En lektion har nummer, antal × 45 min., type (kørsel/teori), sted, indhold (ét punkt pr. linje), noter og kontrolstof – som lektionsplanen på papir.
 - Admin kan krydse en lektion af med kommentar (fx gæstelærer uden app); den tæller som gennemført med det samme og går ikke til lønnen. Et afsluttet hold kan ikke få nye elever.
-- Demo-elev (`students.is_demo`): admin kan være sin egen elev under fanen "Elev" for at vise elevens skærm. Højst én pr. skole, vises ikke i elevlister og kommer aldrig på lønnen.
+- Demo-elev (`students.is_demo`): en fiktiv elev "Demo Elev" (egen bruger, som ingen logger ind som) under admins fane "Elev", der viser elevens skærm med test-QR-kode. Admin bekræfter på elevens vegne. Højst én pr. skole, vises ikke i elevlister og kommer aldrig på lønnen.
 - QR-kvittering (`lesson_signoffs`): læreren scanner elevens QR-kode og kvitterer (kørelærerens underskrift), eleven bekræfter (elevens underskrift). En kvittering kan aldrig slettes. Kørselslektioner registreres til lønnen i samme tryk; teorilektioner gør ikke.
 
 **Log og privatliv**

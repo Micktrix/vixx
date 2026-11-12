@@ -36,13 +36,15 @@ export async function StudentHome({
   firstName,
   schoolName,
   action,
-  qrLink = true,
+  qrHref = "/elev/qr",
+  demo = false,
 }: {
   studentId: string;
   firstName: string;
   schoolName: string;
   action?: ReactNode;
-  qrLink?: boolean;
+  qrHref?: string;
+  demo?: boolean; // demo-eleven i kontoret: admin bekræfter på elevens vegne
 }) {
   const supabase = await createClient();
   const { data: student } = await supabase
@@ -63,14 +65,9 @@ export async function StudentHome({
 
   return (
     <Screen title={`Hej ${firstName}`} sub={schoolName} action={action}>
-      {qrLink && (
-        <Link
-          href="/elev/qr"
-          className="flex items-center justify-center rounded-[18px] bg-accent px-4 py-4 text-[17px] font-bold text-ink"
-        >
-          Vis min QR-kode
-        </Link>
-      )}
+      <Link href={qrHref} className="flex items-center justify-center rounded-[18px] bg-accent px-4 py-4 text-[17px] font-bold text-ink">
+        Vis min QR-kode
+      </Link>
 
       {waiting.length > 0 && (
         <section className="flex flex-col gap-3 rounded-[20px] border border-accent-line bg-accent-bg p-4" data-testid="student-waiting">
@@ -88,7 +85,7 @@ export async function StudentHome({
                   <span className="text-muted">Ikke nået:</span> {w.skipped_items.split("\n").join(", ")}
                 </p>
               )}
-              <ConfirmButton id={w.id} />
+              <ConfirmButton id={w.id} demo={demo} />
             </div>
           ))}
         </section>

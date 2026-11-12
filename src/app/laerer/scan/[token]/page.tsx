@@ -43,7 +43,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
     );
   }
 
-  const name = student.is_demo ? "Demo-elev" : ((student.profiles as unknown as { full_name: string } | null)?.full_name ?? "");
+  const name = (student.profiles as unknown as { full_name: string } | null)?.full_name ?? "";
   const team = student.teams as unknown as { name: string } | null;
   const course = student.courses as unknown as { name: string; course_lessons: LessonRow[] } | null;
   const lessons = (course?.course_lessons ?? []).filter((l) => l.active).sort((a, b) => a.sort_order - b.sort_order);

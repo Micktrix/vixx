@@ -64,7 +64,7 @@ test("en ukendt kode viser ingen elev", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Ukendt elev" })).toBeVisible();
 });
 
-test("admin viser elevens skærm med en demo-elev og bekræfter selv; intet går til lønnen", async ({ browser, page }) => {
+test("admin viser elevens skærm med en fiktiv demo-elev, scanner test-koden og bekræfter; intet går til lønnen", async ({ browser, page }) => {
   const admin = localAdmin();
   const { page: teacher, instructorId } = await newTeacher(browser, `E2E Demo ${Date.now() % 100000}`);
   try {
@@ -72,17 +72,20 @@ test("admin viser elevens skærm med en demo-elev og bekræfter selv; intet går
     await page.getByRole("navigation", { name: "Skift mellem kontor, lærer og elev" }).getByRole("link", { name: "Elev" }).click();
     await expect(page.getByRole("heading", { name: "Elevens skærm" })).toBeVisible();
     await page.getByRole("button", { name: "Opret demo-elev" }).click();
-    await expect(page.getByTestId("demo-qr").locator("svg")).toBeVisible();
+    const phone = page.getByTestId("demo-phone");
+    await expect(phone.getByRole("heading", { name: "Hej Demo" })).toBeVisible();
+    await phone.getByRole("link", { name: "Vis min QR-kode" }).click();
+    await expect(phone.getByTestId("student-qr").locator("svg")).toBeVisible();
+    await phone.getByRole("link", { name: "Luk" }).click();
 
     const { data: demo } = await admin.from("students").select("id, qr_token").eq("is_demo", true).single();
     await teacher.goto(`/laerer/scan/${demo!.qr_token}`);
-    await expect(teacher.getByRole("heading", { name: "Demo-elev" })).toBeVisible();
+    await expect(teacher.getByRole("heading", { name: "Demo Elev" })).toBeVisible();
     await teacher.getByRole("radio", { name: /Lektion 2/ }).check();
     await expect(teacher.getByText("Demo-elev: lektionen kommer ikke på lønnen.")).toBeVisible();
     await teacher.getByRole("button", { name: "Kvittér for lektion 2" }).click();
     await expect(teacher.getByTestId("signoff-done")).toBeVisible();
 
-    const phone = page.getByTestId("demo-phone");
     await expect(phone.getByTestId("student-waiting")).toContainText("Lektion 2", { timeout: 10000 });
     await phone.getByRole("button", { name: "Bekræft" }).click();
     await expect(phone.getByTestId("student-done")).toHaveText("1");
@@ -90,8 +93,11 @@ test("admin viser elevens skærm med en demo-elev og bekræfter selv; intet går
     const { count } = await admin.from("registrations").select("id", { count: "exact", head: true }).eq("instructor_id", instructorId);
     expect(count).toBe(0);
   } finally {
-    const { data: demos } = await admin.from("students").select("id").eq("is_demo", true);
-    for (const d of demos ?? []) await admin.from("lesson_signoffs").delete().eq("student_id", d.id);
-    await admin.from("students").delete().eq("is_demo", true);
+    const { data: demos } = await admin.from("students").select("id, user_id").eq("is_demo", true);
+    for (const d of demos ?? []) {
+      await admin.from("lesson_signoffs").delete().eq("student_id", d.id);
+      await admin.from("students").delete().eq("id", d.id);
+      await admin.auth.admin.deleteUser(d.user_id);
+    }
   }
 });
