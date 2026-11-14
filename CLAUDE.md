@@ -22,8 +22,10 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 | Miljø | Hvor | Database | Data |
 |---|---|---|---|
 | Udvikling | lokalt (`npm run dev`) | Supabase lokalt via CLI | kun testdata (seed) |
-| Test | `test.vixx.dk` | eget Supabase-projekt | pilotens data |
-| Drift | `app.vixx.dk` | eget Supabase-projekt | rigtige data |
+| Test | `test.vixx.dk` | eget Supabase-projekt | kun testdata – kun til Michael og udviklingen |
+| Drift | `app.vixx.dk` | eget Supabase-projekt | rigtige data – kun her logger skolerne ind |
+
+- Ændringer prøves altid på test først og kommer først i drift, når Michael siger til. Ingen rigtige personer eller rigtige data på test.
 
 - Databaseændringer laves **kun** som migrationer i `supabase/migrations/`. Ret aldrig direkte i test eller drift.
 - Hemmeligheder ligger i `.env.local` / Vercel-miljøvariabler, aldrig i git.
