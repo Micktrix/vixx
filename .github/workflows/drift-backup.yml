@@ -1,0 +1,50 @@
+# Natlig fuld backup af DRIFT-databasen (app.vixx.dk), så længe Supabase-projektet er på den gratis plan
+# uden egen backup. Kopien (roller, skema og data) krypteres med BACKUP_PASSPHRASE og gemmes som
+# artefakt i 30 dage. Gendannelse: se docs/BACKUP.md.
+# Hemmeligheder i GitHub (Settings → Secrets and variables → Actions):
+#   DRIFT_DB_URL       forbindelsen til drift-databasen ("Session pooler" i Supabase → Connect)
+#   BACKUP_PASSPHRASE  lang kode; uden den kan backuppen ikke åbnes
+name: Backup af drift-databasen
+
+on:
+  schedule:
+    - cron: "30 1 * * *" # hver nat kl. 02:30 dansk vintertid
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+
+      - name: Tag kopi af databasen
+        env:
+          DB_URL: ${{ secrets.DRIFT_DB_URL }}
+        run: |
+          supabase db dump --db-url "$DB_URL" -f roles.sql --role-only
+          supabase db dump --db-url "$DB_URL" -f schema.sql
+          supabase db dump --db-url "$DB_URL" -f data.sql --use-copy --data-only
+
+      - name: Krypter kopien
+        env:
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          test -n "$PASSPHRASE"
+          echo "NAME=vixx-drift-$(date -u +%F)" >> "$GITHUB_ENV"
+          tar czf backup.tar.gz roles.sql schema.sql data.sql
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o backup.tar.gz.gpg backup.tar.gz
+          rm -f roles.sql schema.sql data.sql backup.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: backup.tar.gz.gpg
+          retention-days: 30
+          if-no-files-found: error
