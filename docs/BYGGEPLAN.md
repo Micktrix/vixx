@@ -157,13 +157,15 @@ erstatter papirets lektionsplan med dato og to underskrifter.
 ### Trin E8 – Modulplaner (Færdselsstyrelsen, krav fra 1. juli 2026)
 - Modulplanen erstatter lektionsplanen. Forløb bygges som moduler: nummer, navn, minimum teori, minimum kørsel
   (evt. i mørke) og emner (afsnit). Forløbet har minimum i alt og minimum undervisningsdage (B: 30 + 24, 14 dage;
-  D: 16 + 18, 12 dage). Skabeloner ud fra Færdselsstyrelsens planer (B, C, C/E, D, D/E, A …).
+  D: 16 + 18, 12 dage; C/E: 13 + 18, 10 dage). Skabeloner ud fra Færdselsstyrelsens planer (B, C, C/E, D, D/E, A …).
 - Læreren scanner og vælger teori eller kørsel; det tælles i elevens aktuelle modul (kørsel går stadig til lønnen).
 - Læreren afslutter modulet i appen (dato og lærer gemmes; Vixx viser, om minimum er nået).
 - Også: repetitionslektioner efter ikke bestået praktisk prøve, lærerskift midt i et modul, selvstudie,
   manuelt gear (kode 78, kun B), skolens oplysninger (navn, CVR, adresse, telefon).
 - Print: Vixx udfylder Færdselsstyrelsens udfyldbare PDF ("digital"-versionen); den afsluttende kørelærer skriver
-  under med kuglepen pr. modul. Ingen digital underskrift og ingen elevunderskrift i modulplanen.
+  under med kuglepen pr. modul. Ingen elevunderskrift i modulplanen.
+- Den digitale PDF har underskriftsfelter af typen digital signatur (/Sig). Senere evt. digital underskrift med
+  MitID via en signeringstjeneste, og den underskrevne PDF gemmes på eleven. Afklares med Færdselsstyrelsen først.
 
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
