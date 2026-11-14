@@ -4,8 +4,8 @@ import { icons } from "@/components/icons";
 import { LogoMark } from "@/components/logo-mark";
 
 // Den offentlige forside på vixx.dk (src/proxy.ts viser den på "/" for vixx.dk og www.vixx.dk).
-// Appen ligger på sit eget domæne; skift APP_URL til app.vixx.dk, når driften starter.
-const APP_URL = "https://test.vixx.dk";
+// Appen ligger på sit eget domæne (drift).
+const APP_URL = "https://app.vixx.dk";
 const CONTACT = "info@vixx.dk";
 const DEMO_MAIL = `mailto:${CONTACT}?subject=${encodeURIComponent("Demo af Vixx")}`;
 
