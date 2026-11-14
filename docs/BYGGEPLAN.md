@@ -165,6 +165,18 @@ erstatter papirets lektionsplan med dato og to underskrifter.
 - Print: Vixx udfylder Færdselsstyrelsens udfyldbare PDF ("digital"-versionen); den afsluttende kørelærer skriver
   under med kuglepen pr. modul. Ingen digital underskrift og ingen elevunderskrift i modulplanen.
 
+### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
+- Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
+  oprettes med login. Frivilligt afsnit "Hensyn" (ordblind, farveblind, nedsat hørelse, koncentrationsbesvær,
+  andet + fritekst). Det er helbredsoplysninger: udtrykkeligt samtykke, kun kontor og elevens lærere kan se dem,
+  aldrig i ændringsloggen, slettes automatisk efter afsluttet forløb, og eleven kan se og rette dem selv.
+  Lærerne ser et mærke ("Hensyn: Ordblind") ved scanning og i skemaet.
+- Teori-fremmøde med én QR-kode i lokalet/på storskærmen; læreren godkender holdet med ét tryk.
+- "Jeg er syg" fra lærer-appen med overblik over berørte lektioner og omfordeling.
+- Lærerens interne noter pr. elev (ses af næste lærer ved scanning).
+- Venteliste på afbud hos samme lærer.
+- Advarsel om elever, der er gået i stå (og modulplanens afbrydelsesregler).
+
 ### Senere
 - Teoriundervisning i systemet. Betaling og saldo pr. elev (venter, aftalt 12. nov. 2026).
 
