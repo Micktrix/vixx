@@ -49,3 +49,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Arbejdsmappe til drift-databasen (scripts/drift-db-push.sh)
+/.drift/
