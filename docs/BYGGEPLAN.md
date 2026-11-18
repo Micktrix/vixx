@@ -164,8 +164,14 @@ erstatter papirets lektionsplan med dato og to underskrifter.
   manuelt gear (kode 78, kun B), skolens oplysninger (navn, CVR, adresse, telefon).
 - Print: Vixx udfylder Færdselsstyrelsens udfyldbare PDF ("digital"-versionen); den afsluttende kørelærer skriver
   under med kuglepen pr. modul. Ingen elevunderskrift i modulplanen.
-- Den digitale PDF har underskriftsfelter af typen digital signatur (/Sig). Senere evt. digital underskrift med
-  MitID via en signeringstjeneste, og den underskrevne PDF gemmes på eleven. Afklares med Færdselsstyrelsen først.
+- Underskrift (aftalt 18. nov. 2026): læreren tegner sin underskrift med fingeren på skærmen, når modulet
+  afsluttes (som ved pakkemodtagelse). Den tegnes hver gang og gemmes ikke til genbrug. Den gemmes med hvem, hvornår,
+  modul og elev, og kan ikke ændres eller slettes. Den sættes ind i feltet "Afsluttende kørelærers underskrift"
+  i den udfyldte PDF, med lærerens navn med blokbogstaver.
+- Michael regner med, at det er tilladt. Anbefaling: få det bekræftet skriftligt af Færdselsstyrelsen før
+  drift (erklæring til myndighed, straffelovens § 163).
+- Den digitale PDF har også underskriftsfelter af typen digital signatur (/Sig). MitID-signering er en
+  mulighed senere.
 
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
