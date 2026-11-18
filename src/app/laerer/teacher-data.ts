@@ -2,6 +2,7 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/session";
 import { absenceSpan, storedSpan, toMinutes, toPlan, type Span } from "@/lib/schedule";
+import { loadStudentNames, studentsLabel } from "@/lib/student-options";
 import { createClient } from "@/lib/supabase/server";
 
 // Den indloggede lærer på den aktive skole, med skolens indstillinger.
@@ -65,11 +66,11 @@ export type TeacherLesson = Span & {
 export async function loadTeacherPeriod(teacher: Teacher, from: string, to: string) {
   const supabase = await createClient();
   const id = teacher.instructorId;
-  const [registrations, lessons, absences, holidays, canWork, locked, bookings] = await Promise.all([
+  const [registrations, lessons, absences, holidays, canWork, locked, bookings, names] = await Promise.all([
     supabase
       .from("registrations")
       .select(
-        "id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, status, decision_comment, note, student_name, scheduled_lesson_id, office_edited_at, unit_price_ore, services(name)",
+        "id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, status, decision_comment, note, student_ids, student_name, scheduled_lesson_id, office_edited_at, unit_price_ore, services(name)",
       )
       .eq("instructor_id", id)
       .gte("lesson_date", from)
@@ -77,7 +78,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
       .order("start_time"),
     supabase
       .from("scheduled_lessons")
-      .select("id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, student_name, note, origin, services(name)")
+      .select("id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, student_ids, student_name, note, origin, services(name)")
       .eq("instructor_id", id)
       .gte("lesson_date", from)
       .lte("lesson_date", to)
@@ -118,6 +119,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
       .gte("booking_date", from)
       .lte("booking_date", to)
       .order("start_time"),
+    loadStudentNames(teacher.membership.schoolId),
   ]);
 
   const name = (s: unknown) => (s as { name: string } | null)?.name ?? "";
@@ -134,7 +136,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
         status: r.status,
         comment: r.decision_comment,
         note: r.note,
-        studentName: r.student_name,
+        studentName: studentsLabel(r.student_ids, names, r.student_name),
         scheduledLessonId: r.scheduled_lesson_id,
         officeEdited: !!r.office_edited_at,
         unitPriceOre: r.unit_price_ore,
@@ -148,7 +150,7 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
         start: l.start_time.slice(0, 5),
         count: l.lesson_count,
         serviceName: name(l.services),
-        studentName: l.student_name,
+        studentName: studentsLabel(l.student_ids, names, l.student_name),
         note: l.note,
         origin: l.origin,
       }),

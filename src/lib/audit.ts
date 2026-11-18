@@ -87,7 +87,7 @@ const VALUE_LABEL: Record<string, string> = {
 // Felter, der ikke siger kontoret noget i en logtekst.
 const HIDDEN = new Set([
   "id", "school_id", "user_id", "created_by", "decided_by", "decided_at", "office_edited_by", "office_edited_at",
-  "locked_by", "locked_at", "lesson_minutes", "origin", "scheduled_lesson_id", "student_id", "settings", "sent_by",
+  "locked_by", "locked_at", "lesson_minutes", "origin", "scheduled_lesson_id", "student_id", "student_ids", "settings", "sent_by",
   "kind", "recipient_instructor_id", "must_change_password", "sort_order",
 ]);
 

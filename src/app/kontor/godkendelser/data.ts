@@ -1,6 +1,7 @@
 import "server-only";
 import { flagFor, type Flag } from "@/lib/approval";
 import { storedSpan, type Span } from "@/lib/schedule";
+import { loadStudentNames, studentsLabel } from "@/lib/student-options";
 import { createClient } from "@/lib/supabase/server";
 
 export type Status = "pending" | "approved" | "rejected";
@@ -35,6 +36,7 @@ type Row = {
   lesson_minutes: number;
   span_minutes: number;
   service_id: string;
+  student_ids: string[];
   student_name: string | null;
   note: string | null;
   status: Status;
@@ -49,14 +51,17 @@ type Row = {
 };
 
 const SELECT =
-  "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, student_name, note, status, decision_comment, decided_by, decided_at, office_edited_at, unit_price_ore, services(name), scheduled_lessons(lesson_count, service_id), instructors(school_members(profiles(full_name)))";
+  "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, student_ids, student_name, note, status, decision_comment, decided_by, decided_at, office_edited_at, unit_price_ore, services(name), scheduled_lessons(lesson_count, service_id), instructors(school_members(profiles(full_name)))";
 
 export async function loadApprovals(schoolId: string, status: Status, instructorId: string | null) {
   const supabase = await createClient();
   let query = supabase.from("registrations").select(SELECT).eq("school_id", schoolId).eq("status", status);
   if (instructorId) query = query.eq("instructor_id", instructorId);
   // Afventer: ældste først. Godkendt/afvist: nyeste først, de seneste 200.
-  const { data } = await query.order("lesson_date", { ascending: status === "pending" }).order("start_time").limit(status === "pending" ? 1000 : 200);
+  const [{ data }, names] = await Promise.all([
+    query.order("lesson_date", { ascending: status === "pending" }).order("start_time").limit(status === "pending" ? 1000 : 200),
+    loadStudentNames(schoolId),
+  ]);
 
   const rows = ((data ?? []) as unknown as Row[]).map(
     (r): ApprovalRow => ({
@@ -69,7 +74,7 @@ export async function loadApprovals(schoolId: string, status: Status, instructor
       count: r.lesson_count,
       serviceId: r.service_id,
       serviceName: r.services?.name ?? "",
-      studentName: r.student_name,
+      studentName: studentsLabel(r.student_ids, names, r.student_name),
       note: r.note,
       status: r.status,
       comment: r.decision_comment,

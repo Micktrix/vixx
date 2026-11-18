@@ -21,19 +21,19 @@ test("læreren scanner elevens kode og kvitterer, eleven bekræfter, og kontoret
     await expect(teacher.getByRole("heading", { name: "Emil Elev" })).toBeVisible();
     await teacher.getByRole("radio", { name: /Lektion 2/ }).check();
     await teacher.getByRole("checkbox", { name: "2.2 Lastbilens spejle" }).check();
-    await expect(teacher.getByRole("checkbox", { name: "Registrér til løn" })).toBeChecked();
-    await expect(teacher.getByLabel("Ydelse")).toHaveValue("00000000-0000-4000-a500-000000000001");
+    await expect(teacher.getByText("Kvitteringen gælder kun elevens forløb")).toBeVisible();
     await teacher.getByRole("button", { name: "Kvittér for lektion 2" }).click();
     await expect(teacher.getByTestId("signoff-done")).toContainText("Lektion 2 er kvitteret");
 
     // Teorilektion 1: kun kvittering, ingen registrering til lønnen.
     await teacher.getByRole("radio", { name: /Lektion 1/ }).check();
-    await expect(teacher.getByText("Teori kommer ikke med på lønnen")).toBeVisible();
+    await expect(teacher.getByText("Kvitteringen gælder kun elevens forløb")).toBeVisible();
     await teacher.getByRole("button", { name: "Kvittér for lektion 1" }).click();
     await expect(teacher.getByTestId("signoff-done")).toContainText("Lektion 1 er kvitteret");
 
-    const { data: regs } = await admin.from("registrations").select("student_id, status, lesson_count").eq("instructor_id", instructorId);
-    expect(regs).toEqual([{ student_id: EMIL, status: "pending", lesson_count: 2 }]);
+    // Lektioner og timer er adskilt: scanningen laver ingen timer til lønnen.
+    const { count: regs } = await admin.from("registrations").select("id", { count: "exact", head: true }).eq("instructor_id", instructorId);
+    expect(regs).toBe(0);
 
     // Eleven bekræfter begge lektioner.
     await studentPage.goto("/elev");
@@ -83,7 +83,6 @@ test("admin viser elevens skærm med en fiktiv demo-elev, scanner test-koden og 
     await teacher.goto(`/laerer/scan/${demo!.qr_token}`);
     await expect(teacher.getByRole("heading", { name: "Demo Elev" })).toBeVisible();
     await teacher.getByRole("radio", { name: /Lektion 2/ }).check();
-    await expect(teacher.getByText("Demo-elev: lektionen kommer ikke på lønnen.")).toBeVisible();
     await teacher.getByRole("button", { name: "Kvittér for lektion 2" }).click();
     await expect(teacher.getByTestId("signoff-done")).toBeVisible();
 

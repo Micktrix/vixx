@@ -21,7 +21,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
   const { data: lesson } = id
     ? await supabase
         .from("scheduled_lessons")
-        .select("id, lesson_date, start_time, lesson_count, service_id, student_id, student_name, note")
+        .select("id, lesson_date, start_time, lesson_count, service_id, student_ids, student_name, note")
         .eq("id", id)
         .eq("origin", "instructor")
         .maybeSingle()
@@ -71,7 +71,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
             serviceId: lesson?.service_id,
             count: lesson?.lesson_count,
             start: lesson?.start_time.slice(0, 5),
-            studentId: lesson?.student_id ?? undefined,
+            studentIds: lesson?.student_ids ?? [],
             studentName: lesson?.student_name ?? undefined,
             note: lesson?.note ?? undefined,
             resourceId: lessonBooking?.resourceId,

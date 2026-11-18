@@ -50,10 +50,10 @@ select is((select count(*) from public.student_open_slots('00000000-0000-4000-a0
 -- Lars kan ikke fjerne tiden, men godkender: planlagt lektion med Emil.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000011", "role": "authenticated"}', true);
 select throws_ok($$delete from public.open_slots$$, '23514', 'Tiden er anmodet eller booket af en elev og kan ikke fjernes.', 'Anmodet tid kan ikke fjernes');
-insert into public.scheduled_lessons (school_id, instructor_id, service_id, lesson_date, start_time, lesson_count, lesson_minutes, student_id, student_name, origin)
+insert into public.scheduled_lessons (school_id, instructor_id, service_id, lesson_date, start_time, lesson_count, lesson_minutes, student_ids, student_name, origin)
 values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011', '00000000-0000-4000-a500-000000000001',
-        current_date + 5, '10:00', 2, 45, '00000000-0000-4000-ad00-000000000031', 'Emil Elev', 'instructor');
-update ids set lesson = (select id from public.scheduled_lessons where student_id = '00000000-0000-4000-ad00-000000000031');
+        current_date + 5, '10:00', 2, 45, array['00000000-0000-4000-ad00-000000000031'::uuid], 'Emil Elev', 'instructor');
+update ids set lesson = (select id from public.scheduled_lessons where '00000000-0000-4000-ad00-000000000031' = any (student_ids));
 select lives_ok(
   $$update public.lesson_requests set status = 'approved', scheduled_lesson_id = (select lesson from ids)$$,
   'Læreren godkender');

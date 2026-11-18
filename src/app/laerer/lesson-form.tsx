@@ -39,7 +39,7 @@ export function TeacherLessonForm({
     serviceId?: string;
     count?: number;
     start?: string;
-    studentId?: string;
+    studentIds?: string[];
     studentName?: string;
     note?: string;
     resourceId?: string;
@@ -152,7 +152,7 @@ export function TeacherLessonForm({
         </label>
       )}
 
-      <StudentPicker students={students} initialId={initial.studentId} initialName={initial.studentName} />
+      <StudentPicker students={students} initialIds={initial.studentIds} initialName={initial.studentName} />
       <label className="flex flex-col gap-1.5 text-sm font-bold">
         Note (valgfri)
         <textarea

@@ -26,13 +26,13 @@ export async function studentCalendar(token: string): Promise<string | null> {
     admin
       .from("scheduled_lessons")
       .select(`id, lesson_date, start_time, span_minutes, lesson_count, ${teacher}`)
-      .eq("student_id", student.id)
+      .contains("student_ids", [student.id])
       .gte("lesson_date", from)
       .lte("lesson_date", to),
     admin
       .from("registrations")
       .select(`id, lesson_date, start_time, span_minutes, lesson_count, scheduled_lesson_id, ${teacher}`)
-      .eq("student_id", student.id)
+      .contains("student_ids", [student.id])
       .neq("status", "rejected")
       .gte("lesson_date", from)
       .lte("lesson_date", to),

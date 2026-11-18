@@ -4,57 +4,86 @@ import { useState } from "react";
 import type { StudentOption } from "@/lib/student-options";
 import { inputClass } from "./styles";
 
-const OTHER = "";
-
-// Elev på en lektion: vælg en elev fra skolens liste (så lektionen kommer i elevens kalender), eller skriv
-// et navn, hvis eleven ikke er oprettet i Vixx. Sender studentId og studentName.
+// Elever på en lektion: vælg en eller flere elever fra skolens liste (fx 4 elever på køreteknisk anlæg), så
+// lektionen kommer i hver elevs kalender. Elever, der ikke er i Vixx, kan skrives med navn. Sender studentIds
+// (en pr. valgt elev) og studentName (fritekst).
 export function StudentPicker({
   students,
-  initialId,
+  initialIds = [],
   initialName,
 }: {
   students: StudentOption[];
-  initialId?: string | null;
+  initialIds?: string[];
   initialName?: string | null;
 }) {
-  const known = students.some((s) => s.id === initialId);
-  const [id, setId] = useState(known ? initialId! : OTHER);
-  const [name, setName] = useState(known ? "" : (initialName ?? ""));
-  const chosen = students.find((s) => s.id === id);
-  const mine = students.filter((s) => s.mine);
-  const others = students.filter((s) => !s.mine);
-  const option = (s: StudentOption) => (
-    <option key={s.id} value={s.id}>
-      {s.name}
-    </option>
-  );
+  const [chosen, setChosen] = useState<string[]>(initialIds.filter((id) => students.some((s) => s.id === id)));
+  const [search, setSearch] = useState("");
+  const [name, setName] = useState(initialName ?? "");
+  const q = search.trim().toLowerCase();
+  const matches = students
+    .filter((s) => !chosen.includes(s.id) && (!q || s.name.toLowerCase().includes(q)))
+    .sort((a, b) => Number(b.mine) - Number(a.mine));
+  const shown = q ? matches : matches.filter((s) => s.mine);
+  const toggle = (id: string) => setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
 
   return (
-    <div className="flex flex-col gap-2">
-      <label className="flex flex-col gap-1.5 text-sm font-bold">
-        Elev (valgfri)
-        <select name="studentId" value={id} onChange={(e) => setId(e.target.value)} className={inputClass}>
-          <option value={OTHER}>Ingen / ikke oprettet i Vixx</option>
-          {mine.length > 0 && <optgroup label="Dine elever">{mine.map(option)}</optgroup>}
-          {others.length > 0 && <optgroup label={mine.length ? "Andre elever" : "Elever"}>{others.map(option)}</optgroup>}
-        </select>
-      </label>
-      {chosen ? (
-        <>
-          <input type="hidden" name="studentName" value={chosen.name} />
-          <span className="text-[13px] text-muted">Lektionen kommer i elevens kalender.</span>
-        </>
-      ) : (
-        <input
-          name="studentName"
-          aria-label="Elevens navn"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={80}
-          placeholder="Navn (valgfrit), hvis eleven ikke er i Vixx"
-          className={inputClass}
-        />
+    <fieldset className="flex flex-col gap-2" data-testid="student-picker">
+      <legend className="mb-1.5 text-sm font-bold">Elever (valgfri)</legend>
+      {chosen.map((id) => (
+        <input key={id} type="hidden" name="studentIds" value={id} />
+      ))}
+      {chosen.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {chosen.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => toggle(id)}
+              aria-label={`Fjern ${students.find((s) => s.id === id)?.name}`}
+              className="rounded-full border border-accent bg-accent-bg px-3 py-1 text-sm font-semibold text-accent-ink"
+            >
+              {students.find((s) => s.id === id)?.name} ×
+            </button>
+          ))}
+        </div>
       )}
-    </div>
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        aria-label="Søg elev"
+        placeholder={chosen.length ? "Tilføj flere elever – søg på navn" : "Søg elev på navn"}
+        className={inputClass}
+      />
+      {shown.length > 0 && (
+        <div className="flex max-h-[180px] flex-col overflow-y-auto rounded-[10px] border border-line2">
+          {!q && <span className="px-3 pt-2 text-[12px] font-semibold text-muted">Dine elever</span>}
+          {shown.slice(0, 30).map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => {
+                toggle(s.id);
+                setSearch("");
+              }}
+              className="border-b border-line px-3 py-2 text-left text-[15px] last:border-b-0 hover:bg-soft"
+            >
+              + {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {q && !shown.length && <span className="text-[13px] text-muted">Ingen aktive elever matcher.</span>}
+      <input
+        name="studentName"
+        aria-label="Andre elever (navn)"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        maxLength={120}
+        placeholder="Andre elever, der ikke er i Vixx (navn, valgfrit)"
+        className={inputClass}
+      />
+      {chosen.length > 0 && <span className="text-[13px] font-normal text-muted">Lektionen kommer i elevernes kalender.</span>}
+    </fieldset>
   );
 }

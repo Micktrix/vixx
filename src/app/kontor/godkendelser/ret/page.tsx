@@ -18,7 +18,7 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
   const { data: reg } = await supabase
     .from("registrations")
     .select(
-      "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, status, student_id, student_name, note, decision_comment, instructors(school_members(profiles(full_name)))",
+      "id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, service_id, status, student_ids, student_name, note, decision_comment, instructors(school_members(profiles(full_name)))",
     )
     .eq("id", typeof sp.id === "string" ? sp.id : "")
     .eq("school_id", membership.schoolId)
@@ -82,7 +82,7 @@ export default async function OfficeEditRegistrationPage({ searchParams }: PageP
             serviceId: reg.service_id,
             count: reg.lesson_count,
             start: reg.start_time.slice(0, 5),
-            studentId: reg.student_id ?? undefined,
+            studentIds: reg.student_ids ?? [],
             studentName: reg.student_name ?? undefined,
             note: reg.note ?? undefined,
           }}

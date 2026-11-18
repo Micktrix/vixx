@@ -72,7 +72,7 @@ export async function resetDemoStudent(_prev: ActionState, formData: FormData): 
   const results = await Promise.all([
     admin.from("lesson_signoffs").delete().eq("student_id", demo.id),
     admin.from("lesson_requests").delete().eq("student_id", demo.id),
-    admin.from("scheduled_lessons").delete().eq("student_id", demo.id),
+    admin.from("scheduled_lessons").delete().contains("student_ids", [demo.id]),
   ]);
   if (results.some((r) => r.error)) return { error: "Demo-eleven kunne ikke nulstilles. Prøv igen." };
   const courseId = String(formData.get("courseId") ?? "");

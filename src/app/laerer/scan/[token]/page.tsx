@@ -1,18 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatDate, todayDk } from "@/lib/dates";
-import { nowMinutesDk } from "@/lib/now-status";
-import { fromMinutes, planSlotIsFree, toMinutes, type LessonPlan, type Span } from "@/lib/schedule";
+import { formatDate } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../../screen";
-import { allowedServices, getTeacher, isLocked, loadTeacherPeriod } from "../../teacher-data";
+import { getTeacher } from "../../teacher-data";
 import { SignoffForm, type SignoffLesson } from "./signoff-form";
 
 type LessonRow = SignoffLesson & { sort_order: number; active: boolean };
 type SignoffRow = { course_lesson_id: string; lesson_date: string; confirmed_at: string | null; instructor_name: string };
 
-// Elevens QR-kode er scannet: se forløbet, vælg lektionen og kvittér. En kørselslektion kan registreres
-// til lønnen i samme tryk. Kun lærere fra elevens skole kan se eleven (RLS).
+// Elevens QR-kode er scannet: se forløbet, vælg lektionen og kvittér. Kvitteringen gælder kun elevens forløb;
+// timen til lønnen registreres i kalenderen. Kun lærere fra elevens skole kan se eleven (RLS).
 export default async function SignoffPage({ params, searchParams }: PageProps<"/laerer/scan/[token]">) {
   const { token } = await params;
   const sp = await searchParams;
@@ -55,13 +53,6 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
     lessons.filter((l) => l.kind === "theory" && signoffs.has(l.id)).reduce((n, l) => n + l.lesson_count, 0);
   const theory = course?.theory_lessons ? { done: theoryDone, total: course.theory_lessons } : null;
 
-  // Dagens skema: optagede tider og planlagte lektioner, der ikke er registreret endnu.
-  const today = todayDk();
-  const [period, services] = await Promise.all([loadTeacherPeriod(teacher, today, today), allowedServices(teacher)]);
-  const busy = period.registrations.filter((r) => r.status !== "rejected").map((r) => ({ from: r.from, to: r.to }));
-  const planned = period.lessons
-    .filter((l) => !period.registrations.some((r) => r.scheduledLessonId === l.id))
-    .map((l) => ({ id: l.id, label: `${fromMinutes(l.from)}–${fromMinutes(l.to)} ${l.serviceName}` }));
   const signed = typeof sp.kvitteret === "string" ? sp.kvitteret : null;
 
   return (
@@ -105,31 +96,17 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
         <p className="text-[12px] text-muted">Grøn: gennemført · Orange: venter på elevens bekræftelse · Grå: mangler</p>
       </section>
 
-      {isLocked(period, today) ? (
-        <p className="rounded-[16px] bg-soft px-4 py-3 text-sm">Lønperioden er låst, så der kan ikke kvitteres i dag.</p>
-      ) : missing.length === 0 && !theory ? (
+      {missing.length === 0 && !theory ? (
         <p className="rounded-[16px] bg-ok-bg px-4 py-3 text-[15px] text-ok">Eleven har fået kvitteret for alle lektioner i forløbet.</p>
       ) : (
         <SignoffForm
           token={token}
           studentId={student.id}
-          demo={student.is_demo}
           theory={theory}
           lessons={missing}
-          services={services}
-          defaultServiceId={student.service_id ?? ""}
-          plan={teacher.plan}
-          busy={busy}
-          planned={planned}
-          defaultStart={latestStart(teacher.plan, busy, nowMinutesDk())}
         />
       )}
     </Screen>
   );
 }
 
-// Den seneste ledige starttid i planen, der er begyndt nu: lektionen er typisk lige kørt.
-function latestStart(plan: LessonPlan, busy: Span[], now: number) {
-  const started = plan.starts.filter((s) => toMinutes(s) <= now && planSlotIsFree(plan, s, 1, busy));
-  return started.at(-1) ?? "";
-}

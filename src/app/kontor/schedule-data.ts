@@ -1,6 +1,7 @@
 import "server-only";
 import { todayDk } from "@/lib/dates";
 import { absenceSpan, storedSpan, toMinutes, type DayInfo, type Span } from "@/lib/schedule";
+import { loadStudentNames, studentsLabel } from "@/lib/student-options";
 import { createClient } from "@/lib/supabase/server";
 
 // Alt hvad kontorets kalender, planlægning og "Find ledig underviser" skal bruge for en periode.
@@ -61,7 +62,7 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
   const supabase = await createClient();
   const today = todayDk();
 
-  const [instructors, lessons, absences, holidays, canWork, bookings] = await Promise.all([
+  const [instructors, lessons, absences, holidays, canWork, bookings, names] = await Promise.all([
     supabase
       .from("instructors")
       .select(
@@ -72,7 +73,7 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       .eq("school_members.active", true),
     supabase
       .from("scheduled_lessons")
-      .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, student_name, note, services(name)")
+      .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, span_minutes, student_ids, student_name, note, services(name)")
       .eq("school_id", schoolId)
       .gte("lesson_date", from)
       .lte("lesson_date", to)
@@ -105,6 +106,7 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       .gte("booking_date", from)
       .lte("booking_date", to)
       .order("start_time"),
+    loadStudentNames(schoolId),
   ]);
 
   return {
@@ -127,7 +129,7 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       start: l.start_time.slice(0, 5),
       count: l.lesson_count,
       serviceName: (l.services as unknown as { name: string } | null)?.name ?? "",
-      studentName: l.student_name,
+      studentName: studentsLabel(l.student_ids, names, l.student_name),
       note: l.note,
     })),
     absences: (absences.data ?? []).map((a) => ({

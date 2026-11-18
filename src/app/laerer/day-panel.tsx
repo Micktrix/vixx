@@ -96,6 +96,11 @@ export function DayPanel({
                   <Pill tone="accent">Uplanlagt</Pill>
                 </span>
               )}
+              {r.studentName && (
+                <span className="text-[13px] text-muted">
+                  {r.studentName.includes(",") ? "Elever" : "Elev"}: {r.studentName}
+                </span>
+              )}
               {r.note && <span className="text-[13px] text-muted">Note: {r.note}</span>}
               {r.status === "rejected" && r.comment && <span className="text-[13px] text-bad">Kontoret: {r.comment}</span>}
               {r.officeEdited && <span className="text-[13px] text-muted">Rettet af kontoret</span>}
@@ -139,7 +144,7 @@ export function DayPanel({
               <b>{formatSpan(l)}</b> · {l.serviceName} · {l.count} lek.
               {lessonResources[l.id] && ` · ${lessonResources[l.id]}`}
             </span>
-            {l.studentName && <span className="text-[13px] text-muted">Elev: {l.studentName}</span>}
+            {l.studentName && <span className="text-[13px] text-muted">{l.studentName.includes(",") ? "Elever" : "Elev"}: {l.studentName}</span>}
             {l.note && <span className="text-[13px] text-muted">Note: {l.note}</span>}
           </span>
           {!locked && !future && (

@@ -91,7 +91,7 @@ export async function answerRequest(_prev: ActionState, formData: FormData): Pro
       start_time: slot.start_time,
       lesson_count: slot.lesson_count,
       lesson_minutes: slot.lesson_minutes,
-      student_id: request.student_id,
+      student_ids: [request.student_id],
       student_name: name,
       origin: "instructor",
       created_by: user.id,

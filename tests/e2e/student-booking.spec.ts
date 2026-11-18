@@ -4,6 +4,7 @@ import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, loginOk } from "./helpers";
 
 const LARS = "00000000-0000-4000-a200-000000000011";
 const FREJA = "00000000-0000-4000-ad00-000000000032";
+const EMIL = "00000000-0000-4000-ad00-000000000031";
 const inDays = (n: number) => {
   const d = new Date();
   d.setDate(d.getDate() + n);
@@ -126,7 +127,7 @@ test("demo-eleven har hele elevens app: kalender med lærerens åbne tider, anmo
   }
 });
 
-test("læreren planlægger en lektion med en elev fra listen, og den kommer i elevens kalender", async ({ browser }) => {
+test("læreren planlægger en lektion med to elever (fx KTA), og den kommer i begge elevers kalender", async ({ browser }) => {
   const date = inDays(7);
   const teacher = await browser.newPage();
   const student = await browser.newPage();
@@ -134,17 +135,23 @@ test("læreren planlægger en lektion med en elev fra listen, og den kommer i el
     await loginOk(teacher, INSTRUCTOR, PASSWORD);
     await teacher.goto(`/laerer/planlaeg?dato=${date}`);
     await teacher.getByLabel("Ydelse").selectOption({ label: "Amu C" });
-    const picker = teacher.getByLabel("Elev (valgfri)");
-    await expect(picker.locator("optgroup[label='Dine elever'] option")).toHaveText(["Emil Elev"]);
-    await picker.selectOption({ label: "Emil Elev" });
-    await expect(teacher.getByText("Lektionen kommer i elevens kalender.")).toBeVisible();
+    const picker = teacher.getByTestId("student-picker");
+    await expect(picker.getByRole("button", { name: "+ Emil Elev" })).toBeVisible(); // Lars' faste elev står klar
+    await picker.getByRole("button", { name: "+ Emil Elev" }).click();
+    await picker.getByLabel("Søg elev").fill("freja");
+    await picker.getByRole("button", { name: "+ Freja Elev" }).click();
+    await expect(teacher.getByText("Lektionen kommer i elevernes kalender.")).toBeVisible();
     await teacher.getByRole("button", { name: "Planlæg" }).click();
     await teacher.waitForURL(/\/laerer\?dag=/);
 
     await loginOk(student, "20000031", PASSWORD);
     await student.goto("/elev/kalender");
     await expect(student.getByTestId("student-upcoming").filter({ hasText: "Lars Jensen" })).toBeVisible();
+
+    // Lektionen har begge elever, og lønnen er uændret (én planlagt lektion, ingen ekstra timer).
+    const { data: lesson } = await localAdmin().from("scheduled_lessons").select("student_ids").eq("lesson_date", date).eq("instructor_id", LARS).single();
+    expect([...lesson!.student_ids].sort()).toEqual([EMIL, FREJA].sort());
   } finally {
-    await localAdmin().from("scheduled_lessons").delete().eq("student_id", "00000000-0000-4000-ad00-000000000031").eq("lesson_date", date);
+    await localAdmin().from("scheduled_lessons").delete().contains("student_ids", ["00000000-0000-4000-ad00-000000000031"]).eq("lesson_date", date);
   }
 });

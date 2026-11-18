@@ -21,7 +21,7 @@ type Initial = {
   start?: string;
   count: number;
   serviceId?: string;
-  studentId?: string;
+  studentIds?: string[];
   studentName?: string;
   note?: string;
   resourceId?: string;
@@ -212,7 +212,7 @@ export function LessonForm({
       )}
 
       <div className="grid items-start gap-3 sm:grid-cols-2">
-        <StudentPicker students={students} initialId={initial.studentId} initialName={initial.studentName} />
+        <StudentPicker students={students} initialIds={initial.studentIds} initialName={initial.studentName} />
         <TextField label="Note (valgfri)" name="note" defaultValue={initial.note} maxLength={300} />
       </div>
 

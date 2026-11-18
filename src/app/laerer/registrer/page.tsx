@@ -22,7 +22,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
   const { data: reg } = id
     ? await supabase
         .from("registrations")
-        .select("id, lesson_date, start_time, lesson_count, service_id, status, student_id, student_name, note, decision_comment")
+        .select("id, lesson_date, start_time, lesson_count, service_id, status, student_ids, student_name, note, decision_comment")
         .eq("id", id)
         .maybeSingle()
     : { data: null };
@@ -73,7 +73,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
             serviceId: reg?.service_id,
             count: reg?.lesson_count,
             start: reg?.start_time.slice(0, 5) ?? "08:00",
-            studentId: reg?.student_id ?? undefined,
+            studentIds: reg?.student_ids ?? [],
             studentName: reg?.student_name ?? undefined,
             note: reg?.note ?? undefined,
           }}
