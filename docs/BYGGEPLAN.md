@@ -176,7 +176,8 @@ erstatter papirets lektionsplan med dato og to underskrifter.
 - Materialer (vidensbank, aftalt 18. nov. 2026): "Mine materialer" er privat for hver lærer og kontorbruger.
   "Skolens materialer" er i mapper, som kun admin opretter, omdøber, flytter og lukker (fx B, C/E, Taxa,
   EU/AMU, med undermapper). Alle lærere og kontor kan lægge filer eller links i admins mapper og se og downloade
-  alt dér. Man deler fra "Mine" med ét tryk ved at vælge mappe. Man retter og sletter sit eget, og admin og
+  alt dér. Man deler fra "Mine" ved at vælge mappen fra admins liste (mappe skal vælges; intet "diverse").
+  Ligger det forkert, kan ejeren selv flytte det, og admin og kontor kan også flytte det. Man retter og sletter sit eget, og admin og
   kontor kan rydde op. En mappe med indhold kan kun lukkes, ikke slettes. Hvem og hvornår vises.
   Påmindelse om ophavsret ved upload. Filer i Supabase Storage med RLS pr. skole (gratis plan: 1 GB, 50 MB pr.
   fil, så video som links). Senere: deling med elever og kobling til modulplanens moduler.
