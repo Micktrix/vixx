@@ -164,9 +164,17 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
         </p>
       </section>
 
-      <Link href="/laerer/aabne-tider" className="text-center text-sm font-semibold text-accent-ink underline underline-offset-[3px]">
-        Åbne tider til elever
-      </Link>
+      <div className="flex justify-center gap-5 text-sm font-semibold text-accent-ink">
+        <Link href="/laerer/aabne-tider" className="underline underline-offset-[3px]">
+          Åbne tider til elever
+        </Link>
+        <Link href="/laerer/materialer" className="underline underline-offset-[3px]">
+          Materialer
+        </Link>
+        <Link href="/laerer/quiz" className="underline underline-offset-[3px]">
+          Quiz
+        </Link>
+      </div>
 
       <DayPanel teacher={teacher} period={period} date={selected} today={today} lessonResources={lessonResources} />
     </Screen>

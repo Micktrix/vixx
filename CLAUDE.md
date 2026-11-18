@@ -111,6 +111,10 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 - Kørelektioner (trin E5): eleven har faste lærere (`student_instructors`) og evt. flueben `can_request`. Læreren åbner tider (`open_slots`), eleven anmoder (`lesson_requests`), læreren godkender (= planlagt lektion med `student_id`) eller afviser. Afbud inden skolens frist (`schools.cancel_hours`). Eleven læser og handler via `student_*`-funktionerne, aldrig direkte i lærernes skema. Alle elever har kalender og iCal-abonnement.
 - QR-kvittering (`lesson_signoffs`): læreren scanner elevens QR-kode og kvitterer (kørelærerens underskrift), eleven bekræfter (elevens underskrift). En kvittering kan aldrig slettes og går ikke til lønnen.
 
+**Vidensbank og quiz** (bygget 18. nov. 2026)
+- Materialer (`material_folders`, `materials`): "Mine materialer" er private. Skolens mapper oprettes kun af admin. Alle lærere og kontor lægger op i dem og kan se og hente alt. Ejeren retter og sletter sit eget, og admin og kontor rydder op. Filerne ligger i Storage-bucketten `materials`, som kun serveren tilgår (tidsbegrænsede links). Højst 50 MB pr. fil, og video lægges ind som link. Elever har ingen adgang.
+- Quiz (`quizzes`, `quiz_questions`, `quiz_sessions`, `quiz_players`, `quiz_answers`): lærere og kontor laver quizzer (private eller delt i mapper) og kører dem på storskærmen (`/quiz/vis/<runde>`). Deltagere går til `/q/<kode>` uden login og vælger et kaldenavn. Er de logget ind som elev, kobles resultatet på eleven. Skærmene viser kun kaldenavne. Deltagerne handler kun via `quiz_join`/`quiz_player_state`/`quiz_answer` med en hemmelig nøgle.
+
 **Log og privatliv**
 - Alle ændringer skrives i en ændringslog (hvem, hvornår, hvad). Følsomme værdier skrives ikke i loggen.
 - Backup af timer: hver nat sendes en CSV med registreringer (igangværende + forrige lønperiode, alle statusser, uden elevnavne/noter) til en backup-e-mail, som kun admin kan se og rette. Ændring giver besked til den gamle adresse.
