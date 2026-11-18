@@ -181,6 +181,17 @@ erstatter papirets lektionsplan med dato og to underskrifter.
   kontor kan rydde op. En mappe med indhold kan kun lukkes, ikke slettes. Hvem og hvornår vises.
   Påmindelse om ophavsret ved upload. Filer i Supabase Storage med RLS pr. skole (gratis plan: 1 GB, 50 MB pr.
   fil, så video som links). Senere: deling med elever og kobling til modulplanens moduler.
+- Quiz (aftalt 18. nov. 2026, "Kahoot-idéen", men vi bruger ikke navnet Kahoot):
+  - Lærere og kontor laver quizzer med 2–4 svar, det rigtige svar, valgfrit billede (fx færdselstavle) og tid
+    pr. spørgsmål. Quizzer gemmes som materialer: private, eller delt i admins mapper til genbrug.
+  - Egen quiz-sektion på storskærmen: læreren starter den, og storskærmen viser QR-kode og kort kode,
+    spørgsmål, nedtælling, svarfordeling og pointtavle. Live-opdatering via Supabase Realtime.
+  - Eleverne svarer på telefonen. Gæster deltager uden login med et kaldenavn, og deres resultat gemmes kun
+    samlet for quizzen. Elever med login vælger også et kaldenavn (Vixx husker det), og deres resultat gemmes
+    på eleven og ses i elevens app og af læreren.
+  - Storskærmen viser aldrig rigtige navne, kun kaldenavne. Læreren kan fjerne en deltager.
+  - Bagefter ser læreren, hvilke spørgsmål holdet havde svært ved.
+  - Senere: quiz som hjemmeopgave i eget tempo.
 - Teori-fremmøde med én QR-kode i lokalet/på storskærmen; læreren godkender holdet med ét tryk.
 - "Jeg er syg" fra lærer-appen med overblik over berørte lektioner og omfordeling.
 - Lærerens interne noter pr. elev (ses af næste lærer ved scanning).
