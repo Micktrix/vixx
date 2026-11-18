@@ -173,6 +173,13 @@ erstatter papirets lektionsplan med dato og to underskrifter.
   andet + fritekst). Det er helbredsoplysninger: udtrykkeligt samtykke, kun kontor og elevens lærere kan se dem,
   aldrig i ændringsloggen, slettes automatisk efter afsluttet forløb, og eleven kan se og rette dem selv.
   Lærerne ser et mærke ("Hensyn: Ordblind") ved scanning og i skemaet.
+- Materialer (vidensbank, aftalt 18. nov. 2026): "Mine materialer" er privat for hver lærer og kontorbruger.
+  "Skolens materialer" er i mapper, som kun admin opretter, omdøber, flytter og lukker (fx B, C/E, Taxa,
+  EU/AMU, med undermapper). Alle lærere og kontor kan lægge filer eller links i admins mapper og se og downloade
+  alt dér. Man deler fra "Mine" med ét tryk ved at vælge mappe. Man retter og sletter sit eget, og admin og
+  kontor kan rydde op. En mappe med indhold kan kun lukkes, ikke slettes. Hvem og hvornår vises.
+  Påmindelse om ophavsret ved upload. Filer i Supabase Storage med RLS pr. skole (gratis plan: 1 GB, 50 MB pr.
+  fil, så video som links). Senere: deling med elever og kobling til modulplanens moduler.
 - Teori-fremmøde med én QR-kode i lokalet/på storskærmen; læreren godkender holdet med ét tryk.
 - "Jeg er syg" fra lærer-appen med overblik over berørte lektioner og omfordeling.
 - Lærerens interne noter pr. elev (ses af næste lærer ved scanning).
