@@ -39,9 +39,9 @@ select ok((select count(*) from public.holidays) > 0, 'Kontoret ser ferie i kale
 select lives_ok(
   $$insert into public.teams (school_id, name) values ('00000000-0000-4000-a000-000000000001', 'Kontorets hold')$$,
   'Kontoret kan oprette hold');
-select lives_ok(
+select throws_ok(
   $$insert into public.resources (school_id, kind, name) values ('00000000-0000-4000-a000-000000000001', 'room', 'Lokale 9')$$,
-  'Kontoret kan oprette lokaler');
+  '42501', null, 'Kontoret kan ikke oprette lokaler (kun admin)');
 
 -- Admin kan godkende.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);
