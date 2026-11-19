@@ -21,6 +21,9 @@ export default async function NewSchoolPage() {
           <fieldset className="grid gap-3 sm:grid-cols-3">
             <legend className="mb-2 text-sm font-bold">Skolen</legend>
             <TextField label="Navn" name="schoolName" required maxLength={80} className="sm:col-span-3" />
+            <TextField label="CVR-nr." name="cvr" inputMode="numeric" maxLength={11} placeholder="12345678" />
+            <TextField label="Adresse" name="address" maxLength={200} placeholder="Vej 1, 8000 Aarhus C" className="sm:col-span-2" />
+            <TextField label="Telefon til kontoret" name="contactPhone" type="tel" placeholder="12 34 56 78" />
             <TextField label="Lektionslængde (min.)" name="lessonMinutes" type="number" min={15} max={240} defaultValue={45} required />
             <TextField label="Lønperioden starter den" name="payPeriodStartDay" type="number" min={1} max={28} defaultValue={21} required />
           </fieldset>

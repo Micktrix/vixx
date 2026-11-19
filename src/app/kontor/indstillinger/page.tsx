@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadResources, type Resource } from "@/lib/booking-data";
 import { AddResourceForm } from "./add-resource-form";
 import { BackupForm } from "./backup-form";
+import { LogoForm } from "./logo-form";
+import { schoolLogoUrl } from "@/lib/school-logo";
 import { PlanEditor } from "./plan-editor";
 import { deleteResource, updateResource, updateSchool } from "./actions";
 
@@ -19,7 +21,7 @@ export default async function OfficeSettingsPage() {
 
   const [resources, { data: school }, { data: backup }] = await Promise.all([
     loadResources(membership.schoolId, true),
-    supabase.from("schools").select("name, lesson_minutes, lesson_starts, pay_period_start_day, contact_phone, cancel_hours").eq("id", membership.schoolId).single(),
+    supabase.from("schools").select("name, cvr, address, logo_path, lesson_minutes, lesson_starts, pay_period_start_day, contact_phone, cancel_hours").eq("id", membership.schoolId).single(),
     // Kun admin kan se adressen (RLS); for kontoret er svaret tomt.
     supabase.from("school_backups").select("email, last_sent_at, last_error").eq("school_id", membership.schoolId).maybeSingle(),
   ]);
@@ -48,10 +50,14 @@ export default async function OfficeSettingsPage() {
           required
         />
       </div>
+      <div className="grid items-end gap-3 sm:grid-cols-3">
+        <TextField label="CVR-nr." name="cvr" defaultValue={school?.cvr ?? ""} inputMode="numeric" pattern="[0-9 ]*" maxLength={11} placeholder="12345678" />
+        <TextField label="Adresse" name="address" defaultValue={school?.address ?? ""} maxLength={200} placeholder="Vej 1, 8000 Aarhus C" className="sm:col-span-2" />
+      </div>
       <PlanEditor starts={plan.starts} minutes={plan.minutes} />
       <div className="grid items-end gap-3 sm:grid-cols-3">
         <TextField
-          label="Telefon til kontoret (vises for eleverne)"
+          label="Telefon til kontoret (vises for eleverne og på modulplanen)"
           name="contactPhone"
           type="tel"
           defaultValue={school?.contact_phone ? formatPhone(school.contact_phone) : ""}
@@ -96,6 +102,12 @@ export default async function OfficeSettingsPage() {
             schoolFields
           )}
         </Box>
+
+        {isAdmin && (
+          <Box title="Logo" hint="Vises i appen for lærere, elever og kontor">
+            <LogoForm logoUrl={schoolLogoUrl(school?.logo_path)} />
+          </Box>
+        )}
 
         {isAdmin && (
           <Box title="Backup af timer">

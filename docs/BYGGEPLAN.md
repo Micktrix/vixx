@@ -270,11 +270,24 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      for en gæstelærer uden app (navn, dato, kommentar). Admin afgiver ikke erklæringen; gæstelæreren skriver
      under med kuglepen på den udskrevne modulplan, og Vixx sætter aldrig en tegnet underskrift på.
   5. Lærerskift, repetitionslektioner, manuelt gear (kode 78) og skolens oplysninger.
+     **Skolens oplysninger bygget 19. nov. 2026:** CVR-nr., adresse og telefon under Indstillinger → Skolen
+     (og når platform-ejeren opretter en skole). Admin kan lægge skolens logo op (PNG/JPEG/WebP, højst 1 MB,
+     offentlig bucket `school-logos`, kun serveren lægger op). Logoet vises i kontorets menu og øverst i lærer-
+     og elevappen. Om logoet må stå på Færdselsstyrelsens modulplan, er ikke afklaret.
   6. PDF: upload af styrelsens PDF, feltkortlægning, udfyldning og gemte versioner.
+     Visning og print (Michaels ønske, 19. nov. 2026):
+     - Undervejs: eleven og lærerne kan se den udfyldte modulplan i appen, ved siden af modulvisningen. Eleven
+       får aldrig selve PDF-filen. Siderne vises som billeder uden download, og print er blokeret ("Modulplanen
+       kan kun fremvises i Vixx"). Vandmærke med elevens navn og "Seneste udgave · vist [dato] kl. [tid]".
+     - Print (afklaret 19. nov. 2026): alle lærere, kontoret og admin kan altid printe elevens modulplan, med de datoer,
+       navne og underskrifter der er sat indtil nu. Eleven kan ikke printe. (Færdselsstyrelsens guide tillader,
+       at eleven viser planen som print; skolens regel er strengere.)
   7. Tegnet underskrift i PDF'en (venter på Færdselsstyrelsen).
 - Første plan, før Michaels beslutning: Vixx udfylder den officielle PDF (stamdata, moduler, datoer,
   lærernavne), og læreren skriver under med kuglepen eller med digitalt ID i Adobe. Den tegnede underskrift,
   som Vixx lægger på automatisk, bygges først, når Færdselsstyrelsen har bekræftet den skriftligt.
+- **Færdselsstyrelsen har sagt ok til den digitale underskrift (Michael, 19. nov. 2026).** Den tegnede
+  underskrift kommer derfor med i del 6a.
 
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven

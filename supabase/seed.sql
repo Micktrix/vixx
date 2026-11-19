@@ -68,8 +68,8 @@ from seed_people;
 -- ---------------------------------------------------------------------------
 -- Skole og medlemskaber
 -- ---------------------------------------------------------------------------
-insert into public.schools (id, name, lesson_minutes, pay_period_start_day, contact_phone)
-values ('00000000-0000-4000-a000-000000000001', 'Testkøreskolen', 45, 21, '+4570000000');
+insert into public.schools (id, name, lesson_minutes, pay_period_start_day, contact_phone, cvr, address)
+values ('00000000-0000-4000-a000-000000000001', 'Testkøreskolen', 45, 21, '+4570000000', '12345678', 'Testvej 1, 8000 Aarhus C');
 
 insert into public.school_members (school_id, user_id, role)
 select '00000000-0000-4000-a000-000000000001', ('00000000-0000-4000-a100-0000000000' || nn)::uuid, role

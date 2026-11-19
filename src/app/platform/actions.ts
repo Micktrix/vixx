@@ -33,6 +33,12 @@ export async function createSchool(_prev: ActionState, formData: FormData): Prom
   const phone = normalizePhone(text("adminPhone"));
 
   if (!schoolName) return { error: "Skriv skolens navn." };
+  const cvr = text("cvr").replace(/\s+/g, "");
+  if (cvr && !/^[0-9]{8}$/.test(cvr)) return { error: "CVR-nr. skal være 8 cifre." };
+  const address = text("address");
+  if (address.length > 200) return { error: "Adressen er for lang." };
+  const contactPhone = text("contactPhone") ? normalizePhone(text("contactPhone")) : null;
+  if (text("contactPhone") && !contactPhone) return { error: "Skriv et gyldigt telefonnummer til kontoret." };
   if (!Number.isInteger(minutes) || minutes < 15 || minutes > 240) return { error: "Lektionslængden skal være mellem 15 og 240 minutter." };
   if (!Number.isInteger(startDay) || startDay < 1 || startDay > 28) return { error: "Lønperioden skal starte mellem den 1. og den 28." };
   if (!adminName) return { error: "Skriv navnet på skolens admin." };
@@ -43,7 +49,15 @@ export async function createSchool(_prev: ActionState, formData: FormData): Prom
 
   const { data: school, error: schoolError } = await supabase
     .from("schools")
-    .insert({ name: schoolName, lesson_minutes: minutes, pay_period_start_day: startDay, lesson_starts: defaultStarts(minutes) })
+    .insert({
+      name: schoolName,
+      cvr: cvr || null,
+      address: address || null,
+      contact_phone: contactPhone,
+      lesson_minutes: minutes,
+      pay_period_start_day: startDay,
+      lesson_starts: defaultStarts(minutes),
+    })
     .select("id")
     .single();
   if (schoolError || !school) return { error: "Skolen kunne ikke oprettes. Prøv igen." };

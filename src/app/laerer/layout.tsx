@@ -22,6 +22,12 @@ export default async function InstructorLayout({ children }: LayoutProps<"/laere
         data-switch={isStaff(membership) ? "" : undefined}
         className="group/frame flex w-full flex-col overflow-hidden bg-bg sm:max-h-[844px] sm:max-w-[400px] sm:rounded-[36px] sm:border sm:border-line sm:shadow-[0_20px_50px_-30px_rgba(38,36,34,0.35)]"
       >
+        {membership.schoolLogo && (
+          <div className="flex items-center gap-2 px-5 pt-[calc(10px+env(safe-area-inset-top))]" data-testid="school-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={membership.schoolLogo} alt={membership.schoolName} className="h-7 max-w-[140px] object-contain" />
+          </div>
+        )}
         {isStaff(membership) && (
           <div className="px-5 pt-[calc(12px+env(safe-area-inset-top))]">
             <PartSwitch teaches demo={membership.role === "admin"} />

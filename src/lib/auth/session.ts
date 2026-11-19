@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { todayDk } from "@/lib/dates";
+import { schoolLogoUrl } from "@/lib/school-logo";
 import { createClient } from "@/lib/supabase/server";
 
 export type Role = "admin" | "office" | "instructor" | "student";
@@ -13,6 +14,7 @@ export type Role = "admin" | "office" | "instructor" | "student";
 export type Membership = {
   schoolId: string;
   schoolName: string;
+  schoolLogo: string | null; // offentlig adresse til skolens logo
   role: Role;
   teaches: boolean;
 };
@@ -45,11 +47,11 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     supabase.from("profiles").select("full_name, phone, must_change_password").eq("id", userId).single(),
     supabase
       .from("school_members")
-      .select("school_id, role, schools(name), instructors(active, active_until)")
+      .select("school_id, role, schools(name, logo_path), instructors(active, active_until)")
       .eq("user_id", userId)
       .eq("active", true),
     supabase.from("platform_owners").select("user_id").eq("user_id", userId).maybeSingle(),
-    supabase.from("students").select("school_id, schools(name)").eq("user_id", userId).eq("active", true),
+    supabase.from("students").select("school_id, schools(name, logo_path)").eq("user_id", userId).eq("active", true),
   ]);
   if (!profile) return null;
 
@@ -60,6 +62,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       return {
         schoolId: m.school_id,
         schoolName: (m.schools as unknown as { name: string } | null)?.name ?? "",
+        schoolLogo: schoolLogoUrl((m.schools as unknown as { logo_path: string | null } | null)?.logo_path),
         role: m.role as Role,
         teaches: !!instructor && instructor.active && (!instructor.active_until || instructor.active_until >= today),
       };
@@ -72,6 +75,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     memberships.push({
       schoolId: s.school_id,
       schoolName: (s.schools as unknown as { name: string } | null)?.name ?? "",
+      schoolLogo: schoolLogoUrl((s.schools as unknown as { logo_path: string | null } | null)?.logo_path),
       role: "student",
       teaches: false,
     });

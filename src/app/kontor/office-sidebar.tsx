@@ -11,6 +11,7 @@ import { officeHref, officeSections, type OfficeSection } from "./sections";
 
 type Props = {
   schoolName: string;
+  schoolLogo: string | null;
   userName: string;
   canSwitchSchool: boolean;
   teaches: boolean;
@@ -36,7 +37,7 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, isAdmin, badges, isPlatformOwner }: Props) {
+export function OfficeSidebar({ schoolName, schoolLogo, userName, canSwitchSchool, teaches, isAdmin, badges, isPlatformOwner }: Props) {
   const pathname = usePathname();
   const isCurrent = (s: OfficeSection) => {
     const href = officeHref(s);
@@ -53,7 +54,12 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, 
     >
       <div className="flex flex-row flex-wrap gap-1 p-2.5 min-[860px]:h-full min-[860px]:flex-col min-[860px]:flex-nowrap min-[860px]:overflow-y-auto min-[860px]:px-3 min-[860px]:py-5">
         <div className="hidden items-center gap-3 px-2 pb-5 min-[860px]:flex">
-          <LogoMark />
+          {schoolLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={schoolLogo} alt={schoolName} className="h-10 max-w-[64px] shrink-0 object-contain" />
+          ) : (
+            <LogoMark />
+          )}
           <div className="min-w-0">
             <b className="block text-[15px]">Timeregistrering</b>
             <span className="text-[13px] text-muted">{schoolName}</span>

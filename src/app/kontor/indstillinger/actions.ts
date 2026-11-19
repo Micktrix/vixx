@@ -81,6 +81,10 @@ export async function updateSchool(_prev: ActionState, formData: FormData): Prom
   const phoneInput = String(formData.get("contactPhone") ?? "").trim();
   const contactPhone = phoneInput ? normalizePhone(phoneInput) : null;
   if (phoneInput && !contactPhone) return { error: "Skriv et gyldigt telefonnummer, fx 20 45 67 89." };
+  const cvr = String(formData.get("cvr") ?? "").replace(/\s+/g, "");
+  if (cvr && !/^[0-9]{8}$/.test(cvr)) return { error: "CVR-nr. skal være 8 cifre." };
+  const address = String(formData.get("address") ?? "").trim();
+  if (address.length > 200) return { error: "Adressen er for lang." };
   const cancelHours = Number(formData.get("cancelHours") ?? 24);
   if (!Number.isInteger(cancelHours) || cancelHours < 0 || cancelHours > 168) return { error: "Fristen for afbud skal være mellem 0 og 168 timer." };
 
@@ -89,6 +93,8 @@ export async function updateSchool(_prev: ActionState, formData: FormData): Prom
     .from("schools")
     .update({
       name,
+      cvr: cvr || null,
+      address: address || null,
       lesson_minutes: minutes,
       pay_period_start_day: startDay,
       lesson_starts: starts,

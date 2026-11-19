@@ -17,6 +17,7 @@ export default async function OfficeLayout({ children }: LayoutProps<"/kontor">)
     <div className="flex flex-1 flex-col min-[860px]:flex-row">
       <OfficeSidebar
         schoolName={membership.schoolName}
+        schoolLogo={membership.schoolLogo}
         userName={user.fullName}
         canSwitchSchool={user.memberships.length > 1}
         teaches={membership.teaches}
