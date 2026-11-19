@@ -81,6 +81,15 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
             <b className="text-ok">{signed === "Afsluttet" ? "✓ Modulet er afsluttet." : "✓ Lektionerne er talt med i modulet."}</b>
           </p>
         )}
+        <a
+          href={`/api/modulplan/${student.id}`}
+          target="_blank"
+          rel="noopener"
+          className="self-start text-sm font-bold text-accent-ink"
+          data-testid="print-module-plan"
+        >
+          Se og print modulplanen (PDF) ›
+        </a>
         <ol className="flex flex-col gap-1.5 rounded-[20px] border border-line bg-surface p-4" data-testid="scan-modules">
           {progress.map((m) => (
             <li key={m.id} className="text-[15px]">

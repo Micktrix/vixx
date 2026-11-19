@@ -275,6 +275,19 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      offentlig bucket `school-logos`, kun serveren lægger op). Logoet vises i kontorets menu og øverst i lærer-
      og elevappen. Om logoet må stå på Færdselsstyrelsens modulplan, er ikke afklaret.
   6. PDF: upload af styrelsens PDF, feltkortlægning, udfyldning og gemte versioner.
+     **6a bygget 19. nov. 2026** (Michael: læreren skal have gemt sin underskrift for at afslutte; kontoret
+     taster elevens adresse): Vixx udfylder styrelsens PDF (B, C, C/E og D, version 1.1, ligger i
+     `src/lib/modulplan/templates`) med elev, skole, undervisende kørelærere, modulernes start- og slutdato,
+     ekstra lektioner, selvstudie, "Overført", den afsluttende lærers navn og de tegnede underskrifter.
+     Felterne findes ud fra siden (navnene har stavefejl). Formularen låses (flades ud). Lærere, kontor og admin
+     printer via "Print modulplan" (kontorets elevside) og "Se og print modulplanen" (lærerens scanning);
+     eleven kan ikke hente PDF'en. Kopier af underskrifterne (`module_completions.strokes`,
+     `module_plan_teachers`) kan ikke læses via API'et; serveren læser dem. Hver ny udgave gemmes i
+     bucketten `module-plans` og `module_plan_versions` og slettes aldrig. Lærerskift, repetition og manuelt
+     gear udfyldes i hånden (del 5). Mangler: 6b (elevens visning) og 6c (nye versioner fra styrelsen).
+     "Undervisende kørelærere" (papirets side med alle lærernes underskrifter) viser kun de lærere, der har haft
+     eleven, med deres underskrift. Har læreren ingen gemt underskrift, første gang læreren har eleven, sættes
+     den på, når læreren gemmer den.
      Visning og print (Michaels ønske, 19. nov. 2026):
      - Undervejs: eleven og lærerne kan se den udfyldte modulplan i appen, ved siden af modulvisningen. Eleven
        får aldrig selve PDF-filen. Siderne vises som billeder uden download, og print er blokeret ("Modulplanen

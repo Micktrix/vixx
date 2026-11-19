@@ -13,7 +13,7 @@ export function StudentFields({
   courses: CourseInfo[];
   teams: TeamInfo[];
   services: Option[];
-  value?: { courseId?: string; teamId?: string | null; serviceId?: string | null };
+  value?: { courseId?: string; teamId?: string | null; serviceId?: string | null; address?: string | null };
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
@@ -53,6 +53,10 @@ export function StudentFields({
             </option>
           ))}
         </select>
+      </label>
+      <label className="flex flex-col gap-1.5 text-sm font-bold sm:col-span-3">
+        Adresse <span className="font-normal text-muted">(står på modulplanen)</span>
+        <input name="address" defaultValue={value?.address ?? ""} maxLength={200} placeholder="Vej 1, 8000 Aarhus C" className={inputClass} />
       </label>
     </div>
   );

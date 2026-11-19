@@ -213,7 +213,10 @@ export async function reopenStudent(_prev: ActionState, formData: FormData): Pro
 function readStudent(formData: FormData) {
   const courseId = text(formData, "courseId");
   if (!courseId) return { error: "Vælg et forløb." } as const;
+  const address = text(formData, "address");
+  if (address.length > 200) return { error: "Adressen er for lang." } as const;
   return {
+    address: address || null,
     course_id: courseId,
     team_id: text(formData, "teamId") || null,
     service_id: text(formData, "serviceId") || null,

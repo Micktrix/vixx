@@ -8,6 +8,9 @@ create or replace function pg_temp.as_user(p text) returns void language sql as 
   select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-a100-0000000000' || p, 'role', 'authenticated')::text, true);
 $$;
 
+-- Seed giver Lars en underskrift (modulplanen); testen starter uden.
+delete from public.instructor_signatures where user_id = '00000000-0000-4000-a100-000000000011';
+
 set local role authenticated;
 select pg_temp.as_user('11');
 select lives_ok(

@@ -268,11 +268,17 @@ update public.courses set theory_lessons = 8 where id = '00000000-0000-4000-ab00
 -- Trin E8: et B-forløb som modulplan (Færdselsstyrelsen, version 1.1).
 select public.create_module_course('00000000-0000-4000-a000-000000000001', 'B-1.1', 'B – modulplan');
 
+-- Lars har tegnet sin underskrift (trin E8: den sættes på modulplanen).
+insert into public.instructor_signatures (school_id, user_id, strokes)
+values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000011',
+        'M 40 140 L 70 60 L 100 140 L 130 80 L 160 130 L 200 70 L 230 120 L 260 90 L 300 130 L 340 80 L 380 120 L 420 100 L 480 110 M 60 165 L 500 150');
+
 -- Bent er B-elev på modulplanen (uden hold). Lars har talt modul 1 og 2 op (trin E8, del 3).
 insert into public.students (id, school_id, user_id, course_id, service_id)
 select '00000000-0000-4000-ad00-000000000033', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000033',
        c.id, '00000000-0000-4000-a500-000000000001'
 from public.courses c where c.name = 'B – modulplan';
+update public.students set address = 'Elevvej 7, 8000 Aarhus C' where id = '00000000-0000-4000-ad00-000000000033';
 insert into public.module_signoffs (school_id, student_id, course_module_id, kind, lesson_count, dark, instructor_id, instructor_name, signed_by, lesson_date)
 select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', m.id, v.kind::public.course_lesson_kind, v.n, false,
        '00000000-0000-4000-a200-000000000011', 'Lars Jensen', '00000000-0000-4000-a100-000000000011', current_date - v.days_ago

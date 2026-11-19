@@ -86,6 +86,15 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
 
       {course && course.modules.length > 0 && (
         <Box title="Modulplan" hint={`${p.done} af ${p.total} moduler afsluttet`}>
+          <a
+            href={`/api/modulplan/${student.id}`}
+            target="_blank"
+            rel="noopener"
+            className="self-start rounded-[12px] border border-line px-4 py-2 text-sm font-bold hover:border-accent"
+            data-testid="print-module-plan"
+          >
+            Print modulplan (PDF)
+          </a>
           <ProgressBar share={p.share} />
           <ol className="flex flex-col gap-1.5" data-testid="student-modules">
             {modules.map((m) => (
@@ -328,7 +337,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             courses={courses}
             teams={teams}
             services={services ?? []}
-            value={{ courseId: student.courseId, teamId: student.teamId, serviceId: student.serviceId }}
+            value={{ courseId: student.courseId, teamId: student.teamId, serviceId: student.serviceId, address: student.address }}
           />
         </ActionForm>
       </Box>

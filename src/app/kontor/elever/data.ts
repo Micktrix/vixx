@@ -18,6 +18,7 @@ export type StudentInfo = {
   userId: string;
   name: string;
   phone: string;
+  address: string | null; // står på modulplanen
   teamId: string | null;
   courseId: string;
   serviceId: string | null;
@@ -43,7 +44,7 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
@@ -80,6 +81,7 @@ export async function loadStudents(schoolId: string) {
         userId: s.user_id,
         name: p?.full_name ?? "",
         phone: p?.phone ?? "",
+        address: s.address,
         teamId: s.team_id,
         courseId: s.course_id,
         serviceId: s.service_id,
