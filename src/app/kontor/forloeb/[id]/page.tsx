@@ -9,6 +9,7 @@ import { COURSE_TEMPLATES } from "@/lib/course-templates";
 import { createClient } from "@/lib/supabase/server";
 import { addLesson, deleteCourse, deleteLesson, insertTemplate, moveLesson, updateCourse, updateLesson } from "../actions";
 import { LessonFields, type LessonRow } from "../lesson-fields";
+import { ModuleList, type ModuleRow } from "./modules";
 
 const KIND = { driving: "Kørsel", theory: "Teori" } as const;
 
@@ -18,19 +19,29 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
   const { membership } = await requireRole(["admin"]);
   const isAdmin = membership.role === "admin";
   const supabase = await createClient();
-  const [{ data: course }, { data: lessonData }, { data: categories }] = await Promise.all([
-    supabase.from("courses").select("id, name, category_code, theory_lessons, active").eq("id", id).eq("school_id", membership.schoolId).maybeSingle(),
+  const [{ data: course }, { data: lessonData }, { data: moduleData }, { data: categories }] = await Promise.all([
+    supabase
+      .from("courses")
+      .select("id, name, category_code, theory_lessons, active, plan_kind, plan_version, min_days").eq("id", id).eq("school_id", membership.schoolId).maybeSingle(),
     supabase
       .from("course_lessons")
       .select("id, number, kind, lesson_count, location, content, notes, control_topic, active")
       .eq("course_id", id)
       .order("sort_order"),
+    supabase
+      .from("course_modules")
+      .select("id, number, name, min_theory, min_driving, min_dark, topics, notes")
+      .eq("course_id", id)
+      .order("number"),
     supabase.from("license_categories").select("code").order("sort_order"),
   ]);
   if (!course) notFound();
   const lessons = (lessonData ?? []) as LessonRow[];
   const active = lessons.filter((l) => l.active);
-  const templates = COURSE_TEMPLATES.filter((t) => t.category === course.category_code);
+  const modules = (moduleData ?? []) as ModuleRow[];
+  const isModules = course.plan_kind === "modules";
+  const templates = isModules ? [] : COURSE_TEMPLATES.filter((t) => t.category === course.category_code);
+  const sum = (key: "min_theory" | "min_driving") => modules.reduce((n, m) => n + m[key], 0);
 
   return (
     <>
@@ -40,8 +51,17 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
         </Link>
         <h1 className="text-[30px] font-bold">{course.name}</h1>
         <p className="flex flex-wrap items-center gap-1.5 text-muted">
-          Kategori {course.category_code} · {active.length} lektioner · {active.reduce((n, l) => n + l.lesson_count, 0)} × 45 min.
-          {course.theory_lessons > 0 && ` · Teori: ${course.theory_lessons} lektioner`}
+          {isModules ? (
+            <>
+              Kategori {course.category_code} · Modulplan version {course.plan_version} · {modules.length} moduler · Min. {sum("min_theory")} teori +{" "}
+              {sum("min_driving")} kørsel · Min. {course.min_days} undervisningsdage
+            </>
+          ) : (
+            <>
+              Kategori {course.category_code} · {active.length} lektioner · {active.reduce((n, l) => n + l.lesson_count, 0)} × 45 min.
+              {course.theory_lessons > 0 && ` · Teori: ${course.theory_lessons} lektioner`}
+            </>
+          )}
           {course.active ? <Pill tone="ok">Aktiv</Pill> : <Pill>Slået fra</Pill>}
         </p>
       </header>
@@ -52,6 +72,7 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
           <ActionForm action={updateCourse} submitLabel="Gem" className="mt-3 flex flex-col gap-3">
             <input type="hidden" name="id" value={course.id} />
             <div className="flex flex-wrap items-end gap-3">
+              {!isModules && (
               <label className="flex flex-col gap-1.5 text-sm font-bold">
                 Kategori
                 <select name="category" defaultValue={course.category_code} className={`${inputClass.replace("w-full", "")} w-[120px]`}>
@@ -60,7 +81,9 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
                   ))}
                 </select>
               </label>
+              )}
               <TextField label="Navn" name="name" required maxLength={80} defaultValue={course.name} className="min-w-[240px] flex-1" />
+              {!isModules && (
               <TextField
                 label="Teori: antal lektioner"
                 name="theoryLessons"
@@ -70,16 +93,19 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
                 defaultValue={course.theory_lessons}
                 className="w-[180px]"
               />
+              )}
             </div>
+            {!isModules && (
             <p className="text-[13px] text-muted">
               Teori tælles op, når læreren scanner elevens QR-kode og vælger &quot;Teori&quot;. 0 = ingen teori i forløbet.
             </p>
+            )}
             <label className="flex items-center gap-2.5 text-[15px]">
               <input type="checkbox" name="active" defaultChecked={course.active} className="size-[18px] accent-accent" />
               I brug (kan vælges, når en elev oprettes)
             </label>
           </ActionForm>
-          {!lessons.length && (
+          {(isModules || !lessons.length) && (
             <ActionForm action={deleteCourse} submitLabel="Slet forløbet" pendingLabel="…" primary={false} confirmText={`Slet forløbet ${course.name}?`}>
               <input type="hidden" name="id" value={course.id} />
             </ActionForm>
@@ -87,6 +113,9 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
         </details>
       )}
 
+      {isModules && <ModuleList modules={modules} isAdmin={isAdmin} />}
+
+      {!isModules && (
       <ol className="flex flex-col gap-3" data-testid="course-lessons">
         {lessons.map((l, i) => (
           <li
@@ -145,9 +174,10 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
           </li>
         ))}
       </ol>
-      {!lessons.length && <p className="text-muted">Ingen lektioner endnu.</p>}
+      )}
+      {!isModules && !lessons.length && <p className="text-muted">Ingen lektioner endnu.</p>}
 
-      {isAdmin && (
+      {isAdmin && !isModules && (
         <Box title="Ny lektion">
           <ActionForm action={addLesson} submitLabel="Tilføj lektion" className="flex flex-col gap-3">
             <input type="hidden" name="courseId" value={course.id} />

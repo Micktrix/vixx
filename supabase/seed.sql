@@ -264,6 +264,9 @@ insert into public.course_lessons (school_id, course_id, sort_order, number, kin
 
 update public.courses set theory_lessons = 8 where id = '00000000-0000-4000-ab00-000000000011';
 
+-- Trin E8: et B-forløb som modulplan (Færdselsstyrelsen, version 1.1).
+select public.create_module_course('00000000-0000-4000-a000-000000000001', 'B-1.1', 'B – modulplan');
+
 insert into public.teams (id, school_id, name, course_id, starts_on)
 values ('00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-a000-000000000001', 'C-hold uge 48',
         '00000000-0000-4000-ab00-000000000011', current_date - 3);

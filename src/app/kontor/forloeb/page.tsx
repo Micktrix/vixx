@@ -5,13 +5,16 @@ import { Pill } from "@/components/pill";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { createCourse } from "./actions";
+import { createCourse, createModuleCourse } from "./actions";
 
 type CourseRow = {
   id: string;
   name: string;
   category_code: string;
   active: boolean;
+  plan_kind: "lessons" | "modules";
+  plan_version: string | null;
+  course_modules: { min_theory: number; min_driving: number }[];
   course_lessons: { lesson_count: number; active: boolean }[];
 };
 
@@ -23,7 +26,7 @@ export default async function CoursesPage() {
   const [{ data }, { data: categories }] = await Promise.all([
     supabase
       .from("courses")
-      .select("id, name, category_code, active, course_lessons(lesson_count, active)")
+      .select("id, name, category_code, active, plan_kind, plan_version, course_modules(min_theory, min_driving), course_lessons(lesson_count, active)")
       .eq("school_id", membership.schoolId)
       .order("name"),
     supabase.from("license_categories").select("code, name").order("sort_order"),
@@ -60,6 +63,25 @@ export default async function CoursesPage() {
         </Box>
       )}
 
+      {isAdmin && (
+        <Box title="Nyt forløb fra modulplanen">
+          <ActionForm action={createModuleCourse} submitLabel="Opret modulforløb" className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1.5 text-sm font-bold">
+                Modulplan
+                <select name="template" defaultValue="B-1.1" className={`${inputClass.replace("w-full", "")} w-[260px]`}>
+                  <option value="B-1.1">B · version 1.1 (april 2026)</option>
+                </select>
+              </label>
+              <TextField label="Navn" name="name" required maxLength={80} placeholder="Fx B – modulplan" className="min-w-[240px] flex-1" />
+            </div>
+            <p className="text-[13px] text-muted">
+              Modulerne, minimum og emnerne lægges ind fra Færdselsstyrelsens modulplan og kan rettes bagefter.
+            </p>
+          </ActionForm>
+        </Box>
+      )}
+
       {used.map((c) => (
         <section key={c.code} className="flex flex-col gap-2" data-testid="course-category">
           <h2 className="text-lg font-bold">
@@ -80,7 +102,9 @@ export default async function CoursesPage() {
                   >
                     <b className="text-[17px]">{k.name}</b>
                     <span className="text-sm text-muted">
-                      {lessons.length} lektioner · {periods} × 45 min.
+                      {k.plan_kind === "modules"
+                        ? `Modulplan ${k.plan_version} · ${k.course_modules.length} moduler · Min. ${k.course_modules.reduce((n, m) => n + m.min_theory, 0)} teori + ${k.course_modules.reduce((n, m) => n + m.min_driving, 0)} kørsel`
+                        : `${lessons.length} lektioner · ${periods} × 45 min.`}
                     </span>
                     {!k.active && (
                       <span>

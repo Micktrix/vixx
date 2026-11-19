@@ -32,17 +32,41 @@ export async function createCourse(_prev: ActionState, formData: FormData): Prom
   redirect(`${PAGE}/${data.id}`);
 }
 
+// Nyt forløb fra Færdselsstyrelsens modulplan (moduler med minimum og emner). Databasen lægger modulerne ind.
+export async function createModuleCourse(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const name = text(formData, "name");
+  if (!name) return { error: "Skriv et navn." };
+  if (name.length > 80) return { error: "Navnet er for langt." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_module_course", {
+    p_school_id: membership.schoolId,
+    p_template: text(formData, "template"),
+    p_name: name,
+  });
+  if (error?.code === "23505") return { error: `Forløbet "${name}" findes allerede.` };
+  if (error || !data) return { error: "Forløbet kunne ikke oprettes. Prøv igen." };
+  revalidatePath(PAGE);
+  redirect(`${PAGE}/${data}`);
+}
+
 export async function updateCourse(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { membership } = await requireRole(["admin"]);
   const name = text(formData, "name");
   if (!name) return { error: "Skriv et navn." };
   if (name.length > 80) return { error: "Navnet er for langt." };
-  const theory = Number(text(formData, "theoryLessons") || 0);
-  if (!Number.isInteger(theory) || theory < 0 || theory > 200) return { error: "Antal teorilektioner skal være mellem 0 og 200." };
+  const patch: Record<string, unknown> = { name, active: formData.get("active") === "on" };
+  // Et modulforløb har fast kategori og ingen teoritæller; felterne findes kun for lektionsforløb.
+  if (formData.has("category")) patch.category_code = text(formData, "category");
+  if (formData.has("theoryLessons")) {
+    const theory = Number(text(formData, "theoryLessons") || 0);
+    if (!Number.isInteger(theory) || theory < 0 || theory > 200) return { error: "Antal teorilektioner skal være mellem 0 og 200." };
+    patch.theory_lessons = theory;
+  }
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("courses")
-    .update({ name, category_code: text(formData, "category"), theory_lessons: theory, active: formData.get("active") === "on" })
+    .update(patch)
     .eq("id", text(formData, "id"))
     .eq("school_id", membership.schoolId)
     .select("id");
@@ -200,4 +224,33 @@ export async function insertTemplate(_prev: ActionState, formData: FormData): Pr
   if (error) return { error: "Lektionerne kunne ikke indsættes. Prøv igen." };
   revalidatePath(`${PAGE}/${courseId}`);
   return { message: `${template.lessons.length} lektioner er indsat. Ret dem til, så de passer.` };
+}
+
+// Ret et modul i et modulforløb: navn, minimum og emner.
+export async function updateModule(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const name = text(formData, "name");
+  if (!name) return { error: "Skriv modulets navn." };
+  if (name.length > 120) return { error: "Navnet er for langt." };
+  const num = (key: string) => Number(text(formData, key) || 0);
+  const [theory, driving, dark] = [num("minTheory"), num("minDriving"), num("minDark")];
+  if (![theory, driving, dark].every((n) => Number.isInteger(n) && n >= 0 && n <= 100)) return { error: "Antal skal være mellem 0 og 100." };
+  if (dark > driving) return { error: "Kørsel i mørke kan ikke være flere end kørsel i alt." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("course_modules")
+    .update({
+      name,
+      min_theory: theory,
+      min_driving: driving,
+      min_dark: dark,
+      topics: String(formData.get("topics") ?? "").replace(/\r\n/g, "\n").trim() || null,
+      notes: text(formData, "notes") || null,
+    })
+    .eq("id", text(formData, "id"))
+    .eq("school_id", membership.schoolId)
+    .select("course_id, number");
+  if (error || !data?.length) return { error: "Modulet kunne ikke gemmes. Prøv igen." };
+  revalidatePath(`${PAGE}/${data[0].course_id}`);
+  return { message: `Modul ${data[0].number} er gemt.` };
 }

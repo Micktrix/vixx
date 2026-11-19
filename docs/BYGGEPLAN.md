@@ -237,6 +237,20 @@ erstatter papirets lektionsplan med dato og to underskrifter.
     får eleven begge planer. EU-modulerne afsluttes og underskrives på samme måde (lærerens gemte underskrift,
     dato, navn), og hver plan har sin egen PDF og sine egne versioner. Det endelige indhold venter på skolens
     EU/AMU-blanketter.
+- Opdeling i små dele (19. nov. 2026):
+  1. Modulforløb B: forløb som moduler fra skabelon, admin retter, alle på skolen ser, eleven ser sit eget.
+     **Bygget 19. nov. 2026:** `courses.plan_kind` ('lessons'/'modules'), `plan_version`, `min_days` og tabellen
+     `course_modules` (nummer, navn, min. teori, min. kørsel, heraf i mørke, emner, note). Funktionen
+     `create_module_course(skole, 'B-1.1', navn)` lægger B-planens 5 moduler ind (emner fra PDF'en version 1.1).
+     Et forløb er enten lektioner eller moduler og kan ikke skifte. Indstillinger → Forløb → "Nyt forløb fra
+     modulplanen".
+  2. Skabeloner for C, C/E og D (og senere EU-moduler).
+  3. Eleven på modul: aktuelt modul og opstartsdato; scanning tæller teori/kørsel i modulet; elevens app viser
+     modulerne.
+  4. Afslut modul: minimum-tjek, ekstra lektioner, selvstudie, "Overført fra lektionsplan", undervisende kørelærere.
+  5. Lærerskift, repetitionslektioner, manuelt gear (kode 78) og skolens oplysninger.
+  6. PDF: upload af styrelsens PDF, feltkortlægning, udfyldning og gemte versioner.
+  7. Tegnet underskrift i PDF'en (venter på Færdselsstyrelsen).
 - Første plan, før Michaels beslutning: Vixx udfylder den officielle PDF (stamdata, moduler, datoer,
   lærernavne), og læreren skriver under med kuglepen eller med digitalt ID i Adobe. Den tegnede underskrift,
   som Vixx lægger på automatisk, bygges først, når Færdselsstyrelsen har bekræftet den skriftligt.
