@@ -4,9 +4,15 @@
 export type PlanModule = { id: string; number: number; name: string; min_theory: number; min_driving: number; min_dark: number };
 export type ModuleCount = { course_module_id: string; kind: "driving" | "theory"; lesson_count: number; dark: boolean; lesson_date: string };
 export type ModuleCompletion = {
+  id: string;
   course_module_id: string;
+  module_number: number;
   completed_on: string;
+  instructor_id: string | null; // null = gæstelærer uden app, registreret af admin
   instructor_name: string;
+  comment: string | null;
+  annulled_at: string | null; // annulleret af admin; tæller ikke
+  annul_reason: string | null;
   transferred: boolean;
   self_study: string | null;
   extra_theory: number;
@@ -33,7 +39,8 @@ export function moduleProgress(modules: PlanModule[], counts: ModuleCount[], com
       const dark = sum((c) => c.kind === "driving" && c.dark);
       const startedOn = own.map((c) => c.lesson_date).sort()[0] ?? null;
       const reached = theory >= m.min_theory && driving >= m.min_driving && dark >= m.min_dark;
-      return { ...m, theory, driving, dark, startedOn, reached, completed: completions.find((c) => c.course_module_id === m.id) ?? null };
+      const completed = completions.find((c) => c.course_module_id === m.id && !c.annulled_at) ?? null;
+      return { ...m, theory, driving, dark, startedOn, reached, completed };
     });
 }
 
@@ -45,7 +52,7 @@ export function suggestedModule(progress: ModuleProgress[]): ModuleProgress | un
 
 // Fx "Afsluttet 19. nov. 2026 · Lars Jensen · 2 ekstra kørsel".
 export function completionText(c: ModuleCompletion, formatDate: (iso: string) => string): string {
-  const parts = [`Afsluttet ${formatDate(c.completed_on)}`, c.instructor_name];
+  const parts = [`Afsluttet ${formatDate(c.completed_on)}`, c.instructor_id ? c.instructor_name : `${c.instructor_name} (gæstelærer)`];
   if (c.extra_theory) parts.push(`${c.extra_theory} ekstra teori`);
   if (c.extra_driving) parts.push(`${c.extra_driving} ekstra kørsel`);
   if (c.transferred) parts.push("overført fra lektionsplan");

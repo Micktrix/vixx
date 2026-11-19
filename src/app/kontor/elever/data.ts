@@ -43,7 +43,7 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, instructor_name), module_completions(course_module_id, completed_on, instructor_name, transferred, self_study, extra_theory, extra_driving)",
+        "id, user_id, team_id, course_id, service_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
@@ -108,7 +108,7 @@ export async function loadStudents(schoolId: string) {
 // Modulforløb: andelen af moduler, der er afsluttet.
 export function progress(student: StudentInfo, course: CourseInfo | undefined) {
   if (course?.modules.length) {
-    const completed = student.moduleCompletions.filter((c) => course.modules.some((m) => m.id === c.course_module_id)).length;
+    const completed = student.moduleCompletions.filter((c) => !c.annulled_at && course.modules.some((m) => m.id === c.course_module_id)).length;
     return { done: completed, total: course.modules.length, share: completed / course.modules.length };
   }
   const total = course?.lessons.length ?? 0;

@@ -61,9 +61,9 @@ select throws_ok(
   $$insert into public.module_signoffs (school_id, student_id, course_module_id, kind, lesson_count, instructor_id)
     select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', b2, 'theory', 1, '00000000-0000-4000-a200-000000000011' from ids$$,
   '23514', null, 'Der kan ikke tælles i et afsluttet modul');
-select throws_ok(
-  $$update public.module_completions set extra_theory = 5 where course_module_id = (select b2 from ids)$$,
-  '42501', null, 'En afslutning kan ikke rettes');
+update public.module_completions set extra_theory = 5 where course_module_id = (select b2 from ids);
+select is((select extra_theory from public.module_completions where course_module_id = (select b2 from ids)), 0,
+  'Læreren kan ikke rette en afslutning');
 select throws_ok(
   $$delete from public.module_completions where course_module_id = (select b2 from ids)$$,
   '42501', null, 'En afslutning kan ikke slettes');

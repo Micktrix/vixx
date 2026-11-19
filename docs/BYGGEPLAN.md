@@ -264,6 +264,11 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      eller slettes. Der kan ikke tælles i et afsluttet modul. Aktuelt modul = første, der ikke er afsluttet.
      Undervisende kørelærere vises på kontorets elevside (udledt af tællinger og afslutninger). Underskriften
      kommer med PDF'en.
+  4b. **Bygget 19. nov. 2026** (aftalt med Michael): admin kan annullere en fejlagtig afslutning med
+     begrundelse på kontorets elevside. Den slettes ikke, men markeres annulleret (hvem, hvornår, hvorfor), og
+     modulet er åbent igen. Kun det seneste afsluttede modul kan annulleres. Admin kan også afslutte et modul
+     for en gæstelærer uden app (navn, dato, kommentar). Admin afgiver ikke erklæringen; gæstelæreren skriver
+     under med kuglepen på den udskrevne modulplan, og Vixx sætter aldrig en tegnet underskrift på.
   5. Lærerskift, repetitionslektioner, manuelt gear (kode 78) og skolens oplysninger.
   6. PDF: upload af styrelsens PDF, feltkortlægning, udfyldning og gemte versioner.
   7. Tegnet underskrift i PDF'en (venter på Færdselsstyrelsen).

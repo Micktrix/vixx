@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { completionText, moduleProgress, progressText } from "@/lib/module-progress";
+import { completionText, moduleProgress, progressText, suggestedModule } from "@/lib/module-progress";
 import { notFound } from "next/navigation";
 import { Box } from "@/components/box";
 import { ActionForm, CheckChip, TextField } from "@/components/form";
@@ -11,6 +11,8 @@ import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import {
   addTheory,
+  annulModuleCompletion,
+  completeModuleForGuest,
   correctTheory,
   crossOffLesson,
   finishStudent,
@@ -46,6 +48,10 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const p = progress(student, course);
   const missing = course?.lessons.filter((l) => !student.signoffs.has(l.id)) ?? [];
   const isAdmin = membership.role === "admin";
+  const modules = course?.modules.length ? moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions) : [];
+  const currentModule = suggestedModule(modules);
+  const lastCompleted = [...modules].reverse().find((m) => m.completed);
+  const annulled = student.moduleCompletions.filter((c) => c.annulled_at).sort((a, b) => a.module_number - b.module_number);
   const theory = theoryProgress(student, course);
   const theoryRows = ((booking?.theory_signoffs ?? []) as { id: string; lesson_count: number; lesson_date: string; instructor_name: string; comment: string | null }[]).sort(
     (a, b) => b.lesson_date.localeCompare(a.lesson_date),
@@ -82,7 +88,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         <Box title="Modulplan" hint={`${p.done} af ${p.total} moduler afsluttet`}>
           <ProgressBar share={p.share} />
           <ol className="flex flex-col gap-1.5" data-testid="student-modules">
-            {moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions).map((m) => (
+            {modules.map((m) => (
               <li key={m.id} className={`rounded-xl border px-3 py-2 text-[15px] ${m.completed ? "border-ok/30 bg-ok-bg" : "border-line"}`}>
                 <b>
                   Modul {m.number} – {m.name}
@@ -95,11 +101,37 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
                   <span className="block text-[13px] text-ok">
                     {completionText(m.completed, formatDate)}
                     {m.completed.self_study && ` · Selvstudie: ${m.completed.self_study}`}
+                    {m.completed.comment && ` · ${m.completed.comment}`}
                   </span>
+                )}
+                {isAdmin && m.id === lastCompleted?.id && m.completed && (
+                  <details className="mt-1 text-sm">
+                    <summary className="cursor-pointer font-semibold text-muted hover:text-ink">Annullér afslutningen</summary>
+                    <ActionForm
+                      action={annulModuleCompletion}
+                      submitLabel="Annullér"
+                      pendingLabel="…"
+                      primary={false}
+                      confirmText={`Annullér afslutningen af modul ${m.number}? Modulet bliver åbent igen.`}
+                      className="mt-2 flex flex-wrap items-end gap-2"
+                    >
+                      <input type="hidden" name="id" value={m.completed.id} />
+                      <TextField label="Begrundelse" name="reason" required maxLength={500} placeholder="Fx afsluttet på den forkerte elev" className="min-w-[240px] flex-1" />
+                    </ActionForm>
+                  </details>
                 )}
               </li>
             ))}
           </ol>
+          {annulled.length > 0 && (
+            <ul className="text-[13px] text-muted" data-testid="annulled-completions">
+              {annulled.map((c) => (
+                <li key={c.id}>
+                  Annulleret: modul {c.module_number}, afsluttet {formatDate(c.completed_on)} af {c.instructor_name} · {c.annul_reason}
+                </li>
+              ))}
+            </ul>
+          )}
           {teachersOf(student).length > 0 && (
             <p className="text-sm" data-testid="module-teachers">
               <span className="text-muted">Undervisende kørelærere:</span> {teachersOf(student).join(", ")}
@@ -158,6 +190,37 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               );
             })}
           </ol>
+        </Box>
+      )}
+
+      {isAdmin && currentModule && (
+        <Box title={`Afslut modul ${currentModule.number} for en gæstelærer`} hint="Når en gæstelærer uden Vixx har afsluttet modulet">
+          <ActionForm
+            action={completeModuleForGuest}
+            submitLabel={`Afslut modul ${currentModule.number}`}
+            confirmText={`Afslut modul ${currentModule.number} for gæstelæreren?`}
+            className="flex flex-col gap-3"
+          >
+            <input type="hidden" name="studentId" value={student.id} />
+            <input type="hidden" name="moduleId" value={currentModule.id} />
+            <p className="text-sm">
+              {progressText(currentModule)}
+              {currentModule.reached ? " · minimum er nået" : " · minimum er ikke nået: kun muligt, hvis eleven er overført fra lektionsplanen"}
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <TextField label="Gæstelærerens navn" name="guestName" required maxLength={120} className="min-w-[200px] flex-1" />
+              <TextField label="Dato" name="date" type="date" required defaultValue={todayDk()} max={todayDk()} />
+            </div>
+            <TextField label="Kommentar" name="comment" required maxLength={500} placeholder="Fx vikar uden adgang til Vixx" />
+            <TextField label="Selvstudie (valgfrit)" name="selfStudy" maxLength={500} />
+            <label className="flex items-center gap-2.5 text-[15px]">
+              <input type="checkbox" name="transferred" className="size-[18px] accent-accent" />
+              Overført fra lektionsplan
+            </label>
+            <p className="text-[13px] text-muted">
+              Erklæringen afgiver gæstelæreren ved at skrive under på den udskrevne modulplan. Vixx sætter ingen underskrift på.
+            </p>
+          </ActionForm>
         </Box>
       )}
 
@@ -331,10 +394,10 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
 
 // Undervisende kørelærere i modulplanen: alle, der har talt lektioner eller afsluttet et modul, i den rækkefølge
 // de første gang havde eleven.
-function teachersOf(student: { moduleCounts: { instructor_name?: string; lesson_date: string }[]; moduleCompletions: { instructor_name: string; completed_on: string }[] }) {
+function teachersOf(student: { moduleCounts: { instructor_name?: string; lesson_date: string }[]; moduleCompletions: { instructor_name: string; completed_on: string; annulled_at: string | null }[] }) {
   const seen = [
     ...student.moduleCounts.map((c) => ({ name: c.instructor_name ?? "", date: c.lesson_date })),
-    ...student.moduleCompletions.map((c) => ({ name: c.instructor_name, date: c.completed_on })),
+    ...student.moduleCompletions.filter((c) => !c.annulled_at).map((c) => ({ name: c.instructor_name, date: c.completed_on })),
   ]
     .filter((x) => x.name)
     .sort((a, b) => a.date.localeCompare(b.date));
