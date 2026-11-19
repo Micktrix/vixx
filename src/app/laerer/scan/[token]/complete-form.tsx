@@ -1,0 +1,61 @@
+"use client";
+
+import { ResultBox, useFormAction } from "@/components/form";
+import { inputClass } from "@/components/styles";
+import type { ModuleProgress } from "@/lib/module-progress";
+import { completeModule } from "./actions";
+
+const check = "size-[20px] shrink-0 accent-accent";
+
+// Afslut elevens aktuelle modul: erklæring, evt. selvstudie og "Overført fra lektionsplan". Vixx gemmer dato og
+// lærer og regner ekstra lektioner ud. Afslutningen kan ikke fortrydes.
+export function CompleteForm({ token, studentId, module: m }: { token: string; studentId: string; module: ModuleProgress }) {
+  const { state, onSubmit, pending } = useFormAction(completeModule);
+  const extraTheory = Math.max(m.theory - m.min_theory, 0);
+  const extraDriving = Math.max(m.driving - m.min_driving, 0);
+
+  return (
+    <details
+      open={m.reached}
+      className={`rounded-[20px] border p-4 ${m.reached ? "border-ok/30 bg-ok-bg" : "border-line bg-surface"}`}
+      data-testid="complete-module"
+    >
+      <summary className="cursor-pointer font-bold">
+        {m.reached ? `Modul ${m.number} er klar til at blive afsluttet` : `Afslut modul ${m.number}`}
+      </summary>
+      <form onSubmit={onSubmit} className="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="token" value={token} />
+        <input type="hidden" name="studentId" value={studentId} />
+        <input type="hidden" name="moduleId" value={m.id} />
+        {m.reached ? (
+          <p className="text-sm">
+            Minimum er nået. Ekstra lektioner: {extraTheory} teori og {extraDriving} kørsel.
+          </p>
+        ) : (
+          <p className="text-sm text-bad">Minimum er ikke nået. Modulet kan kun afsluttes, hvis eleven er overført fra lektionsplanen.</p>
+        )}
+        <label className="flex flex-col gap-1.5 text-sm font-bold">
+          Selvstudie <span className="font-normal text-muted">(valgfrit: antal lektioner og afsnit)</span>
+          <input name="selfStudy" maxLength={500} className={inputClass} />
+        </label>
+        <label className="flex items-center gap-2.5 text-[15px]">
+          <input type="checkbox" name="transferred" className={check} />
+          Overført fra lektionsplan
+        </label>
+        <label className="flex items-start gap-2.5 text-[15px]">
+          <input type="checkbox" name="declaration" required className={`${check} mt-0.5`} />
+          Jeg erklærer, at eleven har opnået de nødvendige kompetencer og opfylder målene i undervisningsplanen for modulet.
+        </label>
+        <button
+          type="submit"
+          disabled={pending}
+          className="flex h-12 w-full items-center justify-center rounded-[14px] border border-accent bg-accent text-[15px] font-bold text-ink disabled:opacity-60"
+        >
+          {pending ? "Afslutter …" : `Afslut modul ${m.number}`}
+        </button>
+        <p className="text-[13px] text-muted">Dato og dit navn gemmes. Afslutningen kan ikke fortrydes.</p>
+        <ResultBox state={state} />
+      </form>
+    </details>
+  );
+}

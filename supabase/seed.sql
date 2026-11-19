@@ -280,6 +280,13 @@ from (values (1, 'theory', 4, 10), (1, 'theory', 3, 8), (2, 'theory', 2, 3), (2,
 join public.course_modules m on m.number = v.module
 join public.courses c on c.id = m.course_id and c.name = 'B – modulplan';
 
+-- Lars har afsluttet Bents modul 1 (trin E8, del 4).
+insert into public.module_completions (school_id, student_id, course_module_id, completed_on, instructor_id, instructor_name, completed_by, declaration)
+select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', m.id, current_date - 8,
+       '00000000-0000-4000-a200-000000000011', 'Lars Jensen', '00000000-0000-4000-a100-000000000011', true
+from public.course_modules m join public.courses c on c.id = m.course_id
+where c.name = 'B – modulplan' and m.number = 1;
+
 insert into public.teams (id, school_id, name, course_id, starts_on)
 values ('00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-a000-000000000001', 'C-hold uge 48',
         '00000000-0000-4000-ab00-000000000011', current_date - 3);

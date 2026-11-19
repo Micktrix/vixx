@@ -3,6 +3,15 @@
 
 export type PlanModule = { id: string; number: number; name: string; min_theory: number; min_driving: number; min_dark: number };
 export type ModuleCount = { course_module_id: string; kind: "driving" | "theory"; lesson_count: number; dark: boolean; lesson_date: string };
+export type ModuleCompletion = {
+  course_module_id: string;
+  completed_on: string;
+  instructor_name: string;
+  transferred: boolean;
+  self_study: string | null;
+  extra_theory: number;
+  extra_driving: number;
+};
 
 export type ModuleProgress = PlanModule & {
   theory: number;
@@ -10,9 +19,10 @@ export type ModuleProgress = PlanModule & {
   dark: number;
   startedOn: string | null; // dato for første tælling i modulet = opstart
   reached: boolean; // minimum for teori, kørsel og mørke er nået
+  completed: ModuleCompletion | null; // læreren har afsluttet modulet
 };
 
-export function moduleProgress(modules: PlanModule[], counts: ModuleCount[]): ModuleProgress[] {
+export function moduleProgress(modules: PlanModule[], counts: ModuleCount[], completions: ModuleCompletion[] = []): ModuleProgress[] {
   return [...modules]
     .sort((a, b) => a.number - b.number)
     .map((m) => {
@@ -22,13 +32,24 @@ export function moduleProgress(modules: PlanModule[], counts: ModuleCount[]): Mo
       const driving = sum((c) => c.kind === "driving");
       const dark = sum((c) => c.kind === "driving" && c.dark);
       const startedOn = own.map((c) => c.lesson_date).sort()[0] ?? null;
-      return { ...m, theory, driving, dark, startedOn, reached: theory >= m.min_theory && driving >= m.min_driving && dark >= m.min_dark };
+      const reached = theory >= m.min_theory && driving >= m.min_driving && dark >= m.min_dark;
+      return { ...m, theory, driving, dark, startedOn, reached, completed: completions.find((c) => c.course_module_id === m.id) ?? null };
     });
 }
 
-// Vixx foreslår første modul, hvor minimum ikke er nået (indtil "Afslut modul" er bygget). Alle nået → sidste.
+// Elevens aktuelle modul: første modul, der ikke er afsluttet (modulerne afsluttes i rækkefølge).
+// Undefined, når alle moduler er afsluttet.
 export function suggestedModule(progress: ModuleProgress[]): ModuleProgress | undefined {
-  return progress.find((m) => !m.reached) ?? progress[progress.length - 1];
+  return progress.find((m) => !m.completed);
+}
+
+// Fx "Afsluttet 19. nov. 2026 · Lars Jensen · 2 ekstra kørsel".
+export function completionText(c: ModuleCompletion, formatDate: (iso: string) => string): string {
+  const parts = [`Afsluttet ${formatDate(c.completed_on)}`, c.instructor_name];
+  if (c.extra_theory) parts.push(`${c.extra_theory} ekstra teori`);
+  if (c.extra_driving) parts.push(`${c.extra_driving} ekstra kørsel`);
+  if (c.transferred) parts.push("overført fra lektionsplan");
+  return parts.filter(Boolean).join(" · ");
 }
 
 // Fx "Teori 7 af 7 · Kørsel 2 af 3" (mørke kun, når modulet har mørke).

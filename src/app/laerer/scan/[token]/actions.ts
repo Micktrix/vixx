@@ -109,3 +109,32 @@ export async function countModuleLessons(_prev: ActionState, formData: FormData)
   revalidatePath("/elev", "layout");
   redirect(`/laerer/scan/${token}?kvitteret=Modul`);
 }
+
+// Afslut elevens modul (trin E8): erklæringen skal være sat. Databasen tjekker minimum (medmindre "Overført
+// fra lektionsplan") og rækkefølgen, regner ekstra lektioner ud og gemmer dato og lærer.
+export async function completeModule(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, membership } = await requireRole(["instructor"]);
+  const text = (k: string) => String(formData.get(k) ?? "").trim();
+  if (formData.get("declaration") !== "on") return { error: "Sæt flueben ved erklæringen." };
+  if (text("selfStudy").length > 500) return { error: "Selvstudie er for langt." };
+  const supabase = await createClient();
+  const { data: instructor } = await supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single();
+  if (!instructor) return { error: "Du har ikke adgang til at afslutte moduler." };
+  const { error } = await supabase.from("module_completions").insert({
+    school_id: membership.schoolId,
+    student_id: text("studentId"),
+    course_module_id: text("moduleId"),
+    module_number: 0, // sættes af databasen fra modulet
+    instructor_id: instructor.id,
+    declaration: true,
+    transferred: formData.get("transferred") === "on",
+    self_study: text("selfStudy") || null,
+  });
+  if (error?.code === "23505") return { error: "Modulet er allerede afsluttet." };
+  const failed = dbError(error, "Modulet kunne ikke afsluttes. Prøv igen.");
+  if (failed) return failed;
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/kontor", "layout");
+  revalidatePath("/elev", "layout");
+  redirect(`/laerer/scan/${text("token")}?kvitteret=Afsluttet`);
+}

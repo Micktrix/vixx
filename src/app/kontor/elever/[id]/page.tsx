@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { moduleProgress, progressText } from "@/lib/module-progress";
+import { completionText, moduleProgress, progressText } from "@/lib/module-progress";
 import { notFound } from "next/navigation";
 import { Box } from "@/components/box";
 import { ActionForm, CheckChip, TextField } from "@/components/form";
@@ -79,11 +79,11 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
       </header>
 
       {course && course.modules.length > 0 && (
-        <Box title="Modulplan" hint={`${p.done} af ${p.total} moduler med minimum nået`}>
+        <Box title="Modulplan" hint={`${p.done} af ${p.total} moduler afsluttet`}>
           <ProgressBar share={p.share} />
           <ol className="flex flex-col gap-1.5" data-testid="student-modules">
-            {moduleProgress(course.modules, student.moduleCounts).map((m) => (
-              <li key={m.id} className={`rounded-xl border px-3 py-2 text-[15px] ${m.reached ? "border-ok/30 bg-ok-bg" : "border-line"}`}>
+            {moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions).map((m) => (
+              <li key={m.id} className={`rounded-xl border px-3 py-2 text-[15px] ${m.completed ? "border-ok/30 bg-ok-bg" : "border-line"}`}>
                 <b>
                   Modul {m.number} – {m.name}
                 </b>
@@ -91,9 +91,20 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
                   {progressText(m)}
                   {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
                 </span>
+                {m.completed && (
+                  <span className="block text-[13px] text-ok">
+                    {completionText(m.completed, formatDate)}
+                    {m.completed.self_study && ` · Selvstudie: ${m.completed.self_study}`}
+                  </span>
+                )}
               </li>
             ))}
           </ol>
+          {teachersOf(student).length > 0 && (
+            <p className="text-sm" data-testid="module-teachers">
+              <span className="text-muted">Undervisende kørelærere:</span> {teachersOf(student).join(", ")}
+            </p>
+          )}
         </Box>
       )}
 
@@ -316,4 +327,16 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
       </Box>
     </>
   );
+}
+
+// Undervisende kørelærere i modulplanen: alle, der har talt lektioner eller afsluttet et modul, i den rækkefølge
+// de første gang havde eleven.
+function teachersOf(student: { moduleCounts: { instructor_name?: string; lesson_date: string }[]; moduleCompletions: { instructor_name: string; completed_on: string }[] }) {
+  const seen = [
+    ...student.moduleCounts.map((c) => ({ name: c.instructor_name ?? "", date: c.lesson_date })),
+    ...student.moduleCompletions.map((c) => ({ name: c.instructor_name, date: c.completed_on })),
+  ]
+    .filter((x) => x.name)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return [...new Set(seen.map((x) => x.name))];
 }

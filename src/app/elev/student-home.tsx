@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { formatDate } from "@/lib/dates";
-import { moduleProgress, type ModuleCount, type PlanModule } from "@/lib/module-progress";
+import { moduleProgress, type ModuleCompletion, type ModuleCount, type PlanModule } from "@/lib/module-progress";
 import { StudentModules } from "./student-modules";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../laerer/screen";
@@ -51,7 +51,7 @@ export async function StudentHome({
   const supabase = await createClient();
   const { data: student } = await supabase
     .from("students")
-    .select("id, teams(name), lesson_signoffs(id, course_lesson_id, lesson_number, instructor_name, lesson_date, skipped_items, confirmed_at), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date), courses(name, theory_lessons, plan_kind, course_modules(id, number, name, min_theory, min_driving, min_dark, topics), course_lessons(id, number, kind, lesson_count, location, content, notes, control_topic, sort_order, active))")
+    .select("id, teams(name), lesson_signoffs(id, course_lesson_id, lesson_number, instructor_name, lesson_date, skipped_items, confirmed_at), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date), module_completions(course_module_id, completed_on, instructor_name, transferred, self_study, extra_theory, extra_driving), courses(name, theory_lessons, plan_kind, course_modules(id, number, name, min_theory, min_driving, min_dark, topics), course_lessons(id, number, kind, lesson_count, location, content, notes, control_topic, sort_order, active))")
     .eq("id", studentId)
     .maybeSingle();
   if (!student) return null;
@@ -74,7 +74,11 @@ export async function StudentHome({
         <StudentModules
           courseName={course.name}
           teamName={team?.name ?? null}
-          modules={moduleProgress(course.course_modules, (student.module_signoffs ?? []) as ModuleCount[])}
+          modules={moduleProgress(
+            course.course_modules,
+            (student.module_signoffs ?? []) as ModuleCount[],
+            (student.module_completions ?? []) as ModuleCompletion[],
+          )}
           topics={new Map(course.course_modules.map((m) => [m.id, m.topics]))}
         />
       </Screen>

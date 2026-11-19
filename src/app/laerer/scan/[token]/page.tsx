@@ -1,6 +1,15 @@
 import { notFound } from "next/navigation";
 import { formatDate } from "@/lib/dates";
-import { moduleProgress, progressText, suggestedModule, type ModuleCount, type PlanModule } from "@/lib/module-progress";
+import {
+  completionText,
+  moduleProgress,
+  progressText,
+  suggestedModule,
+  type ModuleCompletion,
+  type ModuleCount,
+  type PlanModule,
+} from "@/lib/module-progress";
+import { CompleteForm } from "./complete-form";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../../screen";
 import { getTeacher } from "../../teacher-data";
@@ -21,7 +30,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, is_demo, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date), courses(name, theory_lessons, plan_kind, course_modules(id, number, name, min_theory, min_driving, min_dark), course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
+      "id, service_id, active, is_demo, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date), module_completions(course_module_id, completed_on, instructor_name, transferred, self_study, extra_theory, extra_driving), courses(name, theory_lessons, plan_kind, course_modules(id, number, name, min_theory, min_driving, min_dark), course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
@@ -59,27 +68,39 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const signed = typeof sp.kvitteret === "string" ? sp.kvitteret : null;
 
   if (course?.plan_kind === "modules") {
-    const progress = moduleProgress(course.course_modules, (student.module_signoffs ?? []) as ModuleCount[]);
+    const progress = moduleProgress(
+      course.course_modules,
+      (student.module_signoffs ?? []) as ModuleCount[],
+      (student.module_completions ?? []) as ModuleCompletion[],
+    );
     const suggested = suggestedModule(progress);
     return (
       <Screen title={name} sub={[team?.name, course.name].filter(Boolean).join(" · ")} back={close}>
         {signed && (
           <p role="status" className="rounded-[16px] border border-ok/30 bg-ok-bg px-4 py-3 text-[15px]" data-testid="signoff-done">
-            <b className="text-ok">✓ Lektionerne er talt med i modulet.</b>
+            <b className="text-ok">{signed === "Afsluttet" ? "✓ Modulet er afsluttet." : "✓ Lektionerne er talt med i modulet."}</b>
           </p>
         )}
         <ol className="flex flex-col gap-1.5 rounded-[20px] border border-line bg-surface p-4" data-testid="scan-modules">
           {progress.map((m) => (
             <li key={m.id} className="text-[15px]">
-              <b>Modul {m.number}</b> {m.reached && <span className="text-ok">✓</span>}
+              <b>Modul {m.number}</b> {m.completed && <span className="text-ok">✓</span>}
               <span className="block text-[13px] text-muted">
                 {progressText(m)}
                 {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
               </span>
+              {m.completed && <span className="block text-[13px] text-ok">{completionText(m.completed, formatDate)}</span>}
             </li>
           ))}
         </ol>
-        {suggested && <ModuleForm token={token} studentId={student.id} modules={progress} suggestedId={suggested.id} />}
+        {suggested ? (
+          <>
+            <CompleteForm token={token} studentId={student.id} module={suggested} />
+            <ModuleForm token={token} studentId={student.id} modules={progress.filter((m) => !m.completed)} suggestedId={suggested.id} />
+          </>
+        ) : (
+          <p className="rounded-[16px] bg-ok-bg px-4 py-3 text-[15px] text-ok">Alle moduler er afsluttet.</p>
+        )}
       </Screen>
     );
   }

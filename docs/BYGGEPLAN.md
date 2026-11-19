@@ -257,6 +257,13 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      databasen endnu, ingen skærm). Elevens app, kontorets elevside og elevlisten viser modulerne. Seed: Bent
      Elev (B).
   4. Afslut modul: minimum-tjek, ekstra lektioner, selvstudie, "Overført fra lektionsplan", undervisende kørelærere.
+     **Bygget 19. nov. 2026** (Michael: minimum skal være nået, medmindre "Overført fra lektionsplan"; modulerne
+     afsluttes i rækkefølge; Vixx regner de ekstra lektioner ud): tabellen `module_completions`. Ved scanning
+     viser Vixx "Modul X er klar til at blive afsluttet"; læreren sætter flueben ved erklæringen, evt. selvstudie
+     og "Overført", og trykker "Afslut modul". Dato, lærer, ekstra teori og kørsel gemmes og kan aldrig ændres
+     eller slettes. Der kan ikke tælles i et afsluttet modul. Aktuelt modul = første, der ikke er afsluttet.
+     Undervisende kørelærere vises på kontorets elevside (udledt af tællinger og afslutninger). Underskriften
+     kommer med PDF'en.
   5. Lærerskift, repetitionslektioner, manuelt gear (kode 78) og skolens oplysninger.
   6. PDF: upload af styrelsens PDF, feltkortlægning, udfyldning og gemte versioner.
   7. Tegnet underskrift i PDF'en (venter på Færdselsstyrelsen).
