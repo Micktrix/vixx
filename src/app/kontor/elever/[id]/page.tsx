@@ -132,6 +132,15 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               </li>
             ))}
           </ol>
+          {student.repetitions.length > 0 && (
+            <ul className="text-sm" data-testid="student-repetitions">
+              {student.repetitions.map((r) => (
+                <li key={r.id}>
+                  <b>Repetition</b> {formatDate(r.lesson_date)}: {r.lesson_count} {r.lesson_count === 1 ? "lektion" : "lektioner"} · {r.instructor_name}
+                </li>
+              ))}
+            </ul>
+          )}
           {annulled.length > 0 && (
             <ul className="text-[13px] text-muted" data-testid="annulled-completions">
               {annulled.map((c) => (
@@ -337,7 +346,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             courses={courses}
             teams={teams}
             services={services ?? []}
-            value={{ courseId: student.courseId, teamId: student.teamId, serviceId: student.serviceId, address: student.address }}
+            value={{ courseId: student.courseId, teamId: student.teamId, serviceId: student.serviceId, address: student.address, manualGear: student.manualGear }}
           />
         </ActionForm>
       </Box>

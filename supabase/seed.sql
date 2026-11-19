@@ -286,6 +286,11 @@ from (values (1, 'theory', 4, 10), (1, 'theory', 3, 8), (2, 'theory', 2, 3), (2,
 join public.course_modules m on m.number = v.module
 join public.courses c on c.id = m.course_id and c.name = 'B – modulplan';
 
+-- Bent er med i forsøgsordningen med manuelt gear (kode 78); kørslen i modul 2 var i manuelt gear (del 5).
+update public.students set manual_gear = true where id = '00000000-0000-4000-ad00-000000000033';
+update public.module_signoffs set manual_gear = true
+where student_id = '00000000-0000-4000-ad00-000000000033' and kind = 'driving';
+
 -- Lars har afsluttet Bents modul 1 (trin E8, del 4).
 insert into public.module_completions (school_id, student_id, course_module_id, completed_on, instructor_id, instructor_name, completed_by, declaration)
 select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', m.id, current_date - 8,

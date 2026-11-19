@@ -274,6 +274,15 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      (og når platform-ejeren opretter en skole). Admin kan lægge skolens logo op (PNG/JPEG/WebP, højst 1 MB,
      offentlig bucket `school-logos`, kun serveren lægger op). Logoet vises i kontorets menu og øverst i lærer-
      og elevappen. Om logoet må stå på Færdselsstyrelsens modulplan, er ikke afklaret.
+     **Resten bygget 19. nov. 2026** (aftalt med Michael):
+     - Kode 78 (manuelt gear, kun B): kontoret sætter flueben på eleven. Læreren markerer "Manuelt gear (kode
+       78)" ved kørsel i modul 2–5, og Vixx skriver antallet pr. modul på modulplanen.
+     - Repetitionslektioner efter ikke bestået praktisk prøve: når alle moduler er afsluttet, registrerer
+       læreren dem ved scanning (antal). Dato, navn og en kopi af underskriften (kræves) kommer på planen.
+       Kan ikke ændres eller slettes (tabellen `repetition_lessons`).
+     - Lærerskift: eleverne skifter ofte lærer inden for skolen, og det dækkes af "Undervisende kørelærere".
+       Siden "Oplysninger ved kørelærerskifte" og felterne for skift af køreskole udfyldes i hånden, hvis
+       eleven skifter køreskole.
   6. PDF: upload af styrelsens PDF, feltkortlægning, udfyldning og gemte versioner.
      **6a bygget 19. nov. 2026** (Michael: læreren skal have gemt sin underskrift for at afslutte; kontoret
      taster elevens adresse): Vixx udfylder styrelsens PDF (B, C, C/E og D, version 1.1, ligger i
@@ -283,19 +292,24 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      printer via "Print modulplan" (kontorets elevside) og "Se og print modulplanen" (lærerens scanning);
      eleven kan ikke hente PDF'en. Kopier af underskrifterne (`module_completions.strokes`,
      `module_plan_teachers`) kan ikke læses via API'et; serveren læser dem. Hver ny udgave gemmes i
-     bucketten `module-plans` og `module_plan_versions` og slettes aldrig. Lærerskift, repetition og manuelt
-     gear udfyldes i hånden (del 5). Mangler: 6b (elevens visning) og 6c (nye versioner fra styrelsen).
+     bucketten `module-plans` og `module_plan_versions` og slettes aldrig. Repetition og manuelt gear
+     udfyldes med del 5.
+     **6c (mangler):** admin lægger selv Færdselsstyrelsens PDF'er op (nye versioner og EU-modulplaner).
+     Michael (19. nov. 2026): der skal være plads til flere modulplaner under samme kategori, fx C/E og
+     "C/E med EU", på samme vilkår: hver plan har sin egen PDF, sine egne moduler og sine egne versioner, og en
+     elev kan have begge planer (kontoret vælger EU ved oprettelse eller på holdet).
      "Undervisende kørelærere" (papirets side med alle lærernes underskrifter) viser kun de lærere, der har haft
      eleven, med deres underskrift. Har læreren ingen gemt underskrift, første gang læreren har eleven, sættes
      den på, når læreren gemmer den.
-     Visning og print (Michaels ønske, 19. nov. 2026):
-     - Undervejs: eleven og lærerne kan se den udfyldte modulplan i appen, ved siden af modulvisningen. Eleven
-       får aldrig selve PDF-filen. Siderne vises som billeder uden download, og print er blokeret ("Modulplanen
-       kan kun fremvises i Vixx"). Vandmærke med elevens navn og "Seneste udgave · vist [dato] kl. [tid]".
-     - Print (afklaret 19. nov. 2026): alle lærere, kontoret og admin kan altid printe elevens modulplan, med de datoer,
-       navne og underskrifter der er sat indtil nu. Eleven kan ikke printe. (Færdselsstyrelsens guide tillader,
-       at eleven viser planen som print; skolens regel er strengere.)
-  7. Tegnet underskrift i PDF'en (venter på Færdselsstyrelsen).
+     Visning og print (afklaret med Michael 19. nov. 2026):
+     - Eleven ser ikke selve modulplanen (6b er droppet). Eleven følger sit forløb i appen (moduler, lektioner
+       mod minimum, start- og afslutningsdatoer og lærer), som er de samme oplysninger.
+     - Alle lærere, kontoret og admin kan altid printe elevens modulplan, med de datoer, navne og underskrifter,
+       der er sat indtil nu. Eleven kan ikke hente eller printe den.
+     - Skolen printer den endelige plan, så eleven kan tage den med til den teoretiske og praktiske prøve
+       (planen skal medbringes, og det skal være den seneste udgave). En påmindelse om at printe kan komme med
+       i trin E7 (prøver og tjekliste).
+  7. ~~Tegnet underskrift i PDF'en~~ Bygget med 6a (Færdselsstyrelsen har sagt ok).
 - Første plan, før Michaels beslutning: Vixx udfylder den officielle PDF (stamdata, moduler, datoer,
   lærernavne), og læreren skriver under med kuglepen eller med digitalt ID i Adobe. Den tegnede underskrift,
   som Vixx lægger på automatisk, bygges først, når Færdselsstyrelsen har bekræftet den skriftligt.

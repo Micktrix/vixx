@@ -13,7 +13,7 @@ export function StudentFields({
   courses: CourseInfo[];
   teams: TeamInfo[];
   services: Option[];
-  value?: { courseId?: string; teamId?: string | null; serviceId?: string | null; address?: string | null };
+  value?: { courseId?: string; teamId?: string | null; serviceId?: string | null; address?: string | null; manualGear?: boolean };
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
@@ -57,6 +57,10 @@ export function StudentFields({
       <label className="flex flex-col gap-1.5 text-sm font-bold sm:col-span-3">
         Adresse <span className="font-normal text-muted">(står på modulplanen)</span>
         <input name="address" defaultValue={value?.address ?? ""} maxLength={200} placeholder="Vej 1, 8000 Aarhus C" className={inputClass} />
+      </label>
+      <label className="flex items-center gap-2.5 text-[15px] sm:col-span-3">
+        <input type="checkbox" name="manualGear" defaultChecked={value?.manualGear ?? false} className="size-[18px] accent-accent" />
+        Kode 78: forsøgsordningen med manuelt gear (kun B)
       </label>
     </div>
   );

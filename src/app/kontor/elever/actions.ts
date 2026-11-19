@@ -217,6 +217,7 @@ function readStudent(formData: FormData) {
   if (address.length > 200) return { error: "Adressen er for lang." } as const;
   return {
     address: address || null,
+    manual_gear: formData.get("manualGear") === "on",
     course_id: courseId,
     team_id: text(formData, "teamId") || null,
     service_id: text(formData, "serviceId") || null,

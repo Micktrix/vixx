@@ -18,9 +18,11 @@ type StudentRow = {
   id: string;
   school_id: string;
   address: string | null;
+  manual_gear: boolean;
   profiles: { full_name: string; phone: string } | null;
   courses: { category_code: string; plan_kind: string; plan_version: string | null; course_modules: { id: string; number: number }[] } | null;
-  module_signoffs: { course_module_id: string; lesson_date: string }[];
+  module_signoffs: { course_module_id: string; lesson_date: string; kind: string; lesson_count: number; manual_gear: boolean }[];
+  repetition_lessons: { id: string; lesson_date: string; lesson_count: number }[];
   module_completions: {
     id: string;
     course_module_id: string;
@@ -40,7 +42,7 @@ export async function loadModulePlan(studentId: string) {
   const { data } = await supabase
     .from("students")
     .select(
-      "id, school_id, address, profiles(full_name, phone), courses(category_code, plan_kind, plan_version, course_modules(id, number)), module_signoffs(course_module_id, lesson_date), module_completions(id, course_module_id, completed_on, instructor_name, extra_theory, extra_driving, self_study, transferred, annulled_at), module_plan_teachers(id, instructor_name, first_on)",
+      "id, school_id, address, manual_gear, profiles(full_name, phone), courses(category_code, plan_kind, plan_version, course_modules(id, number)), module_signoffs(course_module_id, lesson_date, kind, lesson_count, manual_gear), repetition_lessons(id, lesson_date, lesson_count), module_completions(id, course_module_id, completed_on, instructor_name, extra_theory, extra_driving, self_study, transferred, annulled_at), module_plan_teachers(id, instructor_name, first_on)",
     )
     .eq("id", studentId)
     .maybeSingle();
@@ -56,9 +58,11 @@ export async function loadModulePlan(studentId: string) {
   const admin = createAdminClient();
   const completions = student.module_completions.filter((c) => !c.annulled_at);
   const teacherRows = [...student.module_plan_teachers].sort((a, b) => a.first_on.localeCompare(b.first_on));
-  const [{ data: completionStrokes }, { data: teacherStrokes }] = await Promise.all([
+  const repetitions = [...student.repetition_lessons].sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
+  const [{ data: completionStrokes }, { data: teacherStrokes }, { data: repetitionStrokes }] = await Promise.all([
     admin.from("module_completions").select("id, strokes").in("id", completions.length ? completions.map((c) => c.id) : [randomUUID()]),
     admin.from("module_plan_teachers").select("id, strokes").in("id", teacherRows.length ? teacherRows.map((t) => t.id) : [randomUUID()]),
+    admin.from("repetition_lessons").select("id, strokes").in("id", repetitions.length ? repetitions.map((r) => r.id) : [randomUUID()]),
   ]);
   const strokesOf = (rows: { id: string; strokes: string | null }[] | null, id: string) => rows?.find((r) => r.id === id)?.strokes ?? null;
 
@@ -91,10 +95,18 @@ export async function loadModulePlan(studentId: string) {
                 extraDriving: c.extra_driving,
                 selfStudy: c.self_study,
                 transferred: c.transferred,
+                // Kode 78 (kun B): kørsel i manuelt gear i modulet.
+                manualGear:
+                  student.manual_gear && course.category_code === "B"
+                    ? student.module_signoffs
+                        .filter((s) => s.course_module_id === m.id && s.kind === "driving" && s.manual_gear)
+                        .reduce((n, s) => n + s.lesson_count, 0)
+                    : null,
               }
             : null,
       };
       }),
+    repetitions: repetitions.map((r) => ({ date: r.lesson_date, count: r.lesson_count, strokes: strokesOf(repetitionStrokes, r.id) })),
   };
   return { studentId: student.id, schoolId: student.school_id, template, plan };
 }

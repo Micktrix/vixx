@@ -9,7 +9,10 @@ import { PDFDocument, PDFName, PDFSignature, PDFTextField, rgb, type PDFField, t
 //   - undervisende kørelærere: "Undervisende kørelærer_N" og signaturfeltet ud for det
 //   - modul N: "Dato for opstart af modul N"; på siden med "Dato for afslutning af modul N" findes
 //     ekstra teori/kørsel, selvstudie, "Overført", navn og signaturfeltet for den afsluttende kørelærer.
-// Lærerskift, repetitionslektioner og manuelt gear udfyldes i hånden (del 5).
+//   - manuelt gear (kode 78, kun B): "Antal praktiske lektioner gennemført i køretøj med manuelt gear" på
+//     modulets side, kun for elever i forsøgsordningen
+//   - repetitionslektioner: rækkerne "Dato_…", "Antal lektioner_…" og signaturfeltet ud for dem
+// Lærerskift og skift af køreskole udfyldes i hånden (aftalt med Michael 19. nov. 2026).
 
 export type PlanData = {
   student: { name: string; phone: string; address: string };
@@ -26,8 +29,10 @@ export type PlanData = {
       extraDriving: number;
       selfStudy: string | null;
       transferred: boolean;
+      manualGear: number | null; // null = eleven er ikke i forsøgsordningen (kode 78)
     } | null;
   }[];
+  repetitions: { date: string; count: number; strokes: string | null }[];
 };
 
 type Placed = { field: PDFField; page: number; x: number; y: number; width: number; height: number };
@@ -46,7 +51,9 @@ export async function fillModulePlan(template: Uint8Array, data: PlanData): Prom
     const widget = field.acroField.getWidgets()[0];
     const r = widget.getRectangle();
     const pageRef = widget.dict.get(PDFName.of("P"));
-    return { field, page: pages.findIndex((p) => p.ref === pageRef), x: r.x, y: r.y, width: r.width, height: Math.abs(r.height) };
+    // Enkelte felter har negativ højde (fx "Antal lektioner_1.0" i B); rektanglet vendes, så y er bunden.
+    const y = r.height < 0 ? r.y + r.height : r.y;
+    return { field, page: pages.findIndex((p) => p.ref === pageRef), x: r.x, y, width: r.width, height: Math.abs(r.height) };
   });
   const named = (re: RegExp, page?: number) => placed.filter((p) => re.test(p.field.getName()) && (page === undefined || p.page === page));
   const text = (p: Placed | undefined, value: string) => {
@@ -56,6 +63,11 @@ export async function fillModulePlan(template: Uint8Array, data: PlanData): Prom
   const sign = (p: Placed | undefined, strokes: string | null) => {
     if (p && strokes) drawStrokes(pages[p.page], strokes, p);
   };
+  // Signaturfeltet på samme side, der står nærmest i højden.
+  const signatureBeside = (row: Placed) =>
+    placed
+      .filter((p) => p.page === row.page && p.field instanceof PDFSignature)
+      .sort((a, b) => Math.abs(a.y + a.height / 2 - (row.y + row.height / 2)) - Math.abs(b.y + b.height / 2 - (row.y + row.height / 2)))[0];
 
   // Forsiden.
   text(named(/^Elev$/)[0], data.student.name);
@@ -79,10 +91,7 @@ export async function fillModulePlan(template: Uint8Array, data: PlanData): Prom
   data.teachers.slice(0, teacherRows.length).forEach((t, i) => {
     const row = teacherRows[i];
     text(row, t.name);
-    const sig = placed
-      .filter((p) => p.page === row.page && p.field instanceof PDFSignature)
-      .sort((a, b) => Math.abs(a.y + a.height / 2 - (row.y + row.height / 2)) - Math.abs(b.y + b.height / 2 - (row.y + row.height / 2)))[0];
-    sign(sig, t.strokes);
+    sign(signatureBeside(row), t.strokes);
   });
 
   // Modulerne.
@@ -98,8 +107,19 @@ export async function fillModulePlan(template: Uint8Array, data: PlanData): Prom
     text(on(/^Antal lektioner og emner/), c.selfStudy ?? "");
     text(on(/^Overført fra lektionsplan/), c.transferred ? "X" : "");
     text(on(/^Afsluttende kørerlærers for- og efternavn/), c.name);
+    if (c.manualGear !== null) text(on(/^Antal praktiske lektioner gennemført i køretøj med manuelt gear/), String(c.manualGear));
     sign(placed.find((p) => p.page === end.page && p.field instanceof PDFSignature), c.strokes);
   }
+
+  // Repetitionslektioner efter ikke bestået praktisk prøve: dato, antal og underskrift pr. række.
+  const repetitionRows = named(/^Dato_/).sort((a, b) => a.page - b.page || b.y - a.y);
+  data.repetitions.slice(0, repetitionRows.length).forEach((r, i) => {
+    const row = repetitionRows[i];
+    text(row, planDate(r.date));
+    const count = named(/^Antal lektioner_/, row.page).sort((a, b) => Math.abs(a.y - row.y) - Math.abs(b.y - row.y))[0];
+    text(count, String(r.count));
+    sign(signatureBeside(row), r.strokes);
+  });
 
   // Signaturfelterne er digitale signaturfelter; underskrifterne er tegnet på siden. Formularen låses
   // (flades ud), så den udskrevne og gemte udgave ikke kan rettes.

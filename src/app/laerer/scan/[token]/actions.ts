@@ -100,6 +100,7 @@ export async function countModuleLessons(_prev: ActionState, formData: FormData)
     kind,
     lesson_count: count,
     dark: kind === "driving" && formData.get("dark") === "on",
+    manual_gear: kind === "driving" && formData.get("manualGear") === "on",
     instructor_id: instructor.id,
   });
   const failed = dbError(error, "Lektionerne kunne ikke tælles. Prøv igen.");
@@ -137,4 +138,28 @@ export async function completeModule(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/kontor", "layout");
   revalidatePath("/elev", "layout");
   redirect(`/laerer/scan/${text("token")}?kvitteret=Afsluttet`);
+}
+
+// Repetitionslektioner efter ikke bestået praktisk prøve (trin E8, del 5). Databasen kræver, at alle moduler
+// er afsluttet, og at læreren har gemt sin underskrift, og sætter dato, navn og en kopi af underskriften på.
+export async function registerRepetition(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, membership } = await requireRole(["instructor"]);
+  const text = (k: string) => String(formData.get(k) ?? "").trim();
+  const count = Number(text("count"));
+  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Vælg antal lektioner." };
+  const supabase = await createClient();
+  const { data: instructor } = await supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single();
+  if (!instructor) return { error: "Du har ikke adgang til at registrere repetitionslektioner." };
+  const { error } = await supabase.from("repetition_lessons").insert({
+    school_id: membership.schoolId,
+    student_id: text("studentId"),
+    lesson_count: count,
+    instructor_id: instructor.id,
+  });
+  const failed = dbError(error, "Repetitionslektionerne kunne ikke registreres. Prøv igen.");
+  if (failed) return failed;
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/kontor", "layout");
+  revalidatePath("/elev", "layout");
+  redirect(`/laerer/scan/${text("token")}?kvitteret=Repetition`);
 }

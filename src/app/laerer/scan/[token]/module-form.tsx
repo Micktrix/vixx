@@ -16,11 +16,13 @@ export function ModuleForm({
   studentId,
   modules,
   suggestedId,
+  manualGearModules = [],
 }: {
   token: string;
   studentId: string;
   modules: ModuleProgress[];
   suggestedId: string;
+  manualGearModules?: string[]; // moduler, hvor kørsel kan markeres "manuelt gear" (kode 78)
 }) {
   const { state, onSubmit, pending } = useFormAction(countModuleLessons);
   const [moduleId, setModuleId] = useState(suggestedId);
@@ -80,6 +82,12 @@ export function ModuleForm({
         {kind === "driving" && (
           <label className="flex items-center gap-2.5 text-[15px]">
             <input type="checkbox" name="dark" className={check} />I mørke
+          </label>
+        )}
+        {kind === "driving" && manualGearModules.includes(moduleId) && (
+          <label className="flex items-center gap-2.5 text-[15px]">
+            <input type="checkbox" name="manualGear" className={check} />
+            Manuelt gear (kode 78)
           </label>
         )}
       </section>

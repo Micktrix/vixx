@@ -10,6 +10,7 @@ import {
   type PlanModule,
 } from "@/lib/module-progress";
 import { CompleteForm } from "./complete-form";
+import { RepetitionForm } from "./repetition-form";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../../screen";
 import { getTeacher } from "../../teacher-data";
@@ -30,7 +31,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, is_demo, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, theory_lessons, plan_kind, course_modules(id, number, name, min_theory, min_driving, min_dark), course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
+      "id, service_id, active, is_demo, manual_gear, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, category_code, theory_lessons, plan_kind, course_modules(id, number, name, min_theory, min_driving, min_dark), course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
@@ -53,6 +54,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
     name: string;
     theory_lessons: number;
     plan_kind: "lessons" | "modules";
+    category_code: string;
     course_modules: PlanModule[];
     course_lessons: LessonRow[];
   } | null;
@@ -78,7 +80,13 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
       <Screen title={name} sub={[team?.name, course.name].filter(Boolean).join(" · ")} back={close}>
         {signed && (
           <p role="status" className="rounded-[16px] border border-ok/30 bg-ok-bg px-4 py-3 text-[15px]" data-testid="signoff-done">
-            <b className="text-ok">{signed === "Afsluttet" ? "✓ Modulet er afsluttet." : "✓ Lektionerne er talt med i modulet."}</b>
+            <b className="text-ok">
+              {signed === "Afsluttet"
+                ? "✓ Modulet er afsluttet."
+                : signed === "Repetition"
+                  ? "✓ Repetitionslektionerne er registreret."
+                  : "✓ Lektionerne er talt med i modulet."}
+            </b>
           </p>
         )}
         <a
@@ -105,10 +113,32 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
         {suggested ? (
           <>
             <CompleteForm token={token} studentId={student.id} module={suggested} />
-            <ModuleForm token={token} studentId={student.id} modules={progress.filter((m) => !m.completed)} suggestedId={suggested.id} />
+            <ModuleForm
+              token={token}
+              studentId={student.id}
+              modules={progress.filter((m) => !m.completed)}
+              suggestedId={suggested.id}
+              manualGearModules={
+                student.manual_gear && course.category_code === "B" ? progress.filter((m) => m.number >= 2 && m.number <= 5).map((m) => m.id) : []
+              }
+            />
           </>
         ) : (
-          <p className="rounded-[16px] bg-ok-bg px-4 py-3 text-[15px] text-ok">Alle moduler er afsluttet.</p>
+          <>
+            <p className="rounded-[16px] bg-ok-bg px-4 py-3 text-[15px] text-ok">Alle moduler er afsluttet.</p>
+            {((student.repetition_lessons ?? []) as { id: string; lesson_date: string; lesson_count: number; instructor_name: string }[]).length > 0 && (
+              <ul className="flex flex-col gap-1 text-sm" data-testid="scan-repetitions">
+                {((student.repetition_lessons ?? []) as { id: string; lesson_date: string; lesson_count: number; instructor_name: string }[])
+                  .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date))
+                  .map((r) => (
+                    <li key={r.id}>
+                      Repetition {formatDate(r.lesson_date)}: {r.lesson_count} {r.lesson_count === 1 ? "lektion" : "lektioner"} · {r.instructor_name}
+                    </li>
+                  ))}
+              </ul>
+            )}
+            <RepetitionForm token={token} studentId={student.id} />
+          </>
         )}
       </Screen>
     );
