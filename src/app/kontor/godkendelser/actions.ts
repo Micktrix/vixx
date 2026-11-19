@@ -33,7 +33,7 @@ async function notify(supabase: Supabase, schoolId: string, instructorId: string
 }
 
 export async function approveRegistration(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("registrations")
@@ -51,7 +51,7 @@ export async function approveRegistration(_prev: ActionState, formData: FormData
 
 // "Godkend alle der matcher": afventende registreringer, der matcher skemaet (for det valgte filter).
 export async function approveMatching(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const instructorId = String(formData.get("instructorId") ?? "") || null;
   const rows = (await loadApprovals(membership.schoolId, "pending", instructorId)).filter((r) => r.flag === "matcher");
   if (!rows.length) return { error: "Ingen afventende lektioner matcher skemaet." };
@@ -72,7 +72,7 @@ export async function approveMatching(_prev: ActionState, formData: FormData): P
 }
 
 export async function rejectRegistration(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user, membership } = await requireRole(["admin", "office"]);
+  const { user, membership } = await requireRole(["admin"]);
   const comment = String(formData.get("comment") ?? "").trim();
   if (!comment) return { error: "Skriv en kommentar til læreren." };
 
@@ -102,7 +102,7 @@ export async function rejectRegistration(_prev: ActionState, formData: FormData)
 
 // Kontoret retter en registrering. En ikke-godkendt bliver samtidig godkendt ("Ret og godkend").
 export async function officeSaveRegistration(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user, membership } = await requireRole(["admin", "office"]);
+  const { user, membership } = await requireRole(["admin"]);
   const text = (k: string) => String(formData.get(k) ?? "").trim();
   const id = text("id");
   const count = Number(text("count"));

@@ -39,8 +39,8 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 - Alle forretningstabeller har `school_id`. **RLS er slået til på alle tabeller**, og en bruger kan kun se data fra sin egen skole.
 - Roller pr. skole: `admin` (superadmin for skolen), `office` (kontor), `instructor` (lærer). Platformens ejer (Michael) har en separat `platform_owner`-rolle.
 - Rettigheder (foreløbigt):
-  - `admin`: alt, inkl. ydelser og satser, kontorbrugere, oplåsning af lønperioder.
-  - `office`: planlægge, godkende/afvise/rette registreringer, fravær, ferie, lokaler/køretøjer, undervisere (ikke priser).
+  - `admin`: alt: godkendelser, lønoverblik og Dataløn, lønperioder, ferie-afgørelser, undervisere og roller, ydelser og satser, forløb, alle indstillinger, ændringslog, storskærm og oprydning i delte materialer og quizzer.
+  - `office` (kontoret er som en lærer, aftalt 19. nov. 2026): kalender og planlægning (lektioner og fravær for alle lærere), elever og hold, lokaler og køretøjer, beskeder, og materialer og quiz som lærerne. Ingen godkendelser, løn, ferie-afgørelser, undervisere, satser, indstillinger, ændringslog eller storskærm.
   - `instructor`: egne data – skema, registreringer, ferieanmodning, "Kan arbejde", egne bookinger, egne kontakt- og pårørendeoplysninger.
   - `student` (elev): ligger i tabellen `students`, ikke i `school_members`, så eleven ikke rammer "medlemmer ser …"-reglerne. Eleven ser kun sig selv, sit hold, sin skole og forløbene, og lander i elevens app (`/elev`). Kontoret opretter hold og elever; lærerne kan se skolens elever.
 - Skriv RLS-politikker og test dem. Ingen forretningslogik der kun er sikret i frontend.
@@ -69,7 +69,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 - Status: `pending` (afventer), `approved` (godkendt), `rejected` (afvist med kommentar).
 - Ved godkendelse/afvisning gemmes **hvem og hvornår**.
 - Ved godkendelse **låses prisen** på registreringen (`locked_price`). Senere prisændringer rører den ikke.
-- Afvist lektion kan rettes og sendes igen af læreren, eller rettes og godkendes direkte af kontoret (læreren får besked).
+- Afvist lektion kan rettes og sendes igen af læreren, eller rettes og godkendes direkte af admin (læreren får besked).
 
 **Ydelser og satser**
 - *Ydelse* = det der vælges ved planlægning/registrering (fx "Amu-teori", "C privat", "Aften Amu C/E"). En ydelse er kun **navn, sats og Dataløn-løndel**. Der er ingen kategorier eller typer (fjernet 11. nov. 2026 for at gøre det enkelt).
@@ -92,7 +92,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 
 **Fravær og ferie**
 - Fravær (kontoret): årsag (Syg, Fri, Andet), start, antal timer, note. Blokerer tiden. Tæller aldrig i lønnen.
-- Ferie: læreren anmoder, kontoret godkender/afviser. Godkendt ferie blokerer dagene og giver ingen påmindelser.
+- Ferie: læreren anmoder, admin godkender/afviser. Godkendt ferie blokerer dagene og giver ingen påmindelser.
 
 **Lokaler og køretøjer**
 - Ressourcer pr. skole: lokaler og køretøjer (kun navn; ingen kategorier eller typer).
@@ -112,8 +112,8 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 - QR-kvittering (`lesson_signoffs`): læreren scanner elevens QR-kode og kvitterer (kørelærerens underskrift), eleven bekræfter (elevens underskrift). En kvittering kan aldrig slettes og går ikke til lønnen.
 
 **Vidensbank og quiz** (bygget 18. nov. 2026)
-- Materialer (`material_folders`, `materials`): "Mine materialer" er private. Skolens mapper oprettes kun af admin. Alle lærere og kontor lægger op i dem og kan se og hente alt. Ejeren retter og sletter sit eget, og admin og kontor rydder op. Filerne ligger i Storage-bucketten `materials`, som kun serveren tilgår (tidsbegrænsede links). Højst 50 MB pr. fil, og video lægges ind som link. Elever har ingen adgang.
-- Quiz (`quizzes`, `quiz_questions`, `quiz_sessions`, `quiz_players`, `quiz_answers`): lærere og kontor laver quizzer (private eller delt i mapper) og kører dem på storskærmen (`/quiz/vis/<runde>`). Deltagere går til `/q/<kode>` uden login og vælger et kaldenavn. Er de logget ind som elev, kobles resultatet på eleven. Skærmene viser kun kaldenavne. Deltagerne handler kun via `quiz_join`/`quiz_player_state`/`quiz_answer` med en hemmelig nøgle.
+- Materialer (`material_folders`, `materials`): "Mine materialer" er private. Skolens mapper oprettes kun af admin. Alle lærere og kontor lægger op i dem og kan se og hente alt. Ejeren retter og sletter sit eget, og admin rydder op. Filerne ligger i Storage-bucketten `materials`, som kun serveren tilgår (tidsbegrænsede links). Højst 50 MB pr. fil, og video lægges ind som link. Elever har ingen adgang.
+- Quiz (`quizzes`, `quiz_questions`, `quiz_sessions`, `quiz_players`, `quiz_answers`): lærere og kontor laver quizzer (private eller delt med fluebenet "Del med de andre lærere"; billeder på spørgsmål og svar) og kører dem på storskærmen (`/quiz/vis/<runde>`). Deltagere går til `/q/<kode>` uden login og vælger et kaldenavn. Er de logget ind som elev, kobles resultatet på eleven. Skærmene viser kun kaldenavne. Deltagerne handler kun via `quiz_join`/`quiz_player_state`/`quiz_answer` med en hemmelig nøgle.
 
 **Log og privatliv**
 - Alle ændringer skrives i en ændringslog (hvem, hvornår, hvad). Følsomme værdier skrives ikke i loggen.

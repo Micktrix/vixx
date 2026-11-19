@@ -28,19 +28,18 @@ select throws_ok(
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000099', 'admin')$$,
   '42501', null, 'Kontoret kan ikke gøre nogen til admin');
 
-select lives_ok(
+select throws_ok(
   $$insert into public.school_members (school_id, user_id, role)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000099', 'instructor')$$,
-  'Kontoret kan tilføje en lærer');
+  '42501', null, 'Kontoret kan ikke tilføje en lærer (det er admins)');
 
 select lives_ok(
   $$insert into public.absences (school_id, instructor_id, absence_date, start_time, hours, reason)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000013', current_date + 1000, '08:00', 2, 'other')$$,
   'Kontoret kan registrere fravær');
 
-select throws_ok(
-  $$update public.pay_periods set locked = false where locked$$,
-  '42501', 'Kun admin kan låse en lønperiode op.', 'Kontoret får besked om, at kun admin kan låse op');
+with u as (update public.pay_periods set locked = false where locked returning 1)
+select is((select count(*) from u), 0::bigint, 'Kontoret kan ikke låse en lønperiode op');
 reset role;
 
 select is((select count(*) from public.pay_periods where locked), 1::bigint,

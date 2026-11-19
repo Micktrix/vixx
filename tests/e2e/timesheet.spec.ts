@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { OFFICE, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, PASSWORD, loginOk } from "./helpers";
 
 // Seed: Lars har 3 lektioner kl. 08:00 i forgårs (datoerne følger dagens dato).
 const daysAgo = (n: number) => {
@@ -9,7 +9,7 @@ const daysAgo = (n: number) => {
 };
 
 test("kontoret printer en ugeseddel pr. lærer eller for en lønperiode", async ({ page }) => {
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto("/kontor/loen");
   await page.getByRole("link", { name: "Print ugeseddel" }).click();
   await expect(page).toHaveURL(/\/timeseddel\?visning=uge/);

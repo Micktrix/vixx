@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 
 // Godkend eller afvis en ferieanmodning. Databasen afviser godkendelse, hvis der ligger lektioner i perioden.
 export async function decideHoliday(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user, membership } = await requireRole(["admin", "office"]);
+  const { user, membership } = await requireRole(["admin"]);
   const decision = String(formData.get("decision") ?? "");
   if (decision !== "approved" && decision !== "rejected") return { error: "Ukendt valg." };
 

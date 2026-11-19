@@ -24,7 +24,7 @@ const BLOCK: Record<Block["tone"], string> = {
 // fravær og ferie, og i siden de lokaler og biler, der er ledige lige nu. Rækkerne deler højden, så alt kan ses på én
 // skærm uden at rulle. Viser aldrig elevnavne.
 export default async function DashboardPage() {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const today = todayDk();
   const now = nowMinutesDk();
   const supabase = await createClient();

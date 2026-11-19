@@ -15,7 +15,6 @@ const tab = (on: boolean) => `flex-1 rounded-lg px-3 py-1.5 text-center text-sm 
 export async function MaterialsView({ base, params }: { base: string; params: Record<string, string | string[] | undefined> }) {
   const { user, membership } = await requireRole(["admin", "office", "instructor"]);
   const isAdmin = membership.role === "admin";
-  const isStaff = isAdmin || membership.role === "office";
   const one = (k: string) => (typeof params[k] === "string" ? (params[k] as string) : "");
   const mine = one("vis") === "mine";
   const upload = one("vis") === "op";
@@ -105,7 +104,7 @@ export async function MaterialsView({ base, params }: { base: string; params: Re
                 key={m.id}
                 material={m}
                 folders={open}
-                canEdit={m.ownerId === user.id || (isStaff && !!m.folderId)}
+                canEdit={m.ownerId === user.id || (isAdmin && !!m.folderId)}
                 isOwner={m.ownerId === user.id}
                 showFolder={!!q}
                 folderName={folders.find((f) => f.id === m.folderId)?.label}

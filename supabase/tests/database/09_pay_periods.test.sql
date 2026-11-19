@@ -1,29 +1,30 @@
--- Trin 8: kontoret låser, kun admin låser op.
+-- Trin 8: admin låser og låser op (kontoret har ingen adgang til lønnen fra 19. nov. 2026).
 -- Seed: forrige lønperiode er låst, den nuværende er åben.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(7);
 
--- Kontoret (Ole).
+-- Kontoret (Ole) kan hverken låse eller ændre en periode.
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
+with u as (update public.pay_periods set locked = true
+  where school_id = '00000000-0000-4000-a000-000000000001' and not locked and starts_on <= current_date and ends_on >= current_date returning 1)
+select is((select count(*) from u), 0::bigint, 'Kontoret kan ikke låse en lønperiode');
 
+-- Admin (Anne) låser.
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);
 update public.pay_periods set locked = true
 where school_id = '00000000-0000-4000-a000-000000000001' and not locked and starts_on <= current_date and ends_on >= current_date;
 select is(
   (select locked_by from public.pay_periods
    where school_id = '00000000-0000-4000-a000-000000000001' and starts_on <= current_date and ends_on >= current_date),
-  '00000000-0000-4000-a100-000000000002'::uuid, 'Kontoret kan låse, og det gemmes hvem');
+  '00000000-0000-4000-a100-000000000001'::uuid, 'Admin kan låse, og det gemmes hvem');
 
-select throws_ok(
-  $$update public.pay_periods set locked = false
-    where school_id = '00000000-0000-4000-a000-000000000001' and starts_on <= current_date and ends_on >= current_date$$,
-  '42501', 'Kun admin kan låse en lønperiode op.', 'Kontoret kan ikke låse op');
-
-select throws_ok(
-  $$update public.pay_periods set ends_on = ends_on + 1
-    where school_id = '00000000-0000-4000-a000-000000000001' and starts_on <= current_date and ends_on >= current_date$$,
-  '42501', null, 'Kontoret kan ikke ændre datoerne');
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
+with u as (update public.pay_periods set locked = false
+  where school_id = '00000000-0000-4000-a000-000000000001' and starts_on <= current_date and ends_on >= current_date returning 1)
+select is((select count(*) from u), 0::bigint, 'Kontoret kan ikke låse op');
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);
 
 -- Låst: en registrering i perioden kan ikke godkendes eller ændres.
 select throws_ok(

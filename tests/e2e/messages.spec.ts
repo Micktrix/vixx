@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { OFFICE, PASSWORD, loginOk, newTeacher } from "./helpers";
+import { ADMIN, OFFICE, PASSWORD, loginOk, newTeacher } from "./helpers";
 
 const SCHOOL = "00000000-0000-4000-a000-000000000001";
 const B_PRIVAT = "00000000-0000-4000-a500-000000000006";
@@ -36,7 +36,7 @@ test("kontoret sender en besked til én lærer, som læser den", async ({ browse
 
 test("ændringsloggen kan søges på en note og viser hvem og hvad", async ({ page }) => {
   const note = `Tandlæge ${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto(`/kontor/fravaer?laerer=00000000-0000-4000-a200-000000000013&dato=${dayFromToday(400 + Math.floor(Math.random() * 2000))}`);
   await page.getByLabel("Antal timer").fill("1");
   await page.getByLabel("Note (valgfri)").fill(note);
@@ -48,7 +48,7 @@ test("ændringsloggen kan søges på en note og viser hvem og hvad", async ({ pa
   await page.getByRole("button", { name: "Søg" }).click();
   const entry = page.getByTestId("audit-entry");
   await expect(entry).toHaveCount(1);
-  await expect(entry).toContainText("Ole Kontor oprettede fravær");
+  await expect(entry).toContainText("Anne Admin oprettede fravær");
   await expect(entry).toContainText("underviser: Søren Nielsen");
   await expect(entry).toContainText(`note: ${note}`);
 });
@@ -73,7 +73,7 @@ test("påmindelser: kontoret minder en lærer om manglende registrering", async 
   await expect(teacher.getByTestId("rejected-note")).toContainText("1 afvist lektion venter");
 
   // Kontoret sender en påmindelse.
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto(`/kontor/godkendelser?laerer=${instructorId}`);
   await page.getByTestId("missing").getByRole("button", { name: "Send påmindelse" }).click();
   await expect(page.getByTestId("missing").getByRole("status")).toContainText("Påmindelse sendt");

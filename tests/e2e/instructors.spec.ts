@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, chooseOwnPassword, createMember, loginOk, logout } from "./helpers";
+import { ADMIN, INSTRUCTOR, PASSWORD, chooseOwnPassword, createMember, loginOk, logout } from "./helpers";
 
 test("en person med både kontor og lærer skifter med knappen, og Vixx husker valget", async ({ page }) => {
   await loginOk(page, ADMIN, PASSWORD);
@@ -43,7 +43,7 @@ test("på en telefon lander en person med begge roller første gang i lærer-app
 });
 
 test("en gæst efter \"aktiv til\" kan ikke komme ind", async ({ page }) => {
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   const { phone, temp } = await createMember(page, "E2E Udløbet gæst", { guestUntil: "2020-01-31" });
   await page.goto("/kontor/undervisere");
   await expect(page.getByRole("row").filter({ hasText: "E2E Udløbet gæst" }).last()).toContainText("Udløbet");
@@ -58,7 +58,7 @@ test("en gæst efter \"aktiv til\" kan ikke komme ind", async ({ page }) => {
 
 test("en deaktiveret lærer bliver logget ud og kan ikke komme ind", async ({ browser }) => {
   const office = await browser.newPage();
-  await loginOk(office, OFFICE, PASSWORD);
+  await loginOk(office, ADMIN, PASSWORD);
   const { phone, temp, href } = await createMember(office, "E2E Deaktiveres");
 
   const teacher = await browser.newPage();
@@ -83,11 +83,10 @@ test("en deaktiveret lærer bliver logget ud og kan ikke komme ind", async ({ br
   await expect(teacher).toHaveURL("/laerer");
 });
 
-test("kontoret retter tilgængelighed, men ser ikke satser", async ({ page }) => {
-  await loginOk(page, OFFICE, PASSWORD);
+test("admin retter tilgængelighed", async ({ page }) => {
+  await loginOk(page, ADMIN, PASSWORD);
   const { href } = await createMember(page, "E2E Tilgængelighed");
   await page.goto(href);
-  await expect(page.getByRole("heading", { name: "Satser pr. ydelse" })).toHaveCount(0);
 
   await page.getByLabel("Efter aftale").check();
   await page.getByRole("button", { name: "Gem", exact: true }).last().click();

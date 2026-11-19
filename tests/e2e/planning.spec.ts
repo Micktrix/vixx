@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { localAdmin } from "./db";
-import { OFFICE, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, OFFICE, PASSWORD, loginOk } from "./helpers";
 
 const SCHOOL = "00000000-0000-4000-a000-000000000001";
 const LARS = "00000000-0000-4000-a200-000000000011";
@@ -100,7 +100,7 @@ test("ferie kan først godkendes, når lektionerne i perioden er flyttet", async
     .single();
   expect(error).toBeNull();
 
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await planLesson(page, HANNE, date, "08:00", 1, "B privat");
 
   await page.goto("/kontor/ferie");
@@ -120,7 +120,7 @@ test("ferie kan først godkendes, når lektionerne i perioden er flyttet", async
   // Godkendt: anmodningen flytter fra "Afventer" til "Godkendt".
   await expect(page.getByTestId("holiday").filter({ hasText: `E2E ${date}` })).toHaveCount(0);
   await page.goto("/kontor/ferie?status=approved");
-  await expect(page.getByTestId("holiday").filter({ hasText: `E2E ${date}` })).toContainText("Godkendt af Ole Kontor");
+  await expect(page.getByTestId("holiday").filter({ hasText: `E2E ${date}` })).toContainText("Godkendt af Anne Admin");
 
   // Godkendt ferie: dagen kan ikke planlægges.
   await page.goto(`/kontor/planlaeg?laerer=${HANNE}&dato=${date}`);

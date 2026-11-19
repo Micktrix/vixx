@@ -15,7 +15,7 @@ const KIND = { driving: "Kørsel", theory: "Teori" } as const;
 // Ét forløb: lektionerne i rækkefølge, som på lektionsplanen. Admin retter; kontoret kan se.
 export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/[id]">) {
   const { id } = await params;
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const isAdmin = membership.role === "admin";
   const supabase = await createClient();
   const [{ data: course }, { data: lessonData }, { data: categories }] = await Promise.all([

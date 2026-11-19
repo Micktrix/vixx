@@ -7,7 +7,7 @@ import { loadPayroll } from "../data";
 
 // Dataløn-eksport som CSV-fil: godkendte lektioner i perioden, uden gæstelærere.
 export async function GET(request: Request) {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const supabase = await createClient();
   const { data: school } = await supabase.from("schools").select("pay_period_start_day").eq("id", membership.schoolId).single();
   const asked = parseDateInput(new URL(request.url).searchParams.get("periode") ?? "") ?? todayDk();

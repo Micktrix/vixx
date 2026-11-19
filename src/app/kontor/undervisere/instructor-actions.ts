@@ -16,7 +16,7 @@ function refresh() {
 }
 
 export async function updateInstructorDetails(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const instructorId = String(formData.get("instructorId") ?? "");
 
   const read = readFields(formData, [...EMPLOYMENT_FIELDS, ...CONTACT_FIELDS, ...KIN_FIELDS]);
@@ -47,7 +47,7 @@ export async function updateInstructorDetails(_prev: ActionState, formData: Form
 }
 
 export async function setAvailability(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const instructorId = String(formData.get("instructorId") ?? "");
   const mode = String(formData.get("availability") ?? "");
   if (mode !== "fixed" && mode !== "on_request") return { error: "Vælg tilgængelighed." };

@@ -21,7 +21,7 @@ type Row = {
 // Timeseddel til print: lærerens kørte lektioner (registreringer, ikke afviste) for en uge eller en
 // lønperiode. Én side pr. lærer, eller alle lærere med sideskift. Kontoret printer eller gemmer som PDF.
 export default async function TimesheetPage({ searchParams }: PageProps<"/timeseddel">) {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const sp = await searchParams;
   const param = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
   const supabase = await createClient();

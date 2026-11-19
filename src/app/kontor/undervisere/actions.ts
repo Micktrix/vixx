@@ -20,7 +20,7 @@ function refresh() {
 // Opretter en person med de valgte roller på den aktive skole. Findes telefonnummeret allerede
 // i Vixx (fx en lærer på en anden skole), tilføjes personen bare; koden ændres ikke.
 export async function createMember(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const fullName = String(formData.get("fullName") ?? "").trim();
   const phone = normalizePhone(String(formData.get("phone") ?? ""));
   const roles = roleSetFromChoices(formData.getAll("roles").map(String));
@@ -144,7 +144,7 @@ async function loadTarget(targetUserId: string, membership: Membership): Promise
 }
 
 async function authorizeManage(targetUserId: string): Promise<(Target & { membership: Membership }) | { error: string }> {
-  const { user, membership } = await requireRole(["admin", "office"]);
+  const { user, membership } = await requireRole(["admin"]);
   if (targetUserId === user.id) return { error: "Det kan du ikke gøre for dig selv her." };
   const target = await loadTarget(targetUserId, membership);
   return "error" in target ? target : { ...target, membership };

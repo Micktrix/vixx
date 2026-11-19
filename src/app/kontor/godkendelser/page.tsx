@@ -27,7 +27,7 @@ const EMPTY: Record<Status, string> = {
 };
 
 export default async function ApprovalsPage({ searchParams }: PageProps<"/kontor/godkendelser">) {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const sp = await searchParams;
   const status: Status = TABS.some((t) => t.status === sp.status) ? (sp.status as Status) : "pending";
   const instructor = typeof sp.laerer === "string" && sp.laerer ? sp.laerer : null;

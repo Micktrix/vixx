@@ -67,7 +67,7 @@ select is((select count(*) from public.quizzes), 1::bigint, 'En delt quiz ses af
 select is((select count(*) from public.quiz_questions), 1::bigint, 'De andre lærere ser spørgsmålene i en delt quiz');
 with u as (update public.quizzes set title = 'Kapret' where id = (select quiz from ids) returning 1)
 select is((select count(*) from u), 0::bigint, 'En anden lærer kan ikke rette en delt quiz');
-select pg_temp.as_user('02');
+select pg_temp.as_user('01');
 select throws_ok($$update public.quizzes set shared = false where id = (select quiz from ids)$$, '42501', null, 'Kun ejeren kan gøre quizzen privat');
 select pg_temp.as_user('11');
 update public.quizzes set shared = false where id = (select quiz from ids);

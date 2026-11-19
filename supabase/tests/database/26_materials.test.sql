@@ -3,7 +3,7 @@
 -- Seed: Anne admin (a100-…01), Ole kontor (a100-…02), Lars lærer (a100-…11), Pia lærer (a100-…14), Emil elev (a100-…31).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 create temporary table ids (folder uuid, material uuid);
 insert into ids values (null, null);
@@ -43,20 +43,22 @@ delete from public.materials;
 select is((select count(*) from public.materials), 1::bigint, 'En anden lærer kan ikke slette');
 update public.materials set folder_id = null;
 select is((select count(*) from public.materials where folder_id is not null), 1::bigint, 'En anden lærer kan ikke flytte det');
-select pg_temp.as_user('02');
+select pg_temp.as_user('01');
 select throws_ok($$update public.materials set folder_id = null$$, '42501', 'Kun ejeren kan gøre et materiale privat.', 'Kun ejeren kan gøre materialet privat igen');
 
 -- Eleven ser hverken mapper eller materialer.
 select pg_temp.as_user('31');
 select is((select count(*) from public.materials) + (select count(*) from public.material_folders), 0::bigint, 'Elever ser ingenting');
 
--- En mappe med indhold kan ikke slettes; kontoret kan rydde op i delte materialer.
+-- En mappe med indhold kan ikke slettes; kun admin rydder op i delte materialer.
 select pg_temp.as_user('01');
 select throws_ok($$delete from public.material_folders$$, '23514', 'Mappen har indhold og kan kun lukkes, ikke slettes.', 'Mappe med indhold kan ikke slettes');
 select pg_temp.as_user('02');
 delete from public.materials;
-select is((select count(*) from public.materials), 0::bigint, 'Kontoret kan slette delte materialer');
+select is((select count(*) from public.materials), 1::bigint, 'Kontoret kan ikke slette andres delte materialer');
 select pg_temp.as_user('01');
+delete from public.materials;
+select is((select count(*) from public.materials), 0::bigint, 'Admin kan slette delte materialer');
 select lives_ok($$delete from public.material_folders$$, 'En tom mappe kan slettes');
 reset role;
 

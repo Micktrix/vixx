@@ -13,7 +13,7 @@ const th = "px-3 py-2.5 font-semibold first:pl-[18px] last:pr-[18px]";
 const td = "px-3 py-3 first:pl-[18px] last:pr-[18px]";
 
 export default async function ServicesPage() {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const isAdmin = membership.role === "admin";
   const schoolId = membership.schoolId;
   const supabase = await createClient();

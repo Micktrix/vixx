@@ -14,7 +14,7 @@ import { loadPayroll } from "./data";
 const navButton = "inline-flex h-10 items-center rounded-[10px] border border-line2 bg-surface px-3 text-sm font-semibold";
 
 export default async function PayrollPage({ searchParams }: PageProps<"/kontor/loen">) {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const isAdmin = membership.role === "admin";
   const sp = await searchParams;
   const supabase = await createClient();

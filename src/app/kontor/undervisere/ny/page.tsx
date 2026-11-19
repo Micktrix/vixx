@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth/session";
 import { CreateMemberForm } from "../create-member-form";
 
 export default async function NewMemberPage({ searchParams }: PageProps<"/kontor/undervisere/ny">) {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const guest = (await searchParams).gaest === "1";
 
   return (

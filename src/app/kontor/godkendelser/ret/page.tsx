@@ -11,7 +11,7 @@ import { officeSaveRegistration } from "../actions";
 
 // Kontoret retter en registrering. Er den ikke godkendt, godkendes den samtidig ("Ret og godkend").
 export default async function OfficeEditRegistrationPage({ searchParams }: PageProps<"/kontor/godkendelser/ret">) {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const sp = await searchParams;
   const supabase = await createClient();
 

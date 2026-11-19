@@ -13,7 +13,7 @@ import { PlanEditor } from "./plan-editor";
 import { deleteResource, updateResource, updateSchool } from "./actions";
 
 export default async function OfficeSettingsPage() {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const isAdmin = membership.role === "admin";
   const supabase = await createClient();
 

@@ -17,7 +17,7 @@ function readName(formData: FormData) {
 }
 
 export async function addResource(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const kind = String(formData.get("kind") ?? "");
   if (kind !== "room" && kind !== "vehicle") return { error: "Vælg lokale eller køretøj." };
   const values = readName(formData);
@@ -32,7 +32,7 @@ export async function addResource(_prev: ActionState, formData: FormData): Promi
 }
 
 export async function updateResource(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const values = readName(formData);
   if ("error" in values) return { error: values.error as string };
   const id = String(formData.get("id") ?? "");
@@ -51,7 +51,7 @@ export async function updateResource(_prev: ActionState, formData: FormData): Pr
 }
 
 export async function deleteResource(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("resources")

@@ -28,9 +28,9 @@ with u as (update public.instructor_signatures set strokes = 'M 1 1 L 2 2 L 3 3'
 select is((select count(*) from u), 0::bigint, 'En anden lærer kan ikke rette underskriften');
 
 select pg_temp.as_user('01');
-select is((select count(*) from public.instructor_signatures), 0::bigint, 'Admin kan ikke se lærerens underskrift');
+select is((select count(*) from public.instructor_signatures where user_id = '00000000-0000-4000-a100-000000000011'), 0::bigint, 'Admin kan ikke se lærerens underskrift');
 select pg_temp.as_user('02');
-select is((select count(*) from public.instructor_signatures), 0::bigint, 'Kontoret kan ikke se lærerens underskrift');
+select is((select count(*) from public.instructor_signatures where user_id = '00000000-0000-4000-a100-000000000011'), 0::bigint, 'Kontoret kan ikke se lærerens underskrift');
 reset role;
 
 select is(

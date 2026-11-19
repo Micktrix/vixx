@@ -60,7 +60,7 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, 
           </div>
         </div>
         {(teaches || isAdmin) && <PartSwitch teaches={teaches} demo={isAdmin} className="w-full min-[860px]:mb-3" />}
-        {officeSections.map((s) => {
+        {officeSections.filter((s) => isAdmin || !s.adminOnly).map((s) => {
           if (!s.children) {
             const current = isCurrent(s);
             return (

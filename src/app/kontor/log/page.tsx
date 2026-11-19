@@ -20,7 +20,7 @@ const dkTime = new Intl.DateTimeFormat("da-DK", { hour: "2-digit", minute: "2-di
 const dkDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Copenhagen" });
 
 export default async function AuditLogPage({ searchParams }: PageProps<"/kontor/log">) {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const sp = await searchParams;
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
   const query = one("q").trim();

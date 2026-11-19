@@ -72,10 +72,13 @@ select lives_ok(
 -- ---------------------------------------------------------------------------
 -- Ferie kan ikke godkendes med lektioner i perioden
 -- ---------------------------------------------------------------------------
+-- (Ferie afgøres af admin.)
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);
 select throws_ok(
   $$update public.holidays set status = 'approved'
     where instructor_id = '00000000-0000-4000-a200-000000000016' and status = 'pending'$$,
   '23P01', null, 'Ferie med lektioner i perioden kan ikke godkendes');
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
 
 delete from public.scheduled_lessons
 where instructor_id = '00000000-0000-4000-a200-000000000016' and lesson_date = current_date + 15;

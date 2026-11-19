@@ -8,7 +8,7 @@ import { PERSON_SELECT, toPerson, type Person, type PersonRow } from "./people";
 const roleOrder = (p: Person) => (p.role === "admin" ? 0 : p.role === "office" ? 1 : 2);
 
 export default async function OfficeInstructorsPage() {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const supabase = await createClient();
 
   const { data } = await supabase.from("school_members").select(PERSON_SELECT).eq("school_id", membership.schoolId);

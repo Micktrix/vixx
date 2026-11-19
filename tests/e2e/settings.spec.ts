@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { ADMIN, OFFICE, PASSWORD, loginOk, logout } from "./helpers";
 
-test("admin retter skolens navn; ugyldig lektionslængde afvises; kontoret kan kun se", async ({ browser }) => {
+test("admin retter skolens navn; ugyldig lektionslængde afvises", async ({ browser }) => {
   const admin = await browser.newPage();
   await loginOk(admin, ADMIN, PASSWORD);
   await admin.goto("/kontor/indstillinger");
@@ -25,12 +25,6 @@ test("admin retter skolens navn; ugyldig lektionslængde afvises; kontoret kan k
   await name.fill("Testkøreskolen");
   await schoolBox.getByRole("button", { name: "Gem" }).click();
   await expect(admin.getByRole("status").filter({ hasText: "Skolens indstillinger er gemt" })).toBeVisible();
-
-  const office = await browser.newPage();
-  await loginOk(office, OFFICE, PASSWORD);
-  await office.goto("/kontor/indstillinger");
-  await expect(office.getByText("Kun admin kan rette skolens indstillinger.")).toBeVisible();
-  await expect(office.getByLabel("Lektionslængde (min.)")).toBeDisabled();
 });
 
 test("en side, der ikke findes, giver en dansk fejlside", async ({ page }) => {
@@ -66,6 +60,7 @@ test("admin sætter en backup-e-mail, der er låst, og kontoret kan ikke se den"
 
   await loginOk(page, OFFICE, PASSWORD);
   await page.goto("/kontor/indstillinger");
+  await expect(page).toHaveURL("/kontor");
   await expect(page.getByText("Backup af timer")).toHaveCount(0);
 });
 

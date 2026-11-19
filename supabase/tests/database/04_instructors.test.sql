@@ -69,7 +69,7 @@ reset role;
 select is(
   (select active from public.school_members
    where school_id = '00000000-0000-4000-a000-000000000001' and user_id = '00000000-0000-4000-a100-000000000012'),
-  false, 'Kontoret kan deaktivere en lærer');
+  true, 'Kontoret kan ikke deaktivere en lærer (det er admins)');
 select is(
   (select active from public.school_members
    where school_id = '00000000-0000-4000-a000-000000000001' and user_id = '00000000-0000-4000-a100-000000000001'),
@@ -77,7 +77,7 @@ select is(
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000012", "role": "authenticated"}', true);
-select is((select count(*) from public.schools), 0::bigint, 'Deaktiveret lærer ser ikke skolen');
+select is((select count(*) from public.schools), 1::bigint, 'Læreren er stadig aktiv og ser skolen');
 reset role;
 
 select * from finish();

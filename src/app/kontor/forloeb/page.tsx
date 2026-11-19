@@ -17,7 +17,7 @@ type CourseRow = {
 
 // Forløb pr. kørekortkategori. Admin bygger og retter dem; kontoret kan se dem.
 export default async function CoursesPage() {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const isAdmin = membership.role === "admin";
   const supabase = await createClient();
   const [{ data }, { data: categories }] = await Promise.all([

@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import {
   ADMIN,
   INSTRUCTOR,
-  OFFICE,
   PASSWORD,
   chooseOwnPassword,
   createMember,
@@ -30,20 +29,6 @@ test("en lærer lander i lærerdelen og kan ikke åbne kontoret", async ({ page 
   await expect(page).toHaveURL("/laerer");
 });
 
-test("kontoret kan kun oprette lærere og ikke håndtere admin", async ({ page }) => {
-  await loginOk(page, OFFICE, PASSWORD);
-  await expect(page).toHaveURL("/kontor");
-  await page.goto("/kontor/undervisere/ny");
-  await expect(page.getByRole("checkbox", { name: "Lærer", exact: true })).toBeChecked();
-  await expect(page.getByRole("checkbox", { name: "Admin", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("checkbox", { name: "Kontor", exact: true })).toHaveCount(0);
-
-  await page.goto("/kontor/undervisere/00000000-0000-4000-a100-000000000001");
-  await expect(page.getByRole("heading", { name: "Anne Admin" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Nulstil kode" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Roller" })).toHaveCount(0);
-});
-
 test("admin kan vælge alle roller ved oprettelse", async ({ page }) => {
   await loginOk(page, ADMIN, PASSWORD);
   await expect(page).toHaveURL("/kontor");
@@ -54,7 +39,7 @@ test("admin kan vælge alle roller ved oprettelse", async ({ page }) => {
 });
 
 test("ny lærer skal vælge egen kode ved første login", async ({ page }) => {
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   const { phone, temp } = await createMember(page, "E2E Førstegang");
   await logout(page);
 
@@ -87,7 +72,7 @@ test("ny lærer skal vælge egen kode ved første login", async ({ page }) => {
 
 test("kontoret kan logge en lærer ud overalt og nulstille koden", async ({ browser }) => {
   const office = await browser.newPage();
-  await loginOk(office, OFFICE, PASSWORD);
+  await loginOk(office, ADMIN, PASSWORD);
   const { phone, temp, href } = await createMember(office, "E2E Nulstil");
 
   const teacher = await browser.newPage();

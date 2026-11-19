@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { OFFICE, PASSWORD, loginOk, newTeacher } from "./helpers";
+import { ADMIN, OFFICE, PASSWORD, loginOk, newTeacher } from "./helpers";
 
 const SCHOOL = "00000000-0000-4000-a000-000000000001";
 const B_PRIVAT = "00000000-0000-4000-a500-000000000006";
@@ -25,7 +25,7 @@ test("en køretime får en bil, og bilen følger lektionen, når den flyttes", a
   const { instructorId } = await newTeacher(browser, `E2E Bil ${Date.now() % 100000}`);
   const date = freeDay();
 
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto(`/kontor/planlaeg?laerer=${instructorId}&dato=${date}`);
   await page.getByLabel("Start").selectOption("08:45");
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
@@ -73,7 +73,7 @@ test("en booking med en underviser vises i kalenderen og gør underviseren optag
   const date = freeDay();
 
   // Kontoret booker Lokale 2 med underviseren og kommentaren "TAXA".
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto(`/kontor/booking?ressource=${LOKALE_2}&dato=${date}`);
   await page.getByLabel("Fra kl.").selectOption("10:00");
   await page.getByLabel("Til kl.").selectOption("11:30");
@@ -183,7 +183,7 @@ test("storskærmen viser dagens lektioner pr. lærer med lokale, og de ledige lo
     instructor_id: instructorId, scheduled_lesson_id: lesson!.id,
   });
 
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/storskaerm");
   const teacherRow = page.getByTestId("dashboard-row").filter({ hasText: name });
@@ -217,7 +217,7 @@ test("på storskærmen står et booket møde med note og lokale på lærerens r�
     school_id: SCHOOL, resource_id: resource!.id, booking_date: day(0), start_time: start, minutes: 60, title: note, instructor_id: instructorId,
   });
 
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto("/storskaerm");
   const teacherRow = page.getByTestId("dashboard-row").filter({ hasText: name });
   await expect(teacherRow).toContainText(`${note} · ${room}`);
@@ -229,7 +229,7 @@ test("på storskærmen står et booket møde med note og lokale på lærerens r�
 
 test("et køretøj kan oprettes og slettes, når det ikke er brugt", async ({ page }) => {
   const name = `E2E Bil ${Date.now() % 100000}`;
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto("/kontor/indstillinger");
   const add = page.locator("form").filter({ has: page.getByRole("button", { name: "Tilføj", exact: true }) }).last();
   await add.getByRole("radio", { name: "Køretøj" }).locator("..").click();
@@ -257,7 +257,7 @@ test("et køretøj kan oprettes og slettes, når det ikke er brugt", async ({ pa
 
 test("alle lokaler og køretøjer tilbydes til en lektion", async ({ browser, page }) => {
   const { instructorId } = await newTeacher(browser, `E2E Alle ${Date.now() % 100000}`);
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto(`/kontor/planlaeg?laerer=${instructorId}&dato=${freeDay()}`);
 
   await page.getByLabel("Ydelse").selectOption({ label: "B teori" });
@@ -286,7 +286,7 @@ test("en lærer planlægger sin egen køretime med bil, og bilen flytter med", a
   await teacher.getByRole("button", { name: "Gem ændringer" }).click();
   await teacher.waitForURL(/\/laerer\?dag=/);
 
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto(`/kontor/koeretoejer?vis=dag&dato=${date}`);
   await expect(page.getByTestId("resource-row").filter({ hasText: "Personbil 1" }).getByTestId("booking-block")).toContainText(
     "12:45–14:30", // to lektioner med pausen 13:30–13:45

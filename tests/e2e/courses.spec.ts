@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { ADMIN, OFFICE, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, PASSWORD, loginOk } from "./helpers";
 
 test("admin bygger et C-forløb fra papiret, retter og tilføjer en lektion", async ({ page }) => {
   const name = `E2E C-forløb ${Date.now() % 100000}`;
@@ -51,23 +51,3 @@ test("admin bygger et C-forløb fra papiret, retter og tilføjer en lektion", as
   await localAdmin().from("courses").delete().eq("name", name);
 });
 
-test("kontoret kan se forløbene, men ikke rette dem", async ({ page }) => {
-  const { data: course } = await localAdmin()
-    .from("courses")
-    .insert({ school_id: "00000000-0000-4000-a000-000000000001", category_code: "D", name: `E2E D-forløb ${Date.now() % 100000}` })
-    .select("id, name")
-    .single();
-  await localAdmin().from("course_lessons").insert({
-    school_id: "00000000-0000-4000-a000-000000000001", course_id: course!.id, number: "1", lesson_count: 2, content: "1.1 Bussens indretning",
-  });
-
-  await loginOk(page, OFFICE, PASSWORD);
-  await page.goto("/kontor/forloeb");
-  await expect(page.getByRole("button", { name: "Opret forløb" })).toHaveCount(0);
-  await page.getByTestId("course-card").filter({ hasText: course!.name }).click();
-  await expect(page.getByTestId("course-lesson")).toContainText("1.1 Bussens indretning");
-  await expect(page.getByText("Ret lektion 1")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Tilføj lektion" })).toHaveCount(0);
-
-  await localAdmin().from("courses").delete().eq("id", course!.id);
-});

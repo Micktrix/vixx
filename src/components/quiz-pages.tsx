@@ -66,8 +66,8 @@ export async function QuizEditor({ base, id, showBack = true }: { base: string; 
   const { user, membership } = await requireRole(["admin", "office", "instructor"]);
   const quiz = await loadQuiz(id);
   if (!quiz) notFound();
-  const isStaff = membership.role === "admin" || membership.role === "office";
-  const canEdit = quiz.ownerId === user.id || (isStaff && quiz.shared);
+  // Ejeren retter; admin kan rydde op i delte quizzer.
+  const canEdit = quiz.ownerId === user.id || (membership.role === "admin" && quiz.shared);
   const images = await Promise.all(quiz.questions.map((q) => imageUrl(q.imagePath)));
   const answerImages = await Promise.all(
     quiz.questions.map((q) => Promise.all(q.answerImages.map(async (path) => ({ path, url: await imageUrl(path) })))),

@@ -70,7 +70,7 @@ export async function chooseOwnPassword(page: Page, password: string) {
 // En ny lærer, logget ind på sin egen side. Returnerer også lærerkortets id.
 export async function newTeacher(browser: Browser, name: string) {
   const office = await browser.newPage();
-  await loginOk(office, OFFICE, PASSWORD);
+  await loginOk(office, ADMIN, PASSWORD);
   const { phone, temp } = await createMember(office, name);
   await office.close();
 

@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 
 // Kontoret og admin kan låse en lønperiode. Kun admin kan låse op (håndhæves også i databasen).
 async function setLocked(formData: FormData, locked: boolean): Promise<ActionState> {
-  const { membership } = await requireRole(locked ? ["admin", "office"] : ["admin"]);
+  const { membership } = await requireRole(["admin"]);
   const supabase = await createClient();
   const { data: school } = await supabase.from("schools").select("pay_period_start_day").eq("id", membership.schoolId).single();
   const start = parseDateInput(String(formData.get("start") ?? ""));

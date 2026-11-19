@@ -12,7 +12,7 @@ import { InstructorSections } from "./instructor-sections";
 
 export default async function PersonPage({ params }: PageProps<"/kontor/undervisere/[userId]">) {
   const { userId } = await params;
-  const { user, membership } = await requireRole(["admin", "office"]);
+  const { user, membership } = await requireRole(["admin"]);
   const supabase = await createClient();
 
   const { data } = await supabase

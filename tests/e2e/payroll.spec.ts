@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { ADMIN, OFFICE, PASSWORD, loginOk, newTeacher } from "./helpers";
+import { ADMIN, PASSWORD, loginOk, newTeacher } from "./helpers";
 
 const SCHOOL = "00000000-0000-4000-a000-000000000001";
 const AMU_C = "00000000-0000-4000-a500-000000000001";
@@ -40,7 +40,7 @@ test("lønoverblik og Dataløn-eksport stemmer med en manuel beregning", async (
     school_id: SCHOOL, instructor_id: instructorId, service_id: B_PRIVAT, lesson_date: today(), start_time: "15:00", lesson_count: 1,
   });
 
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto("/kontor/loen");
   const row = page.getByTestId("payroll-row").filter({ hasText: name });
   await expect(row.getByTestId("payroll-amount")).toHaveText("1.250 kr.");
@@ -61,9 +61,9 @@ test("lønoverblik og Dataløn-eksport stemmer med en manuel beregning", async (
   expect(csvAfter).not.toContain(name);
 });
 
-test("kontoret låser en periode, og kun admin kan låse op", async ({ browser }) => {
+test("admin låser en periode og låser den op igen", async ({ browser }) => {
   const office = await browser.newPage();
-  await loginOk(office, OFFICE, PASSWORD);
+  await loginOk(office, ADMIN, PASSWORD);
   await office.goto("/kontor/loen");
   // Den næste periode, så testen ikke låser perioden med dagens registreringer.
   await office.getByRole("link", { name: "Næste lønperiode" }).click();
@@ -73,13 +73,8 @@ test("kontoret låser en periode, og kun admin kan låse op", async ({ browser }
   office.once("dialog", (d) => d.accept());
   await office.getByRole("button", { name: "Lås periode" }).click();
   await expect(office.getByText("Låst", { exact: true })).toBeVisible();
-  await expect(office.getByText("af Ole Kontor")).toBeVisible();
-  await expect(office.getByRole("button", { name: "Lås op" })).toHaveCount(0);
-  const url = office.url();
-
-  const admin = await browser.newPage();
-  await loginOk(admin, ADMIN, PASSWORD);
-  await admin.goto(url);
+  await expect(office.getByText("af Anne Admin")).toBeVisible();
+  const admin = office;
   admin.once("dialog", (d) => d.accept());
   await admin.getByRole("button", { name: "Lås op" }).click();
   await expect(admin.getByText("Åben", { exact: true })).toBeVisible();

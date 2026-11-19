@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { localAdmin } from "./db";
-import { OFFICE, PASSWORD, loginOk, newTeacher } from "./helpers";
+import { ADMIN, PASSWORD, loginOk, newTeacher } from "./helpers";
 
 const SCHOOL = "00000000-0000-4000-a000-000000000001";
 const B_PRIVAT = "00000000-0000-4000-a500-000000000006";
@@ -21,7 +21,7 @@ async function pendingRegistration(instructorId: string, start: string, extra: R
 }
 
 async function officeFor(page: Page, instructorId: string, status = "pending") {
-  await loginOk(page, OFFICE, PASSWORD);
+  await loginOk(page, ADMIN, PASSWORD);
   await page.goto(`/kontor/godkendelser?status=${status}&laerer=${instructorId}`);
 }
 
@@ -40,7 +40,7 @@ test("godkendelse låser prisen, og en senere prisændring ændrer ikke beløbet
 
   await page.goto(`/kontor/godkendelser?status=approved&laerer=${instructorId}`);
   await expect(page.getByTestId("locked-amount")).toHaveText("2 × 300 kr. = 600 kr.");
-  await expect(page.getByTestId("approval-row")).toContainText("af Ole Kontor");
+  await expect(page.getByTestId("approval-row")).toContainText("af Anne Admin");
 
   // Prisen ændres bagefter: det godkendte beløb er det samme.
   await localAdmin().from("instructor_prices").update({ amount_ore: 99900 }).eq("instructor_id", instructorId);
@@ -84,7 +84,7 @@ test("afvisning kræver kommentar, og læreren får besked", async ({ browser, p
   await expect(teacher.getByTestId("registration")).toContainText("Kontoret: Forkert ydelse");
 });
 
-test("kontoret kan rette og godkende direkte, og læreren får besked", async ({ browser, page }) => {
+test("admin kan rette og godkende direkte, og læreren får besked", async ({ browser, page }) => {
   const { page: teacher, instructorId } = await newTeacher(browser, "E2E Rettes");
   await pendingRegistration(instructorId, "10:00", { status: "rejected", decision_comment: "Forkert antal" });
 

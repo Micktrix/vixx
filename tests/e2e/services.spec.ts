@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN, OFFICE, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, PASSWORD, loginOk } from "./helpers";
 
 const suffix = () => String(Date.now()).slice(-6);
 
@@ -69,18 +69,6 @@ test("en ubrugt ydelse kan slettes, en brugt kan kun slås fra", async ({ page }
   await expect(page.getByText("kan kun slås fra")).toBeVisible();
 });
 
-test("kontoret ser ydelser og satser, men kan ikke rette", async ({ page }) => {
-  await loginOk(page, OFFICE, PASSWORD);
-  await page.goto("/kontor/ydelser");
-  await expect(page.getByRole("heading", { name: "Ydelser", exact: true })).toBeVisible();
-  await expect(page.getByRole("row").filter({ hasText: "B privat" })).toContainText("kr.");
-  await expect(page.getByRole("link", { name: "+ Ny ydelse" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "B privat" })).toHaveCount(0);
-
-  await page.goto("/kontor/ydelser/ny");
-  await expect(page).toHaveURL("/kontor");
-});
-
 test("admin bestemmer ydelsernes rækkefølge og klynger, og dropdown følger med", async ({ page }) => {
   await loginOk(page, ADMIN, PASSWORD);
   await page.goto("/kontor/ydelser");
@@ -108,9 +96,3 @@ test("admin bestemmer ydelsernes rækkefølge og klynger, og dropdown følger me
   await expect.poll(async () => (await names())[1]).toBe(second);
 });
 
-test("kontoret og lærerne kan ikke ændre rækkefølgen", async ({ page }) => {
-  await loginOk(page, OFFICE, PASSWORD);
-  await page.goto("/kontor/ydelser");
-  await expect(page.getByRole("button", { name: "Flyt op" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Streg efter" })).toHaveCount(0);
-});

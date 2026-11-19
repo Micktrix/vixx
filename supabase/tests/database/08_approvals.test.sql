@@ -11,7 +11,7 @@ values ('00000000-0000-4000-a700-000000000088', '00000000-0000-4000-a000-0000000
         '00000000-0000-4000-a200-000000000014', '00000000-0000-4000-a500-000000000005', '2000-01-03', '08:00', 1);
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);
 
 -- Godkend Lars' registrering og prøv at sende en anden pris med.
 update public.registrations set status = 'approved', locked_unit_price_ore = 1
@@ -24,7 +24,7 @@ select is(
 select is(
   (select decided_by from public.registrations
    where instructor_id = '00000000-0000-4000-a200-000000000011' and lesson_date = current_date - 1),
-  '00000000-0000-4000-a100-000000000002'::uuid, 'Det gemmes, hvem der godkendte');
+  '00000000-0000-4000-a100-000000000001'::uuid, 'Det gemmes, hvem der godkendte');
 select ok(
   (select decided_at > now() - interval '1 minute' from public.registrations
    where instructor_id = '00000000-0000-4000-a200-000000000011' and lesson_date = current_date - 1),
@@ -42,7 +42,7 @@ select is(
   27000, 'Godkendt beløb ændrer sig ikke ved senere prisændring');
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
+select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);
 
 select lives_ok(
   $$update public.registrations set note = 'Set af kontoret'
@@ -71,7 +71,7 @@ select is(
 select ok(
   (select office_edited_by is not null from public.registrations
    where instructor_id = '00000000-0000-4000-a200-000000000014' and lesson_date = current_date - 1),
-  'Det gemmes, at kontoret har rettet');
+  'Det gemmes, at admin har rettet');
 
 -- Afvisning kræver kommentar.
 select throws_ok(

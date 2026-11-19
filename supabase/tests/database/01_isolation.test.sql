@@ -73,7 +73,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-b100-000000000002", "role": "authenticated"}', true);
 
-select is((select count(*) from public.registrations), 1::bigint, 'Skole B ser kun sin egen registrering');
+select is((select count(*) from public.registrations), 0::bigint, 'Kontoret ser ingen registreringer (det er admins)');
 select is((select count(*) from public.instructors), 1::bigint, 'Skole B ser kun sin egen lærer');
 select is((select count(*) from public.audit_log where school_id = '00000000-0000-4000-a000-000000000001'), 0::bigint,
   'Skole B ser ikke skole A''s ændringslog');

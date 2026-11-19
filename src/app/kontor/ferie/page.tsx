@@ -29,7 +29,7 @@ type HolidayRow = {
 const days = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
 
 export default async function OfficeHolidaysPage({ searchParams }: PageProps<"/kontor/ferie">) {
-  const { membership } = await requireRole(["admin", "office"]);
+  const { membership } = await requireRole(["admin"]);
   const sp = await searchParams;
   const status: Status = TABS.some((t) => t.status === sp.status) ? (sp.status as Status) : "pending";
   const supabase = await createClient();
