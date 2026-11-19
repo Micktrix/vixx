@@ -200,6 +200,11 @@ erstatter papirets lektionsplan med dato og to underskrifter.
     Vixx gemmer en kopi af underskriften på afslutningen, så en ny underskrift senere ikke ændrer gamle moduler.
   - Modulplanen (Færdselsstyrelsens PDF) lægges op pr. kørekortkategori (B, C, C/E, D …) under Indstillinger →
     Forløb. Vixx udfylder den for hver elev, og eleven og læreren kan altid vise den seneste udgave.
+  - EU-moduler (aftalt 19. nov. 2026): en kategori kan have en ekstra modulplan til EU (fx C/E med EU). Når en
+    elev oprettes eller sættes på et hold, vælger kontoret, om eleven også skal gennemføre EU-modulerne. I så fald
+    får eleven begge planer. EU-modulerne afsluttes og underskrives på samme måde (lærerens gemte underskrift,
+    dato, navn), og hver plan har sin egen PDF og sine egne versioner. Det endelige indhold venter på skolens
+    EU/AMU-blanketter.
 - Første plan, før Michaels beslutning: Vixx udfylder den officielle PDF (stamdata, moduler, datoer,
   lærernavne), og læreren skriver under med kuglepen eller med digitalt ID i Adobe. Den tegnede underskrift,
   som Vixx lægger på automatisk, bygges først, når Færdselsstyrelsen har bekræftet den skriftligt.
