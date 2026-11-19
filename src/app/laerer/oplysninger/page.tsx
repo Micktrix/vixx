@@ -11,12 +11,16 @@ import { CalendarBox } from "@/components/calendar-box";
 export default async function OwnDetailsPage() {
   const { user, membership } = await requireRole(["instructor"]);
   const supabase = await createClient();
-  const { data } = await supabase
+  // De private felter kan kun hentes via instructor_private (admin og læreren selv).
+  const { data: own } = await supabase
     .from("instructors")
-    .select("email, address, postal_code, city, next_of_kin_name, next_of_kin_relation, next_of_kin_phone, calendar_token")
+    .select("id")
     .eq("school_id", membership.schoolId)
     .eq("user_id", user.id)
     .single();
+  const { data } = own
+    ? await supabase.rpc("instructor_private", { p_instructor_id: own.id }).maybeSingle()
+    : { data: null };
   const values = (data ?? {}) as Record<string, string | null>;
   // Adressen til kalenderfilen, på det domæne appen kører på (fx test.vixx.dk).
   const calendarUrl = `${await siteOrigin()}/kalender/${values.calendar_token}.ics`;

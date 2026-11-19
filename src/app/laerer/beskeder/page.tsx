@@ -15,12 +15,15 @@ const linkButton =
 export default async function InstructorMessagesPage() {
   const { user, membership } = await requireRole(["instructor"]);
   const supabase = await createClient();
-  const { data: me } = await supabase
+  const { data: own } = await supabase
     .from("instructors")
-    .select("address, postal_code, city, next_of_kin_name, next_of_kin_relation")
+    .select("id")
     .eq("school_id", membership.schoolId)
     .eq("user_id", user.id)
     .single();
+  const { data: me } = own
+    ? await supabase.rpc("instructor_private", { p_instructor_id: own.id }).maybeSingle<Record<string, string | null>>()
+    : { data: null };
 
   // Beskeder til alle og til læreren selv (RLS). Afsendelse fra kontoret kommer i trin 9.
   const [{ data: messages }, { data: reads }] = await Promise.all([

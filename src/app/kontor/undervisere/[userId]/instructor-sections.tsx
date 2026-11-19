@@ -33,10 +33,18 @@ export async function InstructorSections({
   roleOff: boolean;
 }) {
   const supabase = await createClient();
-  const { data: instructor } = await supabase.from("instructors").select("*").eq("id", instructorId).single();
+  // De private felter (adresse, pårørende m.m.) kan kun hentes via instructor_private (admin og læreren selv).
+  const [{ data: instructor }, { data: privateFields }] = await Promise.all([
+    supabase
+      .from("instructors")
+      .select("id, school_id, user_id, employee_number, is_guest, guest_company, active_until, availability, active")
+      .eq("id", instructorId)
+      .single(),
+    supabase.rpc("instructor_private", { p_instructor_id: instructorId }).maybeSingle(),
+  ]);
   if (!instructor) return null;
 
-  const i = instructor as unknown as Instructor;
+  const i = { ...instructor, ...(privateFields ?? {}) } as unknown as Instructor;
 
   return (
     <>
