@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { formatDate } from "@/lib/dates";
+import { moduleProgress, type ModuleCount, type PlanModule } from "@/lib/module-progress";
+import { StudentModules } from "./student-modules";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../laerer/screen";
 import { ConfirmButton } from "./confirm-button";
@@ -49,13 +51,36 @@ export async function StudentHome({
   const supabase = await createClient();
   const { data: student } = await supabase
     .from("students")
-    .select("id, teams(name), lesson_signoffs(id, course_lesson_id, lesson_number, instructor_name, lesson_date, skipped_items, confirmed_at), theory_signoffs(lesson_count), courses(name, theory_lessons, course_lessons(id, number, kind, lesson_count, location, content, notes, control_topic, sort_order, active))")
+    .select("id, teams(name), lesson_signoffs(id, course_lesson_id, lesson_number, instructor_name, lesson_date, skipped_items, confirmed_at), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date), courses(name, theory_lessons, plan_kind, course_modules(id, number, name, min_theory, min_driving, min_dark, topics), course_lessons(id, number, kind, lesson_count, location, content, notes, control_topic, sort_order, active))")
     .eq("id", studentId)
     .maybeSingle();
   if (!student) return null;
 
-  const course = student.courses as unknown as { name: string; theory_lessons: number; course_lessons: Lesson[] } | null;
+  const course = student.courses as unknown as {
+    name: string;
+    theory_lessons: number;
+    plan_kind: "lessons" | "modules";
+    course_modules: (PlanModule & { topics: string | null })[];
+    course_lessons: Lesson[];
+  } | null;
   const team = student.teams as unknown as { name: string } | null;
+
+  if (course?.plan_kind === "modules") {
+    return (
+      <Screen title={`Hej ${firstName}`} sub={schoolName} action={action}>
+        <Link href={qrHref} className="flex items-center justify-center rounded-[18px] bg-accent px-4 py-4 text-[17px] font-bold text-ink">
+          Vis min QR-kode
+        </Link>
+        <StudentModules
+          courseName={course.name}
+          teamName={team?.name ?? null}
+          modules={moduleProgress(course.course_modules, (student.module_signoffs ?? []) as ModuleCount[])}
+          topics={new Map(course.course_modules.map((m) => [m.id, m.topics]))}
+        />
+      </Screen>
+    );
+  }
+
   const lessons = (course?.course_lessons ?? []).filter((l) => l.active).sort((a, b) => a.sort_order - b.sort_order);
   const signoffs = (student.lesson_signoffs ?? []) as Signoff[];
   const signoffFor = new Map(signoffs.map((s) => [s.course_lesson_id, s]));

@@ -28,7 +28,8 @@ insert into seed_people values
   ('19', 'Bo Rasmussen',      '+4520000019', 'instructor'),
   -- Elever (ingen rolle på skolen; de ligger i tabellen students).
   ('31', 'Emil Elev',         '+4520000031', null),
-  ('32', 'Freja Elev',        '+4520000032', null);
+  ('32', 'Freja Elev',        '+4520000032', null),
+  ('33', 'Bent Elev',         '+4520000033', null);
 
 -- Login sker med telefon + kode via en intern adresse (se src/lib/auth/login-identity.ts):
 -- +4520000011 -> 4520000011@login.vixx.dk. Telefonnummeret gemmes også, så SMS-kode kan slås til senere.
@@ -266,6 +267,18 @@ update public.courses set theory_lessons = 8 where id = '00000000-0000-4000-ab00
 
 -- Trin E8: et B-forløb som modulplan (Færdselsstyrelsen, version 1.1).
 select public.create_module_course('00000000-0000-4000-a000-000000000001', 'B-1.1', 'B – modulplan');
+
+-- Bent er B-elev på modulplanen (uden hold). Lars har talt modul 1 og 2 op (trin E8, del 3).
+insert into public.students (id, school_id, user_id, course_id, service_id)
+select '00000000-0000-4000-ad00-000000000033', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000033',
+       c.id, '00000000-0000-4000-a500-000000000001'
+from public.courses c where c.name = 'B – modulplan';
+insert into public.module_signoffs (school_id, student_id, course_module_id, kind, lesson_count, dark, instructor_id, instructor_name, signed_by, lesson_date)
+select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', m.id, v.kind::public.course_lesson_kind, v.n, false,
+       '00000000-0000-4000-a200-000000000011', 'Lars Jensen', '00000000-0000-4000-a100-000000000011', current_date - v.days_ago
+from (values (1, 'theory', 4, 10), (1, 'theory', 3, 8), (2, 'theory', 2, 3), (2, 'driving', 2, 1)) v (module, kind, n, days_ago)
+join public.course_modules m on m.number = v.module
+join public.courses c on c.id = m.course_id and c.name = 'B – modulplan';
 
 insert into public.teams (id, school_id, name, course_id, starts_on)
 values ('00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-a000-000000000001', 'C-hold uge 48',

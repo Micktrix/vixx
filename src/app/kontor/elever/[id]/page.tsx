@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { moduleProgress, progressText } from "@/lib/module-progress";
 import { notFound } from "next/navigation";
 import { Box } from "@/components/box";
 import { ActionForm, CheckChip, TextField } from "@/components/form";
@@ -77,7 +78,26 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         </p>
       </header>
 
-      {course && (
+      {course && course.modules.length > 0 && (
+        <Box title="Modulplan" hint={`${p.done} af ${p.total} moduler med minimum nået`}>
+          <ProgressBar share={p.share} />
+          <ol className="flex flex-col gap-1.5" data-testid="student-modules">
+            {moduleProgress(course.modules, student.moduleCounts).map((m) => (
+              <li key={m.id} className={`rounded-xl border px-3 py-2 text-[15px] ${m.reached ? "border-ok/30 bg-ok-bg" : "border-line"}`}>
+                <b>
+                  Modul {m.number} – {m.name}
+                </b>
+                <span className="block text-[13px] text-muted">
+                  {progressText(m)}
+                  {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </Box>
+      )}
+
+      {course && !course.modules.length && (
         <Box title="Forløb" hint={`${p.done} af ${p.total} lektioner gennemført`}>
           <ProgressBar share={p.share} />
           <ol className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3" data-testid="student-lessons">

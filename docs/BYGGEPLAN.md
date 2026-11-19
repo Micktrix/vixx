@@ -250,6 +250,12 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      på skolens blanketter.
   3. Eleven på modul: aktuelt modul og opstartsdato; scanning tæller teori/kørsel i modulet; elevens app viser
      modulerne.
+     **Bygget 19. nov. 2026** (Michael: læreren vælger modulet, og det går ikke til lønnen): tabellen
+     `module_signoffs` (modul, teori/kørsel, antal, i mørke, lærer, dato). Læreren scanner, Vixx foreslår første
+     modul, hvor minimum ikke er nået, og læreren kan vælge et andet. Opstartsdato = første tælling i modulet.
+     Kan ikke slettes; admin kan rette antal, modul og mørke og give lektioner uden lærer med kommentar (kun i
+     databasen endnu, ingen skærm). Elevens app, kontorets elevside og elevlisten viser modulerne. Seed: Bent
+     Elev (B).
   4. Afslut modul: minimum-tjek, ekstra lektioner, selvstudie, "Overført fra lektionsplan", undervisende kørelærere.
   5. Lærerskift, repetitionslektioner, manuelt gear (kode 78) og skolens oplysninger.
   6. PDF: upload af styrelsens PDF, feltkortlægning, udfyldning og gemte versioner.

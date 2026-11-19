@@ -1,4 +1,5 @@
 import "server-only";
+import { moduleProgress, type ModuleCount, type PlanModule } from "@/lib/module-progress";
 import { createClient } from "@/lib/supabase/server";
 
 // Hold, elever og forløb til kontorets elevsider. En lektion er gennemført, når læreren har kvitteret
@@ -10,6 +11,7 @@ export type CourseInfo = {
   category: string;
   theory: number; // antal teorilektioner i forløbet (0 = ingen)
   lessons: { id: string; number: string; count: number; kind: "driving" | "theory" }[];
+  modules: PlanModule[]; // modulforløb (trin E8); tom for lektionsforløb
 };
 export type StudentInfo = {
   id: string;
@@ -25,6 +27,7 @@ export type StudentInfo = {
   waiting: Set<string>; // kvitteret af læreren, venter på elevens bekræftelse
   signoffs: Map<string, Signoff>;
   theoryCount: number; // teorilektioner talt op (scannet eller givet af admin)
+  moduleCounts: ModuleCount[]; // lektioner talt i moduler (modulforløb)
 };
 export const FINISH_LABEL = { passed: "Bestået køreprøve", stopped: "Stoppet", other: "Afsluttet" } as const;
 export type Finished = { on: string; reason: keyof typeof FINISH_LABEL; note: string | null };
@@ -39,13 +42,13 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count)",
+        "id, user_id, team_id, course_id, service_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
     supabase
       .from("courses")
-      .select("id, name, category_code, theory_lessons, course_lessons(id, number, kind, lesson_count, sort_order, active)")
+      .select("id, name, category_code, theory_lessons, course_lessons(id, number, kind, lesson_count, sort_order, active), course_modules(id, number, name, min_theory, min_driving, min_dark)")
       .eq("school_id", schoolId)
       .order("name"),
   ]);
@@ -60,6 +63,7 @@ export async function loadStudents(schoolId: string) {
       .filter((l) => l.active)
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((l) => ({ id: l.id, number: l.number, count: l.lesson_count, kind: l.kind })),
+    modules: (c.course_modules ?? []) as PlanModule[],
   }));
   const studentList: StudentInfo[] = (students ?? [])
     .map((s) => {
@@ -84,6 +88,7 @@ export async function loadStudents(schoolId: string) {
         waiting: new Set([...signoffs].filter(([, x]) => !x.confirmed).map(([id]) => id)),
         signoffs,
         theoryCount: ((s.theory_signoffs ?? []) as { lesson_count: number }[]).reduce((n, t) => n + t.lesson_count, 0),
+        moduleCounts: (s.module_signoffs ?? []) as ModuleCount[],
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "da"));
@@ -98,7 +103,12 @@ export async function loadStudents(schoolId: string) {
 }
 
 // Andel gennemført (0–1) af elevens forløb.
+// Modulforløb: andelen af moduler, hvor minimum er nået.
 export function progress(student: StudentInfo, course: CourseInfo | undefined) {
+  if (course?.modules.length) {
+    const reached = moduleProgress(course.modules, student.moduleCounts).filter((m) => m.reached).length;
+    return { done: reached, total: course.modules.length, share: reached / course.modules.length };
+  }
   const total = course?.lessons.length ?? 0;
   const done = course ? course.lessons.filter((l) => student.done.has(l.id)).length : 0;
   return { done, total, share: total ? done / total : 0 };

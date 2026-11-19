@@ -78,3 +78,34 @@ async function signOffTheory(token: string, studentId: string, count: number): P
   revalidatePath("/elev", "layout");
   redirect(`/laerer/scan/${token}?kvitteret=Teori`);
 }
+
+// Modulforløb (trin E8): teori eller kørsel tælles i det valgte modul. Lærerens scanning er nok (ingen
+// elevunderskrift i modulplanen), og det går ikke til lønnen.
+export async function countModuleLessons(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, membership } = await requireRole(["instructor"]);
+  const text = (k: string) => String(formData.get(k) ?? "").trim();
+  const token = text("token");
+  const kind = text("kind");
+  const count = Number(text("count"));
+  if (!text("moduleId")) return { error: "Vælg modulet." };
+  if (kind !== "theory" && kind !== "driving") return { error: "Vælg teori eller kørsel." };
+  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Vælg antal lektioner." };
+  const supabase = await createClient();
+  const { data: instructor } = await supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single();
+  if (!instructor) return { error: "Du har ikke adgang til at kvittere." };
+  const { error } = await supabase.from("module_signoffs").insert({
+    school_id: membership.schoolId,
+    student_id: text("studentId"),
+    course_module_id: text("moduleId"),
+    kind,
+    lesson_count: count,
+    dark: kind === "driving" && formData.get("dark") === "on",
+    instructor_id: instructor.id,
+  });
+  const failed = dbError(error, "Lektionerne kunne ikke tælles. Prøv igen.");
+  if (failed) return failed;
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/kontor", "layout");
+  revalidatePath("/elev", "layout");
+  redirect(`/laerer/scan/${token}?kvitteret=Modul`);
+}

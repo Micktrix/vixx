@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { formatDate } from "@/lib/dates";
+import { moduleProgress, progressText, suggestedModule, type ModuleCount, type PlanModule } from "@/lib/module-progress";
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../../screen";
 import { getTeacher } from "../../teacher-data";
+import { ModuleForm } from "./module-form";
 import { SignoffForm, type SignoffLesson } from "./signoff-form";
 
 type LessonRow = SignoffLesson & { sort_order: number; active: boolean };
@@ -19,7 +21,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, is_demo, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), theory_signoffs(lesson_count), courses(name, theory_lessons, course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
+      "id, service_id, active, is_demo, profiles(full_name), teams(name), lesson_signoffs(course_lesson_id, lesson_date, confirmed_at, instructor_name), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date), courses(name, theory_lessons, plan_kind, course_modules(id, number, name, min_theory, min_driving, min_dark), course_lessons(id, number, kind, lesson_count, content, sort_order, active))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
@@ -38,7 +40,13 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
 
   const name = (student.profiles as unknown as { full_name: string } | null)?.full_name ?? "";
   const team = student.teams as unknown as { name: string } | null;
-  const course = student.courses as unknown as { name: string; theory_lessons: number; course_lessons: LessonRow[] } | null;
+  const course = student.courses as unknown as {
+    name: string;
+    theory_lessons: number;
+    plan_kind: "lessons" | "modules";
+    course_modules: PlanModule[];
+    course_lessons: LessonRow[];
+  } | null;
   const lessons = (course?.course_lessons ?? []).filter((l) => l.active).sort((a, b) => a.sort_order - b.sort_order);
   const signoffs = new Map(((student.lesson_signoffs ?? []) as SignoffRow[]).map((s) => [s.course_lesson_id, s]));
   const missing = lessons.filter((l) => !signoffs.has(l.id));
@@ -49,6 +57,32 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const theory = course?.theory_lessons ? { done: theoryDone, total: course.theory_lessons } : null;
 
   const signed = typeof sp.kvitteret === "string" ? sp.kvitteret : null;
+
+  if (course?.plan_kind === "modules") {
+    const progress = moduleProgress(course.course_modules, (student.module_signoffs ?? []) as ModuleCount[]);
+    const suggested = suggestedModule(progress);
+    return (
+      <Screen title={name} sub={[team?.name, course.name].filter(Boolean).join(" · ")} back={close}>
+        {signed && (
+          <p role="status" className="rounded-[16px] border border-ok/30 bg-ok-bg px-4 py-3 text-[15px]" data-testid="signoff-done">
+            <b className="text-ok">✓ Lektionerne er talt med i modulet.</b>
+          </p>
+        )}
+        <ol className="flex flex-col gap-1.5 rounded-[20px] border border-line bg-surface p-4" data-testid="scan-modules">
+          {progress.map((m) => (
+            <li key={m.id} className="text-[15px]">
+              <b>Modul {m.number}</b> {m.reached && <span className="text-ok">✓</span>}
+              <span className="block text-[13px] text-muted">
+                {progressText(m)}
+                {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
+              </span>
+            </li>
+          ))}
+        </ol>
+        {suggested && <ModuleForm token={token} studentId={student.id} modules={progress} suggestedId={suggested.id} />}
+      </Screen>
+    );
+  }
 
   return (
     <Screen title={name} sub={[team?.name, course?.name].filter(Boolean).join(" · ")} back={close}>

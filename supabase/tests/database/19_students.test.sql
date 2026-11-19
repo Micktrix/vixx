@@ -22,7 +22,7 @@ select throws_ok(
 
 -- Læreren (Lars) ser skolens elever og deres navne (til QR-kvittering).
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000011", "role": "authenticated"}', true);
-select is((select count(*) from public.students), 2::bigint, 'Læreren ser skolens elever');
+select is((select count(*) from public.students), 3::bigint, 'Læreren ser skolens elever (Emil, Freja og Bent)');
 select is((select full_name from public.profiles where id = '00000000-0000-4000-a100-000000000031'), 'Emil Elev',
   'Læreren ser elevens navn');
 reset role;
