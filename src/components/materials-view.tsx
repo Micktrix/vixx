@@ -168,14 +168,33 @@ function MaterialRow({
           )}
         </span>
       </div>
+      {isOwner && !m.folderId && folders.length > 0 && (
+        <ActionForm action={moveMaterial} submitLabel="Del med skolen" pendingLabel="…" className="flex flex-wrap items-end gap-2">
+          <input type="hidden" name="id" value={m.id} />
+          <label className="flex flex-col gap-1 text-[13px] font-bold">
+            Del i skolens mappe
+            <select name="folderId" required defaultValue="" className={inputClass}>
+              <option value="" disabled>
+                Vælg mappe
+              </option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </ActionForm>
+      )}
       {canEdit && (
         <details className="text-sm">
-          <summary className="cursor-pointer font-semibold text-muted hover:text-ink">{m.folderId ? "Flyt eller slet" : "Del med skolen eller slet"}</summary>
+          <summary className="cursor-pointer font-semibold text-muted hover:text-ink">{m.folderId ? "Flyt eller slet" : "Slet"}</summary>
           <div className="mt-2 flex flex-wrap items-end gap-3">
-            <ActionForm action={moveMaterial} submitLabel={m.folderId ? "Flyt" : "Del"} pendingLabel="…" primary={!m.folderId} className="flex items-end gap-2">
+            {m.folderId && (
+            <ActionForm action={moveMaterial} submitLabel="Flyt" pendingLabel="…" primary={false} className="flex items-end gap-2">
               <input type="hidden" name="id" value={m.id} />
               <label className="flex flex-col gap-1 text-[13px] font-bold">
-                {m.folderId ? "Til mappe" : "Del i mappe"}
+                Til mappe
                 <select name="folderId" required={!isOwner} defaultValue={m.folderId ?? ""} className={inputClass}>
                   {isOwner && <option value="">Mine materialer (kun mig)</option>}
                   {!isOwner && <option value="" disabled>Vælg mappe</option>}
@@ -187,6 +206,7 @@ function MaterialRow({
                 </select>
               </label>
             </ActionForm>
+            )}
             <ActionForm action={deleteMaterial} submitLabel="Slet" pendingLabel="…" primary={false} confirmText={`Slet "${m.title}"?`}>
               <input type="hidden" name="id" value={m.id} />
             </ActionForm>

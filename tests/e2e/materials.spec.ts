@@ -39,6 +39,20 @@ test("admin opretter en mappe, en lærer deler en fil og har et privat link, og 
     await lars.goto("/laerer/materialer?vis=mine");
     await expect(lars.getByTestId("material-list")).toContainText("Mine taxinoter");
 
+    // Lars lægger noget op til sig selv og deler det bagefter.
+    await lars.goto("/laerer/materialer?vis=op");
+    const add2 = lars.getByTestId("material-add");
+    await add2.getByRole("button", { name: "Link" }).click();
+    await add2.getByLabel("Titel").fill("Delt bagefter");
+    await add2.getByLabel("Link").fill("https://example.com/senere");
+    await add2.getByRole("button", { name: "Gem link" }).click();
+    await expect(add2.getByRole("status")).toContainText("Linket er gemt");
+    await lars.goto("/laerer/materialer?vis=mine");
+    const later = lars.getByTestId("material-row").filter({ hasText: "Delt bagefter" });
+    await later.getByLabel("Del i skolens mappe").selectOption({ label: folder });
+    await later.getByRole("button", { name: "Del med skolen" }).click();
+    await expect(lars.getByTestId("material-list")).not.toContainText("Delt bagefter");
+
     // Pia ser filen i mappen, men ikke Lars' private link, og kan hente filen.
     const pia = await browser.newPage();
     await loginOk(pia, "20000014", PASSWORD);
@@ -46,6 +60,7 @@ test("admin opretter en mappe, en lærer deler en fil og har et privat link, og 
     await pia.getByTestId("material-folders").getByRole("link", { name: new RegExp(folder) }).click();
     const row = pia.getByTestId("material-row").filter({ hasText: "Taxiregler" });
     await expect(row).toContainText("Lars Jensen");
+    await expect(pia.getByTestId("material-list")).toContainText("Delt bagefter");
     await pia.goto("/laerer/materialer?q=taxi");
     await expect(pia.getByTestId("material-list")).not.toContainText("Mine taxinoter");
 

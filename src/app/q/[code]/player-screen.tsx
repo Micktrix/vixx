@@ -11,7 +11,7 @@ type PlayerState = {
   status: "lobby" | "question" | "reveal" | "finished";
   index: number;
   total: number;
-  question: { id: string; text: string; answers: string[]; image_url: string | null; seconds_left: number; correct: number | null } | null;
+  question: { id: string; text: string; answers: string[]; image_url: string | null; answer_image_urls?: (string | null)[]; seconds_left: number; correct: number | null } | null;
   answered: boolean;
   my_choice: number | null;
   my_correct: boolean | null;
@@ -194,9 +194,15 @@ export function PlayerScreen({ code, loggedIn }: { code: string; loggedIn: boole
                   type="button"
                   disabled={sending}
                   onClick={() => void answer(i)}
-                  className={`min-h-16 rounded-2xl px-4 text-left text-lg font-bold text-white ${COLORS[i]} disabled:opacity-60`}
+                  className={`flex min-h-16 items-center gap-3 rounded-2xl px-4 py-2 text-left text-lg font-bold text-white ${COLORS[i]} disabled:opacity-60`}
                 >
-                  {LETTERS[i]}. {a}
+                  <span>
+                    {LETTERS[i]}.{a ? ` ${a}` : ""}
+                  </span>
+                  {q.answer_image_urls?.[i] && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={q.answer_image_urls[i]!} alt="" className="max-h-20 rounded-lg bg-white p-1 object-contain" />
+                  )}
                 </button>
               ))}
             </div>
@@ -207,7 +213,7 @@ export function PlayerScreen({ code, loggedIn }: { code: string; loggedIn: boole
               {state.my_choice == null ? "Du nåede ikke at svare." : state.my_correct ? `Rigtigt! +${state.my_points} point` : "Forkert"}
               {q.correct != null && !state.my_correct && (
                 <span className="mt-1 block text-base font-semibold text-ink">
-                  Rigtigt svar: {LETTERS[q.correct]}. {q.answers[q.correct]}
+                  Rigtigt svar: {LETTERS[q.correct]}.{q.answers[q.correct] ? ` ${q.answers[q.correct]}` : ""}
                 </span>
               )}
             </div>

@@ -9,6 +9,7 @@ export type QuizQuestion = {
   text: string;
   imagePath: string | null;
   answers: string[];
+  answerImages: string[]; // ét pr. svar; "" = intet billede
   correct: number;
   timeLimit: number;
 };
@@ -35,14 +36,14 @@ export async function loadQuiz(id: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("quizzes")
-    .select("id, school_id, title, shared, owner_id, owner_name, quiz_questions(id, position, text, image_path, answers, correct, time_limit, created_at)")
+    .select("id, school_id, title, shared, owner_id, owner_name, quiz_questions(id, position, text, image_path, answers, answer_images, correct, time_limit, created_at)")
     .eq("id", id)
     .maybeSingle();
   if (!data) return null;
-  type Row = { id: string; position: number; text: string; image_path: string | null; answers: string[]; correct: number; time_limit: number; created_at: string };
+  type Row = { id: string; position: number; text: string; image_path: string | null; answers: string[]; answer_images: string[] | null; correct: number; time_limit: number; created_at: string };
   const questions = ((data.quiz_questions ?? []) as Row[])
     .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
-    .map((q): QuizQuestion => ({ id: q.id, position: q.position, text: q.text, imagePath: q.image_path, answers: q.answers, correct: q.correct, timeLimit: q.time_limit }));
+    .map((q): QuizQuestion => ({ id: q.id, position: q.position, text: q.text, imagePath: q.image_path, answers: q.answers, answerImages: q.answer_images ?? q.answers.map(() => ""), correct: q.correct, timeLimit: q.time_limit }));
   return { id: data.id, schoolId: data.school_id, title: data.title, shared: data.shared, ownerId: data.owner_id, ownerName: data.owner_name, questions };
 }
 

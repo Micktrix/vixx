@@ -15,7 +15,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ses
   if (!session) return Response.json({ error: "Runden findes ikke." }, { status: 404 });
 
   const [{ data: questions }, { data: players }, { data: answers }] = await Promise.all([
-    supabase.from("quiz_questions").select("id, text, image_path, answers, correct, time_limit, position, created_at").eq("quiz_id", session.quiz_id),
+    supabase.from("quiz_questions").select("id, text, image_path, answers, answer_images, correct, time_limit, position, created_at").eq("quiz_id", session.quiz_id),
     supabase.from("quiz_players").select("id, nickname, score, removed").eq("session_id", id).order("joined_at"),
     supabase.from("quiz_answers").select("question_id, player_id, choice, correct").eq("session_id", id),
   ]);
@@ -50,6 +50,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ses
             text: q.text,
             answers: q.answers,
             imageUrl: await imageUrl(q.image_path),
+            answerImageUrls: await Promise.all(((q.answer_images as string[] | null) ?? []).map((p) => imageUrl(p))),
             correct: session.status === "reveal" || session.status === "finished" ? q.correct : null,
             secondsLeft,
             answered: current.length,

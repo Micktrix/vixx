@@ -14,7 +14,8 @@ export async function QuizList({ base }: { base: string }) {
   const { user, membership } = await requireRole(["admin", "office", "instructor"]);
   const quizzes = await loadQuizzes(membership.schoolId);
   const mine = quizzes.filter((q) => q.ownerId === user.id);
-  const shared = quizzes.filter((q) => q.ownerId !== user.id);
+  // Delte quizzer vises for alle, også ejerens egne, så man kan se, at de er delt.
+  const shared = quizzes.filter((q) => q.shared);
 
   const row = (q: QuizSummary) => (
     <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3 last:border-b-0" data-testid="quiz-row">
@@ -68,6 +69,9 @@ export async function QuizEditor({ base, id, showBack = true }: { base: string; 
   const isStaff = membership.role === "admin" || membership.role === "office";
   const canEdit = quiz.ownerId === user.id || (isStaff && quiz.shared);
   const images = await Promise.all(quiz.questions.map((q) => imageUrl(q.imagePath)));
+  const answerImages = await Promise.all(
+    quiz.questions.map((q) => Promise.all(q.answerImages.map(async (path) => ({ path, url: await imageUrl(path) })))),
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -111,7 +115,7 @@ export async function QuizEditor({ base, id, showBack = true }: { base: string; 
               <span className="text-sm text-muted">{q.timeLimit} sek.</span>
             </div>
             <p className="text-sm text-muted">
-              Rigtigt: {LETTERS[q.correct]}. {q.answers[q.correct]}
+              Rigtigt: {LETTERS[q.correct]}. {q.answers[q.correct] || "(billede)"}
             </p>
             {canEdit && (
               <details>
@@ -120,7 +124,7 @@ export async function QuizEditor({ base, id, showBack = true }: { base: string; 
                   <QuizQuestionForm
                     quizId={quiz.id}
                     position={q.position}
-                    initial={{ id: q.id, text: q.text, answers: q.answers, correct: q.correct, timeLimit: q.timeLimit, imagePath: q.imagePath, imageUrl: images[i] }}
+                    initial={{ id: q.id, text: q.text, answers: q.answers, answerImages: answerImages[i], correct: q.correct, timeLimit: q.timeLimit, imagePath: q.imagePath, imageUrl: images[i] }}
                   />
                   <ActionForm action={deleteQuestion} submitLabel="Slet spørgsmålet" pendingLabel="…" primary={false} confirmText="Slet spørgsmålet?">
                     <input type="hidden" name="id" value={q.id} />

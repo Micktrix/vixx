@@ -76,18 +76,20 @@ export async function saveQuestion(_prev: ActionState, formData: FormData): Prom
   const quizId = text(formData, "quizId");
   const id = text(formData, "id") || null;
   const question = text(formData, "text");
-  const answers = formData.getAll("answers").map((a) => String(a).trim()).filter(Boolean);
+  const texts = formData.getAll("answers").map((a) => String(a).trim());
+  const images = formData.getAll("answerImages").map((a) => String(a).trim());
+  // Et svar tæller, når det har tekst eller billede; tomme felter springes over.
+  const used = texts.map((t, i) => ({ text: t, image: images[i] ?? "", index: i })).filter((a) => a.text || a.image);
   const correctRaw = text(formData, "correct");
   const timeLimit = Number(text(formData, "timeLimit") || 20);
   if (!question) return { error: "Skriv spørgsmålet." };
-  if (answers.length < 2) return { error: "Skriv mindst to svar." };
+  if (used.length < 2) return { error: "Lav mindst to svar (tekst eller billede)." };
   if (correctRaw === "") return { error: "Markér det rigtige svar." };
-  // Det rigtige svar er nummeret blandt de udfyldte svar (tomme felter springes over).
-  const filled = formData.getAll("answers").map((a) => String(a).trim());
-  const correct = filled.slice(0, Number(correctRaw) + 1).filter(Boolean).length - 1;
-  if (!filled[Number(correctRaw)]) return { error: "Det rigtige svar må ikke være tomt." };
+  const correct = used.findIndex((a) => a.index === Number(correctRaw));
+  if (correct < 0) return { error: "Det rigtige svar må ikke være tomt." };
   const imagePath = text(formData, "imagePath") || null;
-  const values = { text: question, answers, correct, time_limit: timeLimit, image_path: imagePath };
+  const answerImages = used.some((a) => a.image) ? used.map((a) => a.image) : null;
+  const values = { text: question, answers: used.map((a) => a.text), answer_images: answerImages, correct, time_limit: timeLimit, image_path: imagePath };
 
   const { error } = id
     ? await supabase.from("quiz_questions").update(values).eq("id", id).eq("quiz_id", quizId)
@@ -105,10 +107,11 @@ export async function saveQuestion(_prev: ActionState, formData: FormData): Prom
 
 export async function deleteQuestion(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase } = await member();
-  const { data, error } = await supabase.from("quiz_questions").delete().eq("id", text(formData, "id")).select("quiz_id, image_path");
+  const { data, error } = await supabase.from("quiz_questions").delete().eq("id", text(formData, "id")).select("quiz_id, image_path, answer_images");
   const failed = dbError(error, "Spørgsmålet kunne ikke slettes.");
   if (failed) return failed;
-  if (data?.[0]?.image_path) await createAdminClient().storage.from("materials").remove([data[0].image_path]);
+  const paths = [data?.[0]?.image_path, ...((data?.[0]?.answer_images as string[] | null) ?? [])].filter(Boolean) as string[];
+  if (paths.length) await createAdminClient().storage.from("materials").remove(paths);
   refresh(data?.[0]?.quiz_id);
   return undefined;
 }

@@ -3,7 +3,7 @@
 -- Seed: Lars lærer (a100-…11), Pia lærer (a100-…14), Emil elev (a100-…31).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(22);
 
 create temporary table ids (quiz uuid, session uuid, code text, guest uuid, emil uuid);
 insert into ids values (null, null, null, null, null);
@@ -73,6 +73,23 @@ select pg_temp.as_user('11');
 update public.quizzes set shared = false where id = (select quiz from ids);
 select pg_temp.as_user('14');
 select is((select count(*) from public.quizzes), 0::bigint, 'Ejeren kan gøre quizzen privat igen');
+
+-- Billeder på svar: kun filer fra samme quiz, og et svar skal have tekst eller billede.
+select pg_temp.as_user('11');
+select lives_ok(
+  $$insert into public.quiz_questions (school_id, quiz_id, text, answers, answer_images, correct)
+    select '00000000-0000-4000-a000-000000000001', quiz, 'Hvilken tavle viser motorvej?', array['', 'Ingen af dem'],
+           array['00000000-0000-4000-a000-000000000001/quiz/' || quiz || '/tavle.png', ''], 0 from ids$$,
+  'Et svar kan være et billede uden tekst');
+select throws_ok(
+  $$insert into public.quiz_questions (school_id, quiz_id, text, answers, answer_images, correct)
+    select '00000000-0000-4000-a000-000000000001', quiz, 'Snyd', array['', 'B'],
+           array['00000000-0000-4000-a000-000000000002/materials/hemmelig.pdf', ''], 0 from ids$$,
+  '23514', 'Billedet hører ikke til denne quiz.', 'Et billede kan ikke pege på en anden skoles fil');
+select throws_ok(
+  $$insert into public.quiz_questions (school_id, quiz_id, text, answers, correct)
+    select '00000000-0000-4000-a000-000000000001', quiz, 'Tomt', array['', 'B'], 0 from ids$$,
+  '23514', 'Hvert svar skal have tekst eller et billede.', 'Et svar kan ikke være helt tomt');
 reset role;
 
 select * from finish();

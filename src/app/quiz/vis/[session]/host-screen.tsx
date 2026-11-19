@@ -13,6 +13,7 @@ type HostState = {
     text: string;
     answers: string[];
     imageUrl: string | null;
+    answerImageUrls: (string | null)[];
     correct: number | null;
     secondsLeft: number | null;
     answered: number;
@@ -137,8 +138,14 @@ export function HostScreen({ sessionId, code, joinUrl, qrSvg }: { sessionId: str
                   key={i}
                   className={`flex items-center justify-between gap-4 rounded-2xl px-6 py-5 text-2xl font-bold text-white ${COLORS[i]} ${wrong ? "opacity-35" : ""} ${right ? "ring-8 ring-ok/60" : ""}`}
                 >
-                  <span>
-                    {LETTERS[i]}. {a}
+                  <span className="flex min-w-0 items-center gap-4">
+                    <span>
+                      {LETTERS[i]}.{a ? ` ${a}` : ""}
+                    </span>
+                    {q.answerImageUrls[i] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={q.answerImageUrls[i]!} alt="" className="max-h-[16vh] rounded-xl bg-white p-1.5 object-contain" />
+                    )}
                   </span>
                   {state.status === "reveal" && <span className="text-3xl">{q.counts[i]}</span>}
                 </div>
