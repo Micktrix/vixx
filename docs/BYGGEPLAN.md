@@ -200,6 +200,29 @@ erstatter papirets lektionsplan med dato og to underskrifter.
     Vixx gemmer en kopi af underskriften på afslutningen, så en ny underskrift senere ikke ændrer gamle moduler.
   - Modulplanen (Færdselsstyrelsens PDF) lægges op pr. kørekortkategori (B, C, C/E, D …) under Indstillinger →
     Forløb. Vixx udfylder den for hver elev, og eleven og læreren kan altid vise den seneste udgave.
+  - Gennemgang af Færdselsstyrelsens udfyldbare modulplaner, version 1.1 april 2026 (B, C, C/E og D; 19. nov.
+    2026):
+    | Kategori | Sider | Moduler (min. teori + kørsel) | I alt | Dage |
+    |---|---|---|---|---|
+    | B | 20 | 1: 7+0 · 2: 5+3 · 3: 8+6 · 4: 9+6 (1 i mørke) · 5: 1+9 | 30 + 24 | 14 |
+    | C | 16 | 1: 8+5 · 2: 7+5 (1 i mørke) · 3: 1+8 | 16 + 18 | 12 |
+    | C/E | 16 | 1: 7+5 · 2: 5+5 · 3: 1+8 | 13 + 18 | 10 |
+    | D | 16 | 1: 8+5 · 2: 7+5 (1 i mørke) · 3: 1+8 | 16 + 18 | 12 |
+    - Underskriften bruges fire steder, ikke kun ved afslutning af et modul:
+      1. "Undervisende kørelærere" (12 linjer): hver lærer, der underviser eleven, skriver navn og underskrift
+         én gang. Vixx tilføjer læreren første gang, læreren har eleven.
+      2. Afslutning af hvert modul: dato, den afsluttende lærers navn og underskrift, plus antal ekstra
+         teori- og kørelektioner, selvstudie og "Overført fra lektionsplan".
+      3. Repetitionslektioner efter ikke bestået praktisk prøve (op til 27 linjer): dato, antal og underskrift.
+      4. Kørelærerskift i et ikke afsluttet modul (8 linjer): modul, antal teori og kørsel, gennemførte afsnit,
+         underskrift og dato.
+    - Kun B har feltet om manuelt gear (forsøgsordningen kode 78/148) i modul 2–5.
+    - Siden "Oplysninger om køreskole" har plads til den første skole og to skift af køreskole.
+    - Felternes navne er forskellige fra plan til plan, går igen på flere sider og har stavefejl (fx "CVRnpr",
+      "udnerskrift"). Vixx skal derfor have en kortlægning af felterne pr. kategori og version. Når
+      Færdselsstyrelsen laver en ny version, skal kortlægningen opdateres, før den nye PDF kan bruges.
+    - Underskriftsfelterne er af typen digital signatur. Vixx lægger den tegnede underskrift ind som et billede
+      på feltets plads; det er ikke en certifikat-underskrift.
   - EU-moduler (aftalt 19. nov. 2026): en kategori kan have en ekstra modulplan til EU (fx C/E med EU). Når en
     elev oprettes eller sættes på et hold, vælger kontoret, om eleven også skal gennemføre EU-modulerne. I så fald
     får eleven begge planer. EU-modulerne afsluttes og underskrives på samme måde (lærerens gemte underskrift,
