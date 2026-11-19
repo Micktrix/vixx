@@ -221,6 +221,15 @@ erstatter papirets lektionsplan med dato og to underskrifter.
     - Felternes navne er forskellige fra plan til plan, går igen på flere sider og har stavefejl (fx "CVRnpr",
       "udnerskrift"). Vixx skal derfor have en kortlægning af felterne pr. kategori og version. Når
       Færdselsstyrelsen laver en ny version, skal kortlægningen opdateres, før den nye PDF kan bruges.
+    - Skolen skifter selv modulplanen (aftalt 19. nov. 2026):
+      - Admin lægger en ny version op under Indstillinger → Forløb.
+      - Vixx læser felterne og genkender dem, hvis de hedder det samme som før.
+      - Mangler der felter, viser Vixx en enkel side, hvor admin vælger, hvilket felt i PDF'en hver oplysning
+        skal i, fx "Dato for afslutning af modul 2". Når alle felter er sat, kan versionen tages i brug.
+      - Admin kan se et prøvetryk med testdata, før versionen tages i brug.
+      - Gamle versioner gemmes, så elevernes udfyldte planer altid kan vises igen.
+      - Nye elever får den nye version. Elever, der er i gang, beholder deres version, medmindre admin flytter
+        dem.
     - Underskriftsfelterne er af typen digital signatur. Vixx lægger den tegnede underskrift ind som et billede
       på feltets plads; det er ikke en certifikat-underskrift.
   - EU-moduler (aftalt 19. nov. 2026): en kategori kan have en ekstra modulplan til EU (fx C/E med EU). Når en
