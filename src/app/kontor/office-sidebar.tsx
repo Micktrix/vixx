@@ -64,7 +64,7 @@ export function OfficeSidebar({ schoolName, userName, canSwitchSchool, teaches, 
           if (!s.children) {
             const current = isCurrent(s);
             return (
-              <Link key={s.label} href={officeHref(s)} aria-current={current ? "page" : undefined} className={`${itemClass(current)} w-auto min-[860px]:w-full`}>
+              <Link key={s.label} href={officeHref(s)} aria-current={current ? "page" : undefined} className={`${itemClass(current)} w-auto min-[860px]:w-full ${s.desktopOnly ? "max-[859px]:hidden" : ""}`}>
                 <span className="hidden min-[860px]:inline-flex">{icons[s.icon]}</span>
                 {s.label}
                 {s.slug && <Badge count={badges[s.slug] ?? 0} />}

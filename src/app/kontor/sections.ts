@@ -4,6 +4,7 @@ export type OfficeSection = {
   label: string;
   icon: "calendar" | "check" | "user" | "chart" | "tag" | "sun" | "message" | "list" | "settings" | "room" | "car" | "screen";
   children?: OfficeSection[];
+  desktopOnly?: boolean; // vises kun på computer (ikke i telefonens topbar)
 };
 
 export const officeSections: OfficeSection[] = [
@@ -14,8 +15,8 @@ export const officeSections: OfficeSection[] = [
   { slug: "koeretoejer", label: "Køretøjer", icon: "car" },
   { slug: "loen", label: "Lønoverblik", icon: "chart" },
   { slug: "beskeder", label: "Beskeder", icon: "message" },
-  { slug: "materialer", label: "Materialer", icon: "list" },
-  { slug: "quiz", label: "Quiz", icon: "check" },
+  { slug: "materialer", label: "Materialer", icon: "list", desktopOnly: true },
+  { slug: "quiz", label: "Quiz", icon: "check", desktopOnly: true },
   { slug: "storskaerm", label: "Storskærm", icon: "screen" },
   {
     slug: "indstillinger",

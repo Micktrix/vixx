@@ -164,14 +164,15 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
         </p>
       </section>
 
+      {/* Materialer og quiz bruges ved computeren (storskærm, upload) og vises ikke på telefonen. */}
       <div className="flex justify-center gap-5 text-sm font-semibold text-accent-ink">
         <Link href="/laerer/aabne-tider" className="underline underline-offset-[3px]">
           Åbne tider til elever
         </Link>
-        <Link href="/laerer/materialer" className="underline underline-offset-[3px]">
+        <Link href="/laerer/materialer" className="hidden underline underline-offset-[3px] min-[860px]:inline">
           Materialer
         </Link>
-        <Link href="/laerer/quiz" className="underline underline-offset-[3px]">
+        <Link href="/laerer/quiz" className="hidden underline underline-offset-[3px] min-[860px]:inline">
           Quiz
         </Link>
       </div>
