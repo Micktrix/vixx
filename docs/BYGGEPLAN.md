@@ -176,6 +176,23 @@ erstatter papirets lektionsplan med dato og to underskrifter.
   (erklæring til myndighed, straffelovens § 163).
 - Den digitale PDF har også underskriftsfelter af typen digital signatur (/Sig). MitID-signering er en
   mulighed senere.
+- Færdselsstyrelsens guide "Sådan udfylder du modulplanen digitalt" (læst 19. nov. 2026):
+  - Køreskoler må integrere modulplanen i egne it-systemer, så længe den kan vises med styrelsens layout og
+    logo. Der stilles ingen krav til særlige it-systemer.
+  - Den digitale underskrift, guiden beskriver, er et digitalt ID (certifikat) i Adobe Acrobat Reader, ikke en
+    tegnet underskrift. Guiden nævner ikke tegnede underskrifter i egne systemer, så det skal stadig bekræftes.
+  - Hver ny underskrift gemmes som en ny version, og alle versioner arkiveres. Vixx gemmer derfor hver
+    underskrevet udgave og kan aldrig overskrive eller slette en.
+  - Datofelterne i PDF'en skal have formatet d/m/yy.
+  - Delvis digital udfyldning er tilladt: fx stamdata digitalt og resten i hånden. Når man er gået over til
+    papir, kan planen ikke længere udfyldes digitalt.
+  - Ved lærerskift sendes den gemte version videre til kollegaen, så det er altid den seneste version, der gælder.
+  - Eleven kan vise planen til køreprøven på telefonen eller som print. Eleven skal have den seneste version,
+    så elevens app skal vise den.
+  - Spørgsmål sendes til koereuddannelse@fstyr.dk med emnet "Digital modulplan".
+- Løsning, der virker nu uden at vente på svar: Vixx udfylder den officielle PDF (stamdata, moduler, datoer,
+  lærernavne), og læreren skriver under med kuglepen eller med digitalt ID i Adobe. Den tegnede underskrift,
+  som Vixx lægger på automatisk, bygges først, når Færdselsstyrelsen har bekræftet den skriftligt.
 
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
