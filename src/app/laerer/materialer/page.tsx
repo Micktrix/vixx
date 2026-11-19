@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { MaterialsView } from "@/components/materials-view";
 import { Screen } from "../screen";
 
@@ -8,11 +7,7 @@ export default async function TeacherMaterialsPage({ searchParams }: PageProps<"
     <Screen
       title="Materialer"
       sub="Vidensbank"
-      action={
-        <Link href="/laerer" className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: "/laerer", label: "Kalender" }}
     >
       <MaterialsView base="/laerer/materialer" params={await searchParams} />
     </Screen>

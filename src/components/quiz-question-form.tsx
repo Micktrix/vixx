@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FileButton } from "@/components/file-button";
 import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass, primaryButtonClass } from "@/components/styles";
 import { prepareQuizImage, saveQuestion } from "@/lib/quiz-actions";
@@ -76,10 +77,10 @@ export function QuizQuestionForm({ quizId, position, initial }: { quizId: string
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5 text-sm font-bold">
+        <div className="flex flex-col gap-1.5 text-sm font-bold">
           Billede (valgfrit)
-          <input type="file" accept="image/*" onChange={(e) => void pickImage(e.target.files?.[0])} className="text-sm font-normal" />
-        </label>
+          <FileButton label="Vælg billede" accept="image/*" disabled={uploading} onFile={(f) => void pickImage(f)} />
+        </div>
         {preview && (
           <span className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}

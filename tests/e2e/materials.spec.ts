@@ -21,6 +21,7 @@ test("admin opretter en mappe, en lærer deler en fil og har et privat link, og 
     await loginOk(lars, INSTRUCTOR, PASSWORD);
     await lars.goto("/laerer");
     await lars.getByRole("link", { name: "Materialer" }).click();
+    await lars.getByRole("link", { name: "Læg materiale op" }).click();
     const add = lars.getByTestId("material-add");
     await add.getByRole("button", { name: "Link" }).click();
     await add.getByLabel("Titel").fill("Mine taxinoter");
@@ -31,7 +32,7 @@ test("admin opretter en mappe, en lærer deler en fil og har et privat link, og 
     await add.getByRole("button", { name: "Fil" }).click();
     await add.getByLabel("Titel").fill("Taxiregler");
     await add.getByLabel("Gem i").selectOption({ label: `Skolens mappe: ${folder}` });
-    await add.getByLabel("Fil (højst 50 MB)").setInputFiles({ name: "taxiregler.txt", mimeType: "text/plain", buffer: Buffer.from("Regler for taxa") });
+    await add.locator('input[type="file"]').setInputFiles({ name: "taxiregler.txt", mimeType: "text/plain", buffer: Buffer.from("Regler for taxa") });
     await add.getByRole("button", { name: "Læg op" }).click();
     await expect(add.getByRole("status")).toContainText("Filen er lagt op");
 

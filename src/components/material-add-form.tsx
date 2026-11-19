@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FileButton } from "@/components/file-button";
 import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass, primaryButtonClass } from "@/components/styles";
 import type { ActionState } from "@/lib/action-state";
@@ -16,6 +17,7 @@ export function MaterialAddForm({ folders, defaultFolderId = "" }: { folders: Fo
   const [kind, setKind] = useState<"file" | "link">("file");
   const [state, setState] = useState<ActionState>(undefined);
   const [busy, setBusy] = useState(false);
+  const [uploads, setUploads] = useState(0); // nulstiller filknappen efter hver upload
   const link = useFormAction(addLink);
 
   async function uploadFile(form: HTMLFormElement) {
@@ -40,6 +42,7 @@ export function MaterialAddForm({ folders, defaultFolderId = "" }: { folders: Fo
       setState(done);
       if (done && "message" in done) {
         form.reset();
+        setUploads((n) => n + 1);
         router.refresh();
       }
     } catch {
@@ -97,10 +100,10 @@ export function MaterialAddForm({ folders, defaultFolderId = "" }: { folders: Fo
           }}
         >
           {common}
-          <label className="flex flex-col gap-1.5 text-sm font-bold">
+          <div className="flex flex-col gap-1.5 text-sm font-bold">
             Fil (højst 50 MB)
-            <input name="file" type="file" required className="text-sm font-normal" />
-          </label>
+            <FileButton key={uploads} label="Vælg fil" name="file" required />
+          </div>
           <p className="text-[13px] text-muted">Læg kun materiale op, som skolen må bruge og dele. Videoer lægges op som links.</p>
           <div>
             <button type="submit" disabled={busy} className={primaryButtonClass}>

@@ -2,22 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, TextField } from "@/components/form";
 import { QuizQuestionForm } from "@/components/quiz-question-form";
-import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
-import { loadFolders } from "@/lib/materials";
 import { createQuiz, deleteQuestion, deleteQuiz, startQuiz, updateQuiz } from "@/lib/quiz-actions";
 import { imageUrl, loadQuiz, loadQuizzes, type QuizSummary } from "@/lib/quiz-data";
 
 const box = "flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-[18px]";
 const LETTERS = ["A", "B", "C", "D"];
 
-// Quiz-oversigten for lærere og kontor: egne quizzer og skolens delte (i vidensbankens mapper).
+// Quiz-oversigten for lærere og kontor: egne quizzer og skolens delte (flueben "Del med de andre lærere").
 export async function QuizList({ base }: { base: string }) {
   const { user, membership } = await requireRole(["admin", "office", "instructor"]);
-  const [quizzes, folders] = await Promise.all([loadQuizzes(membership.schoolId), loadFolders(membership.schoolId)]);
+  const quizzes = await loadQuizzes(membership.schoolId);
   const mine = quizzes.filter((q) => q.ownerId === user.id);
   const shared = quizzes.filter((q) => q.ownerId !== user.id);
-  const folderName = (id: string | null) => folders.find((f) => f.id === id)?.label;
 
   const row = (q: QuizSummary) => (
     <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-line py-3 last:border-b-0" data-testid="quiz-row">
@@ -25,7 +22,7 @@ export async function QuizList({ base }: { base: string }) {
         <b className="text-[15px] hover:text-accent-ink hover:underline">{q.title}</b>
         <span className="block text-[13px] text-muted">
           {q.questions} spørgsmål · {q.ownerName}
-          {q.folderId ? ` · ${folderName(q.folderId) ?? "delt"}` : " · kun mig"}
+          {q.shared ? " · delt med skolen" : " · kun mig"}
         </span>
       </Link>
       {q.questions > 0 && (
@@ -43,6 +40,10 @@ export async function QuizList({ base }: { base: string }) {
         <ActionForm action={createQuiz} submitLabel="Opret quiz" className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="base" value={base} />
           <TextField label="Titel" name="title" required maxLength={120} placeholder="Fx Vigepligt og kryds" className="min-w-[220px] flex-1" />
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" name="shared" className="size-5 accent-accent" />
+            Del med de andre lærere
+          </label>
         </ActionForm>
       </section>
       <section className={box}>
@@ -52,44 +53,42 @@ export async function QuizList({ base }: { base: string }) {
       </section>
       <section className={box}>
         <h2 className="text-lg font-bold">Skolens delte quizzer</h2>
-        {!shared.length && <p className="text-sm text-muted">Ingen delte quizzer endnu. Del en quiz ved at vælge en mappe på quizzen.</p>}
+        {!shared.length && <p className="text-sm text-muted">Ingen delte quizzer endnu. Sæt flueben ved »Del med de andre lærere« på en quiz.</p>}
         <ul className="flex flex-col">{shared.map(row)}</ul>
       </section>
     </div>
   );
 }
 
-// Ret en quiz: titel, deling i mappe, spørgsmål, start og slet.
-export async function QuizEditor({ base, id }: { base: string; id: string }) {
+// Ret en quiz: titel, deling, spørgsmål, start og slet.
+export async function QuizEditor({ base, id, showBack = true }: { base: string; id: string; showBack?: boolean }) {
   const { user, membership } = await requireRole(["admin", "office", "instructor"]);
   const quiz = await loadQuiz(id);
   if (!quiz) notFound();
   const isStaff = membership.role === "admin" || membership.role === "office";
-  const canEdit = quiz.ownerId === user.id || (isStaff && !!quiz.folderId);
-  const folders = (await loadFolders(membership.schoolId)).filter((f) => f.active || f.id === quiz.folderId);
+  const canEdit = quiz.ownerId === user.id || (isStaff && quiz.shared);
   const images = await Promise.all(quiz.questions.map((q) => imageUrl(q.imagePath)));
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href={base} className="text-sm font-semibold text-muted hover:text-ink">
-        ‹ Alle quizzer
-      </Link>
+      {showBack && (
+        <Link href={base} className="text-sm font-semibold text-muted hover:text-ink">
+          ‹ Alle quizzer
+        </Link>
+      )}
       <section className={box}>
         {canEdit ? (
           <ActionForm action={updateQuiz} submitLabel="Gem" className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="id" value={quiz.id} />
             <TextField label="Titel" name="title" required maxLength={120} defaultValue={quiz.title} className="min-w-[220px] flex-1" />
-            <label className="flex flex-col gap-1.5 text-sm font-bold">
-              Deling
-              <select name="folderId" defaultValue={quiz.folderId ?? ""} className={inputClass}>
-                {quiz.ownerId === user.id && <option value="">Kun mig</option>}
-                {folders.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    Skolens mappe: {f.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {quiz.ownerId === user.id ? (
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" name="shared" defaultChecked={quiz.shared} className="size-5 accent-accent" />
+                Del med de andre lærere
+              </label>
+            ) : (
+              <input type="hidden" name="shared" value="on" />
+            )}
           </ActionForm>
         ) : (
           <h2 className="text-xl font-bold">{quiz.title}</h2>

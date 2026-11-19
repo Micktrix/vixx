@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { busyByResource, loadBookings, loadResources } from "@/lib/booking-data";
 import { addDays, formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
@@ -46,11 +45,7 @@ export default async function PlanOwnLessonPage({ searchParams }: PageProps<"/la
     <Screen
       title={lesson ? "Ret planlagt lektion" : "Planlæg lektion"}
       sub={formatLongDate(date)}
-      action={
-        <Link href={back} className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: back, label: "Kalender" }}
     >
       <section className="flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-[18px]">
         <p className="rounded-xl bg-soft px-3.5 py-2.5 text-sm">

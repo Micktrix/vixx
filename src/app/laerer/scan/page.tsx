@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Screen } from "../screen";
 import { Scanner } from "./scanner";
 
@@ -8,11 +7,7 @@ export default function ScanPage() {
     <Screen
       title="Scan elev"
       sub="Kvittér for en lektion"
-      action={
-        <Link href="/laerer" className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: "/laerer", label: "Kalender" }}
     >
       <Scanner />
       <p className="text-center text-sm text-muted">

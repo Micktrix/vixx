@@ -77,7 +77,7 @@ test("admin viser elevens skærm med en fiktiv demo-elev, scanner test-koden og 
     await expect(phone.getByRole("heading", { name: "Hej Demo" })).toBeVisible();
     await phone.getByRole("link", { name: "Vis min QR-kode" }).click();
     await expect(phone.getByTestId("student-qr").locator("svg")).toBeVisible();
-    await phone.getByRole("link", { name: "Luk" }).click();
+    await phone.getByRole("link", { name: "‹ Tilbage" }).click();
 
     const { data: demo } = await admin.from("students").select("id, qr_token").eq("is_demo", true).single();
     await teacher.goto(`/laerer/scan/${demo!.qr_token}`);

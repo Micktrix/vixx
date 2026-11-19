@@ -36,7 +36,7 @@ export async function createQuiz(_prev: ActionState, formData: FormData): Promis
   const { schoolId, supabase } = await member();
   const title = text(formData, "title");
   if (!title) return { error: "Skriv en titel." };
-  const { data, error } = await supabase.from("quizzes").insert({ school_id: schoolId, title }).select("id").single();
+  const { data, error } = await supabase.from("quizzes").insert({ school_id: schoolId, title, shared: formData.get("shared") === "on" }).select("id").single();
   const failed = dbError(error, "Quizzen kunne ikke oprettes. Prøv igen.");
   if (failed) return failed;
   refresh();
@@ -50,7 +50,7 @@ export async function updateQuiz(_prev: ActionState, formData: FormData): Promis
   if (!title) return { error: "Skriv en titel." };
   const { data, error } = await supabase
     .from("quizzes")
-    .update({ title, folder_id: text(formData, "folderId") || null })
+    .update({ title, shared: formData.get("shared") === "on" })
     .eq("id", id)
     .select("id");
   const failed = dbError(error, "Quizzen kunne ikke gemmes. Prøv igen.");

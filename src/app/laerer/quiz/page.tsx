@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { QuizList } from "@/components/quiz-pages";
 import { Screen } from "../screen";
 
@@ -8,11 +7,7 @@ export default function TeacherQuizPage() {
     <Screen
       title="Quiz"
       sub="Til teoriholdene"
-      action={
-        <Link href="/laerer" className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: "/laerer", label: "Kalender" }}
     >
       <QuizList base="/laerer/quiz" />
     </Screen>

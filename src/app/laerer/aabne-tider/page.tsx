@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ActionForm, TextField } from "@/components/form";
 import { ServiceOptions } from "@/components/service-options";
 import { inputClass } from "@/components/styles";
@@ -35,11 +34,7 @@ export default async function OpenSlotsPage() {
     <Screen
       title="Åbne tider"
       sub="Tider dine elever kan anmode om"
-      action={
-        <Link href="/laerer" className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: "/laerer", label: "Kalender" }}
     >
       <section className="rounded-[20px] border border-line bg-surface p-[18px]">
         <ActionForm action={openSlot} submitLabel="Åbn tid" className="flex flex-col gap-3">

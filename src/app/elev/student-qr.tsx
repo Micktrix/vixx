@@ -1,4 +1,3 @@
-import Link from "next/link";
 import QRCode from "qrcode";
 import { siteOrigin } from "@/lib/site-url";
 import { Screen } from "../laerer/screen";
@@ -7,13 +6,9 @@ import { Screen } from "../laerer/screen";
 // Bruges af elevens app og af demo-eleven i kontoret.
 export async function StudentQr({ token, name, closeHref }: { token: string; name: string; closeHref: string }) {
   const svg = await QRCode.toString(`${await siteOrigin()}/laerer/scan/${token}`, { type: "svg", margin: 1 });
-  const back = (
-    <Link href={closeHref} className="text-sm font-semibold text-muted">
-      Luk
-    </Link>
-  );
+  const back = { href: closeHref, label: "Tilbage" };
   return (
-    <Screen title="Min QR-kode" sub={name} action={back}>
+    <Screen title="Min QR-kode" sub={name} back={back}>
       <div
         data-testid="student-qr"
         className="mx-auto w-full max-w-[320px] rounded-[20px] border border-line bg-white p-4 [&_svg]:h-auto [&_svg]:w-full"

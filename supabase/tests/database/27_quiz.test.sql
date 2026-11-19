@@ -3,7 +3,7 @@
 -- Seed: Lars lærer (a100-…11), Pia lærer (a100-…14), Emil elev (a100-…31).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(19);
 
 create temporary table ids (quiz uuid, session uuid, code text, guest uuid, emil uuid);
 insert into ids values (null, null, null, null, null);
@@ -58,6 +58,21 @@ select pg_temp.as_user('11');
 select is((select count(*) from public.quiz_players), 2::bigint, 'Værten ser deltagerne');
 select pg_temp.as_user('14');
 select is((select count(*) from public.quiz_players), 0::bigint, 'Andre ser ikke deltagerne');
+
+-- Deling med flueben: ejeren deler, de andre lærere ser den, men kun ejeren og admin/kontor retter.
+select pg_temp.as_user('11');
+update public.quizzes set shared = true where id = (select quiz from ids);
+select pg_temp.as_user('14');
+select is((select count(*) from public.quizzes), 1::bigint, 'En delt quiz ses af de andre lærere');
+select is((select count(*) from public.quiz_questions), 1::bigint, 'De andre lærere ser spørgsmålene i en delt quiz');
+with u as (update public.quizzes set title = 'Kapret' where id = (select quiz from ids) returning 1)
+select is((select count(*) from u), 0::bigint, 'En anden lærer kan ikke rette en delt quiz');
+select pg_temp.as_user('02');
+select throws_ok($$update public.quizzes set shared = false where id = (select quiz from ids)$$, '42501', null, 'Kun ejeren kan gøre quizzen privat');
+select pg_temp.as_user('11');
+update public.quizzes set shared = false where id = (select quiz from ids);
+select pg_temp.as_user('14');
+select is((select count(*) from public.quizzes), 0::bigint, 'Ejeren kan gøre quizzen privat igen');
 reset role;
 
 select * from finish();

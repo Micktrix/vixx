@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { QuizEditor } from "@/components/quiz-pages";
 import { Screen } from "../../screen";
 
@@ -8,13 +7,9 @@ export default async function TeacherQuizEditPage({ params }: PageProps<"/laerer
     <Screen
       title="Quiz"
       sub="Ret quiz"
-      action={
-        <Link href="/laerer/quiz" className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: "/laerer/quiz", label: "Alle quizzer" }}
     >
-      <QuizEditor base="/laerer/quiz" id={id} />
+      <QuizEditor base="/laerer/quiz" id={id} showBack={false} />
     </Screen>
   );
 }

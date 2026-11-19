@@ -18,31 +18,36 @@ export async function MaterialsView({ base, params }: { base: string; params: Re
   const isStaff = isAdmin || membership.role === "office";
   const one = (k: string) => (typeof params[k] === "string" ? (params[k] as string) : "");
   const mine = one("vis") === "mine";
+  const upload = one("vis") === "op";
   const folderId = one("mappe");
   const q = one("q").trim();
 
   const folders = await loadFolders(membership.schoolId);
   const open = folders.filter((f) => f.active);
   const folder = folders.find((f) => f.id === folderId);
-  const materials = await loadMaterials(membership.schoolId, user.id, mine ? { mine: true } : { folderId: folder?.id, q });
-  const showList = mine || folder || q;
+  const materials = upload ? [] : await loadMaterials(membership.schoolId, user.id, mine ? { mine: true } : { folderId: folder?.id, q });
+  const showList = !upload && (mine || folder || q);
+  const school = !mine && !upload;
   const counts = new Map<string, number>();
-  if (!mine && !folder && !q) {
+  if (school && !folder && !q) {
     for (const m of await loadMaterials(membership.schoolId, user.id, {})) counts.set(m.folderId!, (counts.get(m.folderId!) ?? 0) + 1);
   }
 
   return (
     <div className="flex flex-col gap-4">
       <nav aria-label="Materialer" className="flex rounded-[10px] border border-line2 bg-surface p-0.5">
-        <Link href={base} aria-current={!mine ? "page" : undefined} className={tab(!mine)}>
+        <Link href={base} aria-current={school ? "page" : undefined} className={tab(school)}>
           Skolens materialer
         </Link>
         <Link href={`${base}?vis=mine`} aria-current={mine ? "page" : undefined} className={tab(mine)}>
           Mine materialer
         </Link>
+        <Link href={`${base}?vis=op`} aria-current={upload ? "page" : undefined} className={tab(upload)}>
+          Læg materiale op
+        </Link>
       </nav>
 
-      {!mine && (
+      {school && (
         <form action={base} role="search" className="flex gap-2">
           <input type="search" name="q" defaultValue={q} aria-label="Søg i materialer" placeholder="Søg i skolens materialer" className={inputClass} />
           <button type="submit" className="inline-flex h-11 items-center rounded-xl border border-line2 bg-surface px-4 text-[15px] font-bold">
@@ -51,7 +56,7 @@ export async function MaterialsView({ base, params }: { base: string; params: Re
         </form>
       )}
 
-      {!mine && !q && !folder && (
+      {school && !q && !folder && (
         <section className={box} data-testid="material-folders">
           <h2 className="text-lg font-bold">Mapper</h2>
           {!open.length && (
@@ -78,13 +83,20 @@ export async function MaterialsView({ base, params }: { base: string; params: Re
 
       {showList && (
         <section className={box}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">{mine ? "Mine materialer" : folder ? folder.label : `Søgning: "${q}"`}</h2>
+          <div>
             {!mine && (
-              <Link href={base} className="text-sm font-semibold text-muted hover:text-ink">
+              <Link href={base} className="text-sm font-semibold text-accent-ink">
                 ‹ Alle mapper
               </Link>
             )}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-bold">{mine ? "Mine materialer" : folder ? folder.label : `Søgning: "${q}"`}</h2>
+              {(mine || folder?.active) && (
+                <Link href={`${base}?vis=op${folder ? `&mappe=${folder.id}` : ""}`} className="text-sm font-semibold text-accent-ink hover:underline">
+                  + Læg materiale op {folder ? "i denne mappe" : ""}
+                </Link>
+              )}
+            </div>
           </div>
           {!materials.length && <p className="text-sm text-muted">{mine ? "Du har ingen private materialer." : "Her er intet endnu."}</p>}
           <ul className="flex flex-col" data-testid="material-list">
@@ -103,12 +115,14 @@ export async function MaterialsView({ base, params }: { base: string; params: Re
         </section>
       )}
 
-      <section className={box}>
-        <h2 className="text-lg font-bold">Læg materiale op</h2>
-        <MaterialAddForm folders={open.map((f) => ({ id: f.id, label: f.label }))} defaultFolderId={mine ? "" : (folder?.active ? folder.id : "")} />
-      </section>
+      {upload && (
+        <section className={box}>
+          <h2 className="text-lg font-bold">Læg materiale op</h2>
+          <MaterialAddForm folders={open.map((f) => ({ id: f.id, label: f.label }))} defaultFolderId={folder?.active ? folder.id : ""} />
+        </section>
+      )}
 
-      {isAdmin && !mine && <FolderAdmin folders={folders} />}
+      {isAdmin && school && !folder && !q && <FolderAdmin folders={folders} />}
     </div>
   );
 }

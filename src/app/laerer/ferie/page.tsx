@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ActionForm, TextField } from "@/components/form";
 import { Pill } from "@/components/pill";
 import { formatDate, todayDk } from "@/lib/dates";
@@ -25,11 +24,7 @@ export default async function HolidayRequestPage() {
     <Screen
       title="Ferie"
       sub="Kontoret godkender din anmodning"
-      action={
-        <Link href="/laerer/overblik" className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: "/laerer/overblik", label: "Overblik" }}
     >
       <section className="rounded-[20px] border border-line bg-surface p-[18px]">
         <h2 className="mb-3 text-lg font-bold">Anmod om ferie</h2>

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ActionForm, TextField } from "@/components/form";
 import { requireRole } from "@/lib/auth/session";
 import { CONTACT_FIELDS, KIN_FIELDS, type FieldDef } from "@/lib/instructor-fields";
@@ -22,14 +21,10 @@ export default async function OwnDetailsPage() {
   // Adressen til kalenderfilen, på det domæne appen kører på (fx test.vixx.dk).
   const calendarUrl = `${await siteOrigin()}/kalender/${values.calendar_token}.ics`;
 
-  const back = (
-    <Link href="/laerer/beskeder" className="text-sm font-semibold text-muted">
-      Luk
-    </Link>
-  );
+  const back = { href: "/laerer/beskeder", label: "Tilbage" };
 
   return (
-    <Screen title="Mine oplysninger" sub={user.fullName} action={back}>
+    <Screen title="Mine oplysninger" sub={user.fullName} back={back}>
       {values.calendar_token && <CalendarBox
           httpsUrl={calendarUrl}
           intro="Dine lektioner, bookinger, fravær og ferie vises i telefonens egen kalender og opdateres af sig selv. Godkendelse og registrering sker stadig her i appen."

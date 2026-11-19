@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ActionForm, CheckChip } from "@/components/form";
 import { inputClass } from "@/components/styles";
@@ -26,11 +25,7 @@ export default async function CanWorkPage({ searchParams }: PageProps<"/laerer/k
     <Screen
       title="Jeg kan arbejde"
       sub="Vælg de datoer, du kan arbejde"
-      action={
-        <Link href={`/laerer?dag=${chosen}`} className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: `/laerer?dag=${chosen}`, label: "Kalender" }}
     >
       <section className="rounded-[20px] border border-line bg-surface p-[18px]">
         <ActionForm action={saveCanWork} submitLabel="Gem" className="flex flex-col gap-4">

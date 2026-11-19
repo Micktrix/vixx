@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ActionForm } from "@/components/form";
 import { formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
@@ -42,11 +41,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
     <Screen
       title={reg ? (reg.status === "rejected" ? "Ret og send igen" : "Ret lektion") : "Tilføj lektioner"}
       sub={formatLongDate(date)}
-      action={
-        <Link href={back} className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: back, label: "Kalender" }}
     >
       <section className="flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-[18px]">
         {reg?.status === "rejected" && reg.decision_comment && (

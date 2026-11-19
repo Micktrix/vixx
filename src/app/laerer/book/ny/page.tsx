@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
@@ -46,11 +45,7 @@ export default async function NewBookingPage({ searchParams }: PageProps<"/laere
     <Screen
       title={booking ? "Ret booking" : `Book ${resource.name}`}
       sub={formatLongDate(date)}
-      action={
-        <Link href={back} className="text-sm font-semibold text-muted">
-          Luk
-        </Link>
-      }
+      back={{ href: back, label: "Book" }}
     >
       <section className="flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-[18px]">
         {taken.length > 0 && (

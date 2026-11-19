@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
@@ -26,14 +25,10 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
     .eq("qr_token", token)
     .maybeSingle();
 
-  const close = (
-    <Link href="/laerer" className="text-sm font-semibold text-muted">
-      Luk
-    </Link>
-  );
+  const close = { href: "/laerer/scan", label: "Scan en anden elev" };
   if (!student || !student.active) {
     return (
-      <Screen title="Ukendt elev" sub="Kvittér for en lektion" action={close}>
+      <Screen title="Ukendt elev" sub="Kvittér for en lektion" back={close}>
         <p className="rounded-[16px] border border-bad/30 bg-bad-bg px-4 py-3 text-bad">
           Koden passer ikke til en aktiv elev på din skole. Bed eleven åbne koden igen i Vixx.
         </p>
@@ -56,7 +51,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const signed = typeof sp.kvitteret === "string" ? sp.kvitteret : null;
 
   return (
-    <Screen title={name} sub={[team?.name, course?.name].filter(Boolean).join(" · ")} action={close}>
+    <Screen title={name} sub={[team?.name, course?.name].filter(Boolean).join(" · ")} back={close}>
       {signed && (
         <p role="status" className="rounded-[16px] border border-ok/30 bg-ok-bg px-4 py-3 text-[15px]" data-testid="signoff-done">
           {signed === "Teori" ? (
