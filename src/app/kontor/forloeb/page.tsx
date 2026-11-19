@@ -5,7 +5,7 @@ import { Pill } from "@/components/pill";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { createCourse, createModuleCourse } from "./actions";
+import { createCourse, createEmptyModuleCourse, createModuleCourse } from "./actions";
 
 type CourseRow = {
   id: string;
@@ -82,6 +82,26 @@ export default async function CoursesPage() {
               Modulerne, minimum og emnerne lægges ind fra Færdselsstyrelsens modulplan og kan rettes bagefter.
             </p>
           </ActionForm>
+          <details className="mt-3 border-t border-line pt-3">
+            <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Modulplan uden skabelon (fx EU-moduler)</summary>
+            <ActionForm action={createEmptyModuleCourse} submitLabel="Opret tomt modulforløb" className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1.5 text-sm font-bold">
+                Kategori
+                <select name="category" required defaultValue="" className={`${inputClass.replace("w-full", "")} w-[120px]`}>
+                  <option value="" disabled>
+                    Vælg
+                  </option>
+                  {(categories ?? []).map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <TextField label="Navn" name="name" required maxLength={80} placeholder="Fx C/E med EU" className="min-w-[240px] flex-1" />
+            </ActionForm>
+            <p className="mt-2 text-[13px] text-muted">Du bygger modulerne og lægger Færdselsstyrelsens udfyldbare PDF op på forløbet.</p>
+          </details>
         </Box>
       )}
 

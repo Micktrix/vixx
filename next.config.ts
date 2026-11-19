@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   // Færdselsstyrelsens modulplaner (PDF) læses fra disken, når en plan udfyldes.
   outputFileTracingIncludes: {
     "/api/modulplan/[studentId]": ["./src/lib/modulplan/templates/*.pdf"],
+    "/api/modulplan/proeve/[templateId]": ["./src/lib/modulplan/templates/*.pdf"],
+    "/kontor/forloeb/[id]/pdf/[templateId]": ["./src/lib/modulplan/templates/*.pdf"],
   },
   // Cache Components er slået fra: næsten alle sider ligger bag login og er dynamiske,
   // og klassisk server-rendering holder login-tjekket enkelt.

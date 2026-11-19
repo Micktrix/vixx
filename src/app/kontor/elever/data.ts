@@ -20,6 +20,7 @@ export type StudentInfo = {
   phone: string;
   address: string | null; // står på modulplanen
   manualGear: boolean; // kode 78 (kun B)
+  planTemplateId: string | null; // elevens version af modulplanens PDF
   repetitions: { id: string; lesson_date: string; lesson_count: number; instructor_name: string }[];
   teamId: string | null;
   courseId: string;
@@ -46,7 +47,7 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, address, manual_gear, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, manual_gear, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
@@ -85,6 +86,7 @@ export async function loadStudents(schoolId: string) {
         phone: p?.phone ?? "",
         address: s.address,
         manualGear: s.manual_gear,
+        planTemplateId: s.plan_template_id,
         repetitions: ((s.repetition_lessons ?? []) as StudentInfo["repetitions"]).sort((a, b) => a.lesson_date.localeCompare(b.lesson_date)),
         teamId: s.team_id,
         courseId: s.course_id,

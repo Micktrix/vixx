@@ -1,6 +1,7 @@
 import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
-import { updateModule } from "../actions";
+import { Box } from "@/components/box";
+import { addModule, deleteModule, updateModule } from "../actions";
 
 export type ModuleRow = {
   id: string;
@@ -60,10 +61,44 @@ export function ModuleList({ modules, isAdmin }: { modules: ModuleRow[]; isAdmin
                 </label>
                 <TextField label="Note" name="notes" maxLength={1000} defaultValue={m.notes ?? ""} />
               </ActionForm>
+              <ActionForm
+                action={deleteModule}
+                submitLabel="Slet modulet"
+                pendingLabel="…"
+                primary={false}
+                confirmText={`Slet modul ${m.number}?`}
+                className="mt-3 flex flex-col gap-2"
+              >
+                <input type="hidden" name="id" value={m.id} />
+              </ActionForm>
             </details>
           )}
         </li>
       ))}
     </ol>
+  );
+}
+
+// Nyt modul i et modulforløb, fx når skolen bygger EU-modulerne selv. Kun admin.
+export function NewModuleForm({ courseId, next }: { courseId: string; next: number }) {
+  return (
+    <Box title="Nyt modul" hint="Fx når skolen bygger EU-modulerne efter blanketten">
+      <ActionForm action={addModule} submitLabel="Tilføj modul" className="flex flex-col gap-3">
+        <input type="hidden" name="courseId" value={courseId} />
+        <div className="flex flex-wrap items-end gap-3">
+          <TextField label="Nummer" name="number" type="number" min={1} max={20} defaultValue={next} required className="w-[110px]" />
+          <TextField label="Navn" name="name" required maxLength={120} className="min-w-[240px] flex-1" />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <TextField label="Min. teori" name="minTheory" type="number" min={0} max={100} defaultValue={0} className="w-[130px]" />
+          <TextField label="Min. kørsel" name="minDriving" type="number" min={0} max={100} defaultValue={0} className="w-[130px]" />
+          <TextField label="Heraf i mørke" name="minDark" type="number" min={0} max={100} defaultValue={0} className="w-[130px]" />
+        </div>
+        <label className="flex flex-col gap-1.5 text-sm font-bold">
+          Emner (én linje pr. afsnit)
+          <textarea name="topics" rows={4} maxLength={4000} className={inputClass} />
+        </label>
+      </ActionForm>
+    </Box>
   );
 }

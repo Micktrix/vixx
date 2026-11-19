@@ -9,7 +9,8 @@ import { COURSE_TEMPLATES } from "@/lib/course-templates";
 import { createClient } from "@/lib/supabase/server";
 import { addLesson, deleteCourse, deleteLesson, insertTemplate, moveLesson, updateCourse, updateLesson } from "../actions";
 import { LessonFields, type LessonRow } from "../lesson-fields";
-import { ModuleList, type ModuleRow } from "./modules";
+import { ModuleList, NewModuleForm, type ModuleRow } from "./modules";
+import { TemplatesBox } from "./templates-box";
 
 const KIND = { driving: "Kørsel", theory: "Teori" } as const;
 
@@ -53,8 +54,9 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
         <p className="flex flex-wrap items-center gap-1.5 text-muted">
           {isModules ? (
             <>
-              Kategori {course.category_code} · Modulplan version {course.plan_version} · {modules.length} moduler · Min. {sum("min_theory")} teori +{" "}
-              {sum("min_driving")} kørsel · Min. {course.min_days} undervisningsdage
+              Kategori {course.category_code}
+              {course.plan_version && ` · Modulplan version ${course.plan_version}`} · {modules.length} moduler · Min. {sum("min_theory")} teori +{" "}
+              {sum("min_driving")} kørsel{course.min_days ? ` · Min. ${course.min_days} undervisningsdage` : ""}
             </>
           ) : (
             <>
@@ -114,6 +116,8 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
       )}
 
       {isModules && <ModuleList modules={modules} isAdmin={isAdmin} />}
+      {isModules && isAdmin && <NewModuleForm key={modules.length} courseId={course.id} next={(modules.at(-1)?.number ?? 0) + 1} />}
+      {isModules && <TemplatesBox courseId={course.id} isAdmin={isAdmin} />}
 
       {!isModules && (
       <ol className="flex flex-col gap-3" data-testid="course-lessons">

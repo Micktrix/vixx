@@ -254,3 +254,71 @@ export async function updateModule(_prev: ActionState, formData: FormData): Prom
   revalidatePath(`${PAGE}/${data[0].course_id}`);
   return { message: `Modul ${data[0].number} er gemt.` };
 }
+
+type ModuleValues = { name: string; min_theory: number; min_driving: number; min_dark: number; topics: string | null };
+
+function readModule(formData: FormData): { error: string } | ModuleValues {
+  const name = text(formData, "name");
+  if (!name) return { error: "Skriv modulets navn." };
+  if (name.length > 120) return { error: "Navnet er for langt." };
+  const num = (key: string) => Number(text(formData, key) || 0);
+  const [theory, driving, dark] = [num("minTheory"), num("minDriving"), num("minDark")];
+  if (![theory, driving, dark].every((n) => Number.isInteger(n) && n >= 0 && n <= 100)) return { error: "Antal skal være mellem 0 og 100." };
+  if (dark > driving) return { error: "Kørsel i mørke kan ikke være flere end kørsel i alt." };
+  return {
+    name,
+    min_theory: theory,
+    min_driving: driving,
+    min_dark: dark,
+    topics: String(formData.get("topics") ?? "").replace(/\r\n/g, "\n").trim() || null,
+  };
+}
+
+// Nyt modul i et modulforløb (fx EU-moduler, som skolen bygger efter blanketten).
+export async function addModule(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const values = readModule(formData);
+  if ("error" in values) return values;
+  const number = Number(text(formData, "number"));
+  if (!Number.isInteger(number) || number < 1 || number > 20) return { error: "Nummeret skal være mellem 1 og 20." };
+  const courseId = text(formData, "courseId");
+  const supabase = await createClient();
+  const { error } = await supabase.from("course_modules").insert({ ...values, number, school_id: membership.schoolId, course_id: courseId });
+  if (error?.code === "23505") return { error: `Modul ${number} findes allerede.` };
+  if (error?.code === "23514") return { error: error.message };
+  if (error) return { error: "Modulet kunne ikke tilføjes. Prøv igen." };
+  revalidatePath(`${PAGE}/${courseId}`);
+  return { message: `Modul ${number} er tilføjet.` };
+}
+
+// Slet et modul, der ikke er brugt (tællinger og afslutninger holder modulet fast).
+export async function deleteModule(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("course_modules")
+    .delete()
+    .eq("id", text(formData, "id"))
+    .eq("school_id", membership.schoolId)
+    .select("course_id");
+  if (error?.code === "23503") return { error: "Modulet er brugt og kan ikke slettes." };
+  if (error || !data?.length) return { error: "Modulet kunne ikke slettes. Prøv igen." };
+  revalidatePath(`${PAGE}/${data[0].course_id}`);
+  return { message: "Modulet er slettet." };
+}
+
+// Tomt modulforløb, fx "C/E med EU": admin bygger modulerne og lægger Færdselsstyrelsens PDF op.
+export async function createEmptyModuleCourse(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const name = text(formData, "name");
+  const category = text(formData, "category");
+  if (!name) return { error: "Skriv et navn." };
+  if (name.length > 80) return { error: "Navnet er for langt." };
+  if (!category) return { error: "Vælg en kategori." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_empty_module_course", { p_school_id: membership.schoolId, p_category: category, p_name: name });
+  if (error?.code === "23505") return { error: `Forløbet "${name}" findes allerede.` };
+  if (error || !data) return { error: "Forløbet kunne ikke oprettes. Prøv igen." };
+  revalidatePath(PAGE);
+  redirect(`${PAGE}/${data}`);
+}

@@ -380,3 +380,20 @@ export async function annulModuleCompletion(_prev: ActionState, formData: FormDa
   revalidatePath("/laerer", "layout");
   return { message: `Afslutningen af modul ${data[0].module_number} er annulleret. Modulet er åbent igen.` };
 }
+
+// Admin flytter en elev til en anden version af modulplanen (fx en ny version fra Færdselsstyrelsen).
+// Databasen sikrer, at det er en version i brug af elevens eget forløb.
+export async function moveStudentPlanVersion(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("students")
+    .update({ plan_template_id: text(formData, "templateId") })
+    .eq("id", text(formData, "studentId"))
+    .eq("school_id", membership.schoolId)
+    .select("id");
+  if (error?.code === "23514" || error?.code === "42501") return { error: error.message };
+  if (error || !data?.length) return { error: "Eleven kunne ikke flyttes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  return { message: "Eleven er flyttet til den valgte version." };
+}

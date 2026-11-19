@@ -294,7 +294,16 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      `module_plan_teachers`) kan ikke læses via API'et; serveren læser dem. Hver ny udgave gemmes i
      bucketten `module-plans` og `module_plan_versions` og slettes aldrig. Repetition og manuelt gear
      udfyldes med del 5.
-     **6c (mangler):** admin lægger selv Færdselsstyrelsens PDF'er op (nye versioner og EU-modulplaner).
+     **6c-1 bygget 19. nov. 2026** (Michael: version pr. elev; 6c delt i to): tabellen `module_plan_templates`
+     (bucket `module-plan-templates`). Hvert modulforløb har en eller flere PDF-versioner; 1.1 for B, C, C/E og D
+     er indbygget. Under Forløb → "Modulplanens PDF" lægger admin en ny version op. Vixx genkender felterne og
+     gemmer et feltkort, admin retter manglende felter (siden "Feltkort"), ser et prøvetryk med testdata og
+     tager versionen i brug. En version i brug kan ikke ændres eller slettes. Nye elever får nyeste version;
+     elever i gang beholder deres (`students.plan_template_id`), og kun admin kan flytte dem (elevsiden).
+     Admin kan oprette en "Modulplan uden skabelon (fx EU-moduler)" og selv tilføje og slette ubrugte moduler.
+     **6c-2 (mangler):** elever med to planer (fx C/E og EU). Læreren ser modulerne fra begge planer i én liste
+     ved scanning; hver plan har sin egen PDF. Venter på skolens EU/AMU-blanketter.
+     Oprindeligt ønske:
      Michael (19. nov. 2026): der skal være plads til flere modulplaner under samme kategori, fx C/E og
      "C/E med EU", på samme vilkår: hver plan har sin egen PDF, sine egne moduler og sine egne versioner, og en
      elev kan have begge planer (kontoret vælger EU ved oprettelse eller på holdet).

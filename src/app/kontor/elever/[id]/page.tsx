@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   addTheory,
   annulModuleCompletion,
+  moveStudentPlanVersion,
   completeModuleForGuest,
   correctTheory,
   crossOffLesson,
@@ -95,6 +96,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
           >
             Print modulplan (PDF)
           </a>
+          <PlanVersion studentId={student.id} courseId={student.courseId} current={student.planTemplateId} isAdmin={isAdmin} />
           <ProgressBar share={p.share} />
           <ol className="flex flex-col gap-1.5" data-testid="student-modules">
             {modules.map((m) => (
@@ -420,4 +422,36 @@ function teachersOf(student: { moduleCounts: { instructor_name?: string; lesson_
     .filter((x) => x.name)
     .sort((a, b) => a.date.localeCompare(b.date));
   return [...new Set(seen.map((x) => x.name))];
+}
+
+// Elevens version af modulplanens PDF. Admin kan flytte eleven til en anden version i brug af forløbet.
+async function PlanVersion({ studentId, courseId, current, isAdmin }: { studentId: string; courseId: string; current: string | null; isAdmin: boolean }) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("module_plan_templates")
+    .select("id, version, builtin")
+    .eq("course_id", courseId)
+    .not("activated_at", "is", null)
+    .order("activated_at");
+  const versions = data ?? [];
+  const label = (v: { version: string; builtin: string | null }) => `Version ${v.version}${v.builtin ? " (indbygget)" : ""}`;
+  const mine = versions.find((v) => v.id === current);
+  if (!isAdmin || versions.length < 2) {
+    return <p className="text-sm text-muted" data-testid="plan-version">Modulplanens PDF: {mine ? label(mine) : "ingen version"}</p>;
+  }
+  return (
+    <ActionForm action={moveStudentPlanVersion} submitLabel="Flyt" pendingLabel="…" primary={false} className="flex flex-wrap items-end gap-2">
+      <input type="hidden" name="studentId" value={studentId} />
+      <label className="flex flex-col gap-1 text-sm font-bold">
+        Modulplanens PDF
+        <select name="templateId" defaultValue={current ?? ""} className={inputClass} data-testid="plan-version-select">
+          {versions.map((v) => (
+            <option key={v.id} value={v.id}>
+              {label(v)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </ActionForm>
+  );
 }

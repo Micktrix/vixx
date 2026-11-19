@@ -5,22 +5,35 @@ import path from "node:path";
 import { formatPhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import type { FieldMap } from "./field-map";
 import { fillModulePlan, type PlanData } from "./fill";
 
 // Henter alt til elevens modulplan og udfylder Færdselsstyrelsens PDF (trin E8, del 6a).
 // Adgangen tjekkes med brugerens egen forbindelse (RLS): kan brugeren ikke se eleven, findes planen ikke.
 // Kopierne af underskrifterne kan ikke læses via appen; dem henter serveren bagefter med service role.
+// Eleven har sin egen version af PDF'en (del 6c-1): den indbyggede 1.1 eller en, admin har lagt op.
 
-const TEMPLATES = new Set(["B-1.1", "C-1.1", "CE-1.1", "D-1.1"]);
 const BUCKET = "module-plans";
+export const TEMPLATE_BUCKET = "module-plan-templates";
+
+export type PlanTemplate = { id: string; version: string; builtin: string | null; storage_path: string | null; field_map: FieldMap | null };
+
+// PDF'en for en version: indbygget (ligger i Vixx) eller opsendt (Storage, kun serveren).
+export async function readTemplatePdf(t: Pick<PlanTemplate, "builtin" | "storage_path">): Promise<Uint8Array | null> {
+  if (t.builtin) return new Uint8Array(await readFile(path.join(process.cwd(), "src/lib/modulplan/templates", `${t.builtin}.pdf`)));
+  if (!t.storage_path) return null;
+  const { data } = await createAdminClient().storage.from(TEMPLATE_BUCKET).download(t.storage_path);
+  return data ? new Uint8Array(await data.arrayBuffer()) : null;
+}
 
 type StudentRow = {
   id: string;
   school_id: string;
   address: string | null;
   manual_gear: boolean;
+  plan_template_id: string | null;
   profiles: { full_name: string; phone: string } | null;
-  courses: { category_code: string; plan_kind: string; plan_version: string | null; course_modules: { id: string; number: number }[] } | null;
+  courses: { name: string; category_code: string; plan_kind: string; course_modules: { id: string; number: number }[] } | null;
   module_signoffs: { course_module_id: string; lesson_date: string; kind: string; lesson_count: number; manual_gear: boolean }[];
   repetition_lessons: { id: string; lesson_date: string; lesson_count: number }[];
   module_completions: {
@@ -42,15 +55,20 @@ export async function loadModulePlan(studentId: string) {
   const { data } = await supabase
     .from("students")
     .select(
-      "id, school_id, address, manual_gear, profiles(full_name, phone), courses(category_code, plan_kind, plan_version, course_modules(id, number)), module_signoffs(course_module_id, lesson_date, kind, lesson_count, manual_gear), repetition_lessons(id, lesson_date, lesson_count), module_completions(id, course_module_id, completed_on, instructor_name, extra_theory, extra_driving, self_study, transferred, annulled_at), module_plan_teachers(id, instructor_name, first_on)",
+      "id, school_id, address, manual_gear, plan_template_id, profiles(full_name, phone), courses(name, category_code, plan_kind, course_modules(id, number)), module_signoffs(course_module_id, lesson_date, kind, lesson_count, manual_gear), repetition_lessons(id, lesson_date, lesson_count), module_completions(id, course_module_id, completed_on, instructor_name, extra_theory, extra_driving, self_study, transferred, annulled_at), module_plan_teachers(id, instructor_name, first_on)",
     )
     .eq("id", studentId)
     .maybeSingle();
   const student = data as unknown as StudentRow | null;
   const course = student?.courses;
-  if (!student || course?.plan_kind !== "modules") return null;
-  const template = `${course.category_code}-${course.plan_version}`;
-  if (!TEMPLATES.has(template)) return null;
+  if (!student || course?.plan_kind !== "modules" || !student.plan_template_id) return null;
+  const { data: tpl } = await supabase
+    .from("module_plan_templates")
+    .select("id, version, builtin, storage_path, field_map")
+    .eq("id", student.plan_template_id)
+    .maybeSingle();
+  if (!tpl) return null;
+  const template = tpl as PlanTemplate;
 
   const { data: school } = await supabase.from("schools").select("name, cvr, address, contact_phone").eq("id", student.school_id).single();
 
@@ -108,17 +126,18 @@ export async function loadModulePlan(studentId: string) {
       }),
     repetitions: repetitions.map((r) => ({ date: r.lesson_date, count: r.lesson_count, strokes: strokesOf(repetitionStrokes, r.id) })),
   };
-  return { studentId: student.id, schoolId: student.school_id, template, plan };
+  return { studentId: student.id, schoolId: student.school_id, template, label: template.builtin ?? `${course.name} ${template.version}`, plan };
 }
 
 // Udfyld PDF'en. Er indholdet nyt, gemmes udgaven (den overskrives og slettes aldrig).
 export async function buildModulePlan(studentId: string, userId: string) {
   const loaded = await loadModulePlan(studentId);
   if (!loaded) return null;
-  const file = await readFile(path.join(process.cwd(), "src/lib/modulplan/templates", `${loaded.template}.pdf`));
-  const pdf = await fillModulePlan(new Uint8Array(file), loaded.plan);
+  const file = await readTemplatePdf(loaded.template);
+  if (!file) return null;
+  const pdf = await fillModulePlan(file, loaded.plan, loaded.template.field_map);
 
-  const hash = createHash("sha256").update(JSON.stringify({ template: loaded.template, plan: loaded.plan })).digest("hex");
+  const hash = createHash("sha256").update(JSON.stringify({ template: loaded.template.id, plan: loaded.plan })).digest("hex");
   const admin = createAdminClient();
   const { data: existing } = await admin.from("module_plan_versions").select("id").eq("student_id", studentId).eq("content_hash", hash).maybeSingle();
   if (!existing) {
@@ -128,7 +147,8 @@ export async function buildModulePlan(studentId: string, userId: string) {
       await admin.from("module_plan_versions").insert({
         school_id: loaded.schoolId,
         student_id: studentId,
-        template: loaded.template,
+        template: loaded.label.slice(0, 40),
+        template_id: loaded.template.id,
         content_hash: hash,
         storage_path: storagePath,
         created_by: userId,
@@ -136,4 +156,35 @@ export async function buildModulePlan(studentId: string, userId: string) {
     }
   }
   return { pdf, name: loaded.plan.student.name };
+}
+
+// Prøvetryk af en version med testdata (kun admin; tjekkes af den, der kalder). Gemmes ikke.
+export async function buildTestPrint(template: PlanTemplate, moduleNumbers: number[], fieldMap?: FieldMap | null) {
+  const file = await readTemplatePdf(template);
+  if (!file) return null;
+  const sig = "M 40 140 L 70 60 L 100 140 L 130 80 L 160 130 L 200 70 L 230 120 L 260 90 L 300 130 L 340 80 L 380 120 L 420 100 L 480 110";
+  const plan: PlanData = {
+    student: { name: "Test Elev", phone: "12 34 56 78", address: "Prøvevej 1, 1234 Testby" },
+    school: { name: "Testkøreskole", cvr: "12345678", address: "Skolevej 1, 1234 Testby", phone: "87 65 43 21" },
+    teachers: [
+      { name: "Test Lærer 1", strokes: sig },
+      { name: "Test Lærer 2", strokes: sig },
+    ],
+    modules: moduleNumbers.map((n, i) => ({
+      number: n,
+      startedOn: `2026-01-${String(2 + i * 3).padStart(2, "0")}`,
+      completion: {
+        completedOn: `2026-01-${String(4 + i * 3).padStart(2, "0")}`,
+        name: "Test Lærer 1",
+        strokes: sig,
+        extraTheory: 1,
+        extraDriving: 2,
+        selfStudy: "1 lektion (prøve)",
+        transferred: i === 0,
+        manualGear: 3,
+      },
+    })),
+    repetitions: [{ date: "2026-02-01", count: 2, strokes: sig }],
+  };
+  return fillModulePlan(file, plan, fieldMap ?? template.field_map);
 }
