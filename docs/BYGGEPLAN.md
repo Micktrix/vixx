@@ -190,7 +190,17 @@ erstatter papirets lektionsplan med dato og to underskrifter.
   - Eleven kan vise planen til køreprøven på telefonen eller som print. Eleven skal have den seneste version,
     så elevens app skal vise den.
   - Spørgsmål sendes til koereuddannelse@fstyr.dk med emnet "Digital modulplan".
-- Løsning, der virker nu uden at vente på svar: Vixx udfylder den officielle PDF (stamdata, moduler, datoer,
+- Michaels beslutning (19. nov. 2026): læreren må lave en digital underskrift i Vixx.
+  - **Bygget 19. nov. 2026:** siden "Min underskrift" i lærer-appen (Beskeder → Min underskrift). Læreren
+    tegner med fingeren og trykker "Gem og lås". "Lås op og tegn igen" bruges, hvis den skal laves om; den gamle
+    gælder, til en ny er gemt.
+  - Tabellen `instructor_signatures` gemmer kun stregdata. Kun læreren selv kan se og rette den, heller ikke
+    admin og kontor. Ændringsloggen skriver ikke stregerne.
+  - Når modulplanen er bygget, sætter Vixx underskriften på automatisk, hver gang læreren afslutter et modul.
+    Vixx gemmer en kopi af underskriften på afslutningen, så en ny underskrift senere ikke ændrer gamle moduler.
+  - Modulplanen (Færdselsstyrelsens PDF) lægges op pr. kørekortkategori (B, C, C/E, D …) under Indstillinger →
+    Forløb. Vixx udfylder den for hver elev, og eleven og læreren kan altid vise den seneste udgave.
+- Første plan, før Michaels beslutning: Vixx udfylder den officielle PDF (stamdata, moduler, datoer,
   lærernavne), og læreren skriver under med kuglepen eller med digitalt ID i Adobe. Den tegnede underskrift,
   som Vixx lægger på automatisk, bygges først, når Færdselsstyrelsen har bekræftet den skriftligt.
 

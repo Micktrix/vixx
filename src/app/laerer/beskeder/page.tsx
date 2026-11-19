@@ -84,6 +84,9 @@ export default async function InstructorMessagesPage() {
         <Link href="/laerer/oplysninger" className={linkButton}>
           Ret mine oplysninger
         </Link>
+        <Link href="/laerer/underskrift" className={linkButton}>
+          Min underskrift
+        </Link>
         {user.memberships.length > 1 && (
           <Link href="/vaelg-skole" className="font-semibold text-accent-ink underline underline-offset-[3px]">
             Skift skole
