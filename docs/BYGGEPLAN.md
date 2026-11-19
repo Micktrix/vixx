@@ -245,6 +245,9 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      Et forløb er enten lektioner eller moduler og kan ikke skifte. Indstillinger → Forløb → "Nyt forløb fra
      modulplanen".
   2. Skabeloner for C, C/E og D (og senere EU-moduler).
+     **Bygget 19. nov. 2026:** `create_module_course` kender nu 'C-1.1', 'CE-1.1' og 'D-1.1' (3 moduler hver,
+     emner fra PDF'erne). C/E har påhængskøretøjet i afsnit 1 og ingen kørsel i mørke (7.19). EU-moduler venter
+     på skolens blanketter.
   3. Eleven på modul: aktuelt modul og opstartsdato; scanning tæller teori/kørsel i modulet; elevens app viser
      modulerne.
   4. Afslut modul: minimum-tjek, ekstra lektioner, selvstudie, "Overført fra lektionsplan", undervisende kørelærere.

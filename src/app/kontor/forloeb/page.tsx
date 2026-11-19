@@ -71,6 +71,9 @@ export default async function CoursesPage() {
                 Modulplan
                 <select name="template" defaultValue="B-1.1" className={`${inputClass.replace("w-full", "")} w-[260px]`}>
                   <option value="B-1.1">B · version 1.1 (april 2026)</option>
+                  <option value="C-1.1">C · version 1.1 (april 2026)</option>
+                  <option value="CE-1.1">C/E · version 1.1 (april 2026)</option>
+                  <option value="D-1.1">D · version 1.1 (april 2026)</option>
                 </select>
               </label>
               <TextField label="Navn" name="name" required maxLength={80} placeholder="Fx B – modulplan" className="min-w-[240px] flex-1" />
