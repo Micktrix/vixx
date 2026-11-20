@@ -25,8 +25,27 @@ export async function createModuleCourse(_prev: ActionState, formData: FormData)
   });
   if (error?.code === "23505") return { error: `Forløbet "${name}" findes allerede.` };
   if (error || !data) return { error: "Forløbet kunne ikke oprettes. Prøv igen." };
+  // C og D: skolens kørelektioner kommer med automatisk (aftalt med Michael 20. nov. 2026).
+  const category = text(formData, "template").split("-")[0];
+  if (category === "C" || category === "D") await addSchoolLessons(supabase, membership.schoolId, category, data as string);
   revalidatePath(PAGE);
   redirect(`${PAGE}/${data}`);
+}
+
+// Kopiér kørelektionerne fra skolens eget nyeste forløb i samme kategori (med skolens rettelser). Har skolen
+// ikke et, bruges lektionsskemaet C + D som udgangspunkt.
+async function addSchoolLessons(supabase: Awaited<ReturnType<typeof createClient>>, schoolId: string, category: string, courseId: string) {
+  const { data: courses } = await supabase
+    .from("courses")
+    .select("id, created_at, course_modules(module_lessons(id))")
+    .eq("school_id", schoolId)
+    .eq("category_code", category)
+    .neq("id", courseId)
+    .order("created_at", { ascending: false });
+  type Row = { id: string; course_modules: { module_lessons: { id: string }[] }[] };
+  const source = ((courses ?? []) as unknown as Row[]).find((c) => c.course_modules.some((m) => m.module_lessons.length > 0));
+  if (source) await supabase.rpc("copy_module_lessons", { p_from_course: source.id, p_to_course: courseId });
+  else await supabase.rpc("add_lesson_schedule", { p_course_id: courseId, p_template: "CD-skema" });
 }
 
 export async function updateCourse(_prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -61,7 +61,8 @@ export default async function CoursesPage() {
             </div>
             <p className="text-[13px] text-muted">
               Vixx henter Færdselsstyrelsens modulplan for kategorien (B, C, C/E og D, version 1.1) med moduler, minimum,
-              emner og PDF. Alt kan rettes bagefter. Lader du navnet stå tomt, hedder forløbet fx &quot;C – modulplan&quot;.
+              emner og PDF. C og D får også skolens kørelektioner (fra skolens seneste forløb i kategorien). Alt kan rettes
+              bagefter. Lader du navnet stå tomt, hedder forløbet fx &quot;C – modulplan&quot;.
             </p>
             <details className="text-[15px]">
               <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Andre muligheder</summary>

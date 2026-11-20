@@ -3,7 +3,7 @@
 -- Seed: "C – modulplan" har lektionsskemaet C + D (9 lektioner); Emil er C-elev, Bent er B-elev.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(16);
 
 create temporary table ids as
 select
@@ -66,6 +66,14 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000
 select is(
   (select public.add_lesson_schedule(public.create_module_course('00000000-0000-4000-a000-000000000001', 'D-1.1', 'D – test'), 'CD-skema')),
   9, 'Admin indsætter lektionsskemaet på et D-forløb');
+update public.module_lessons set content = 'Rettet af skolen' where number = '2' and course_module_id = (select m1 from ids);
+select is(
+  (select public.copy_module_lessons((select c from ids), public.create_module_course('00000000-0000-4000-a000-000000000001', 'C-1.1', 'C – aften'))),
+  9, 'Lektionerne kopieres fra skolens eget forløb til et nyt C-forløb');
+select is(
+  (select l.content from public.module_lessons l join public.course_modules m on m.id = l.course_module_id
+     join public.courses c on c.id = m.course_id where c.name = 'C – aften' and l.number = '2'),
+  'Rettet af skolen', 'Skolens rettelser kommer med i kopien');
 select throws_ok(
   $$delete from public.module_lessons where id = (select l2 from ids)$$,
   '23503', null, 'En gennemført lektion kan ikke slettes (kun slås fra)');

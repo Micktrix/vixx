@@ -332,6 +332,10 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      ikke vælges ved scanning. "Afslut modul" kommer selv frem som "Vil du afslutte modul X? Alle lektioner er
      kørt, og minimum er nået", når modulet er klar. Før det er der kun et lille link "Er eleven overført fra
      lektionsplanen?" til elever, der afsluttes uden at minimum er talt i Vixx.
+     **Nye C- og D-forløb får kørelektionerne automatisk (20. nov. 2026):** Vixx kopierer dem fra skolens eget nyeste
+     forløb i samme kategori (`copy_module_lessons`, med skolens rettelser); findes der ikke et, indsættes
+     lektionsskemaet C + D som udgangspunkt. Ønske fra Michael: et sted at lægge et nyt lektionsskema op, når det
+     ændres, og få det lavet om til lektioner. Det bygges sammen med "forløb ud fra en PDF" (taxa, AI).
      Oprindeligt ønske:
      Michael (19. nov. 2026): der skal være plads til flere modulplaner under samme kategori, fx C/E og
      "C/E med EU", på samme vilkår: hver plan har sin egen PDF, sine egne moduler og sine egne versioner, og en
