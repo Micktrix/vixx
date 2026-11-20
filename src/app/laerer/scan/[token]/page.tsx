@@ -96,7 +96,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
       </ol>
       {suggested ? (
         <>
-          <CompleteForm token={token} studentId={student.id} module={suggested} />
+          {suggested.ready && <CompleteForm token={token} studentId={student.id} module={suggested} />}
           <ModuleForm
             token={token}
             studentId={student.id}
@@ -106,6 +106,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
               student.manual_gear && course.category_code === "B" ? progress.filter((m) => m.number >= 2 && m.number <= 5).map((m) => m.id) : []
             }
           />
+          {!suggested.ready && <CompleteForm token={token} studentId={student.id} module={suggested} />}
         </>
       ) : (
         <>

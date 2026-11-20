@@ -35,6 +35,7 @@ export function ModuleForm({
   const byLesson = kind === "driving" && chosen.length > 0;
   // Punkter, eleven mangler i modulet (ikke kørt hos en tidligere lærer), og om alle punkter er kørt.
   const missingTopics = new Set((current?.notDriven ?? []).filter((n) => !n.lesson).map((n) => n.item));
+  const drivenTopics = new Set(current?.drivenTopics ?? []);
   const topicsDone = !!current && current.driving > 0 && missingTopics.size === 0 && !current.reached;
   const toggle = (id: string) => setLessonIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
@@ -106,10 +107,11 @@ export function ModuleForm({
                 </label>
                 {lessonIds.includes(l.id) && lessonItems(l.content).length > 0 && (
                   <div className="mt-2 flex flex-col gap-1 border-t border-line pt-2">
-                    <span className="text-[13px] font-semibold">Sæt kryds ved det, der IKKE blev kørt:</span>
+                    <span className="text-[13px] font-semibold">Fjern fluebenet ved det, der ikke blev kørt:</span>
                     {lessonItems(l.content).map((item) => (
                       <label key={item} className="flex items-start gap-2.5 text-[14px]">
-                        <input type="checkbox" name={`skip:${l.id}`} value={item} className={`${check} mt-0.5`} />
+                        <input type="hidden" name={`all:${l.id}`} value={item} />
+                        <input type="checkbox" name={`drive:${l.id}`} value={item} defaultChecked className={`${check} mt-0.5`} />
                         {item}
                       </label>
                     ))}
@@ -123,17 +125,23 @@ export function ModuleForm({
         )}
         {kind === "driving" && !byLesson && lessonItems(current?.topics ?? null).length > 0 && (
           <fieldset className="flex flex-col gap-1 rounded-[14px] border border-line px-3 py-2.5" data-testid="scan-topics" key={moduleId}>
-            <legend className="px-1 text-[13px] font-semibold">Sæt kryds ved det, der IKKE blev kørt:</legend>
+            <legend className="px-1 text-[13px] font-semibold">Fjern fluebenet ved det, der ikke blev kørt:</legend>
             {topicsDone && (
               <p className="text-[13px] text-ok" data-testid="topics-done">
                 Alle punkter er kørt. De næste lektioner er repetition, til minimum er nået.
               </p>
             )}
             {lessonItems(current?.topics ?? null).map((item) => (
-              <label key={item} className="flex items-start gap-2.5 text-[14px]">
-                <input type="checkbox" name="skipTopic" value={item} className={`${check} mt-0.5`} />
+              <label
+                key={item}
+                data-state={drivenTopics.has(item) ? "driven" : missingTopics.has(item) ? "missing" : "new"}
+                className={`flex items-start gap-2.5 rounded-lg px-1.5 py-0.5 text-[14px] ${drivenTopics.has(item) ? "bg-ok-bg" : ""}`}
+              >
+                <input type="hidden" name="allTopic" value={item} />
+                <input type="checkbox" name="driveTopic" value={item} defaultChecked className={`${check} mt-0.5`} />
                 <span>
                   {item}
+                  {drivenTopics.has(item) && <span className="ml-1.5 text-[12px] font-semibold text-ok">kørt</span>}
                   {missingTopics.has(item) && <span className="ml-1.5 rounded-full bg-bad-bg px-2 text-[12px] font-semibold text-bad">mangler</span>}
                 </span>
               </label>
@@ -164,6 +172,12 @@ export function ModuleForm({
           </label>
         )}
       </section>
+
+      {kind === "driving" && current?.ready && (
+        <p className="rounded-[16px] border border-accent-line bg-accent-bg px-4 py-3 text-sm" data-testid="module-ready-warning">
+          <b>Modul {current.number} er klar til at blive afsluttet.</b> Lektioner, du tæller nu, kommer på planen som ekstra lektioner.
+        </p>
+      )}
 
       <p className="rounded-[16px] bg-soft px-4 py-3 text-sm">Tælles i elevens modul. Timen til lønnen registrerer du som altid i kalenderen.</p>
 

@@ -323,10 +323,15 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      lektioner er kørt. Punkter, der ikke er kørt, og lektioner, der mangler, giver en advarsel, men stopper ikke
      afslutningen (fx "7.20 Kørsel i tunnel"). Eleven må køre i næste modul, før det forrige er afsluttet.
      **Afkrydsning af modulets egne punkter (20. nov. 2026, aftalt med Michael):** ved kørsel uden skolens lektion
-     ser læreren modulets punkter (afsnittene) og krydser af, hvad der IKKE blev kørt. Scanningen starter på
-     "Kørsel". Et punkt er kørt, så snart det ikke er krydset af i én kørsel. Næste lærer ser punkterne, eleven
+     ser læreren modulets punkter (afsnittene) med flueben ved det hele og fjerner fluebenet ved det, der ikke blev kørt (også ved skolens lektioner). Scanningen starter på
+     "Kørsel". Et punkt er kørt, så snart det har haft flueben i én kørsel. Næste lærer ser punkterne, eleven
      mangler, markeret "mangler" og fortsætter derfra. Er alle punkter kørt, men minimum ikke nået, viser
-     scanningen, at de næste lektioner er repetition.
+     scanningen, at de næste lektioner er repetition. Punkter, der allerede er kørt, står grønne med "kørt". Er modulet
+     klar til afslutning (minimum nået og alle lektioner kørt), viser scanningen en advarsel: lektioner, der tælles
+     nu, kommer på planen som ekstra lektioner (ingen blokade; ekstra lektioner er tilladt). Afsluttede moduler kan
+     ikke vælges ved scanning. "Afslut modul" kommer selv frem som "Vil du afslutte modul X? Alle lektioner er
+     kørt, og minimum er nået", når modulet er klar. Før det er der kun et lille link "Er eleven overført fra
+     lektionsplanen?" til elever, der afsluttes uden at minimum er talt i Vixx.
      Oprindeligt ønske:
      Michael (19. nov. 2026): der skal være plads til flere modulplaner under samme kategori, fx C/E og
      "C/E med EU", på samme vilkår: hver plan har sin egen PDF, sine egne moduler og sine egne versioner, og en

@@ -61,6 +61,7 @@ export type ModuleProgress = PlanModule & {
   lessons: LessonProgress[]; // skolens kørelektioner i modulet (aktive)
   lessonsDone: boolean; // alle modulets lektioner er gennemført
   notDriven: { lesson: string | null; item: string }[]; // punkter, der ikke er kørt (lektion eller modulets egne punkter)
+  drivenTopics: string[]; // modulets egne punkter, der er kørt (haft flueben i mindst én kørsel)
   ready: boolean; // klar til afslutning: minimum nået og alle lektioner gennemført
 };
 
@@ -95,11 +96,12 @@ export function moduleProgress(modules: PlanModule[], counts: ModuleCount[], com
       const topicNotDriven = topicDrives.length
         ? lessonItems(m.topics ?? null).filter((item) => topicDrives.every((c) => lessonItems(c.skipped_items ?? null).includes(item)))
         : [];
+      const drivenTopics = topicDrives.length ? lessonItems(m.topics ?? null).filter((item) => !topicNotDriven.includes(item)) : [];
       const notDriven = [
         ...lessons.flatMap((l) => l.skipped.map((item) => ({ lesson: l.lesson.number as string | null, item }))),
         ...topicNotDriven.map((item) => ({ lesson: null, item })),
       ];
-      return { ...m, theory, driving, dark, startedOn, reached, completed, lessons, lessonsDone, notDriven, ready: reached && lessonsDone };
+      return { ...m, theory, driving, dark, startedOn, reached, completed, lessons, lessonsDone, notDriven, drivenTopics, ready: reached && lessonsDone };
     });
 }
 

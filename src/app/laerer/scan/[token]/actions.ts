@@ -16,6 +16,12 @@ function dbError(error: { code?: string; message: string } | null, fallback: str
   return { error: fallback };
 }
 
+// Punkterne står med flueben fra start; dem, læreren har fjernet fluebenet fra, er ikke kørt.
+function notDriven(formData: FormData, allKey: string, drivenKey: string): string | null {
+  const driven = new Set(formData.getAll(drivenKey).map(String));
+  return formData.getAll(allKey).map(String).filter((item) => !driven.has(item)).join("\n") || null;
+}
+
 // Modulforløb (trin E8): teori eller kørsel tælles i det valgte modul. Lærerens scanning er nok (ingen
 // elevunderskrift i modulplanen), og det går ikke til lønnen.
 export async function countModuleLessons(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -40,7 +46,7 @@ export async function countModuleLessons(_prev: ActionState, formData: FormData)
         lesson_count: 1,
         instructor_id: instructor.id,
         module_lesson_id: id,
-        skipped_items: formData.getAll(`skip:${id}`).map(String).join("\n") || null,
+        skipped_items: notDriven(formData, `all:${id}`, `drive:${id}`),
         manual_gear: formData.get("manualGear") === "on",
       })),
     );
@@ -67,7 +73,7 @@ export async function countModuleLessons(_prev: ActionState, formData: FormData)
     manual_gear: kind === "driving" && formData.get("manualGear") === "on",
     instructor_id: instructor.id,
     // Modulets punkter, der ikke blev kørt (kørsel uden skolens lektion).
-    skipped_items: kind === "driving" ? formData.getAll("skipTopic").map(String).join("\n") || null : null,
+    skipped_items: kind === "driving" ? notDriven(formData, "allTopic", "driveTopic") : null,
   });
   const failed = dbError(error, "Lektionerne kunne ikke tælles. Prøv igen.");
   if (failed) return failed;
