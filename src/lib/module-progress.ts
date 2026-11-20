@@ -22,6 +22,7 @@ export type PlanModule = {
   min_theory: number;
   min_driving: number;
   min_dark: number;
+  topics?: string | null; // modulets punkter (afsnittene fra modulplanen), ét pr. linje
   module_lessons?: PlanLesson[];
 };
 export type ModuleCount = {
@@ -59,7 +60,7 @@ export type ModuleProgress = PlanModule & {
   completed: ModuleCompletion | null; // læreren har afsluttet modulet
   lessons: LessonProgress[]; // skolens kørelektioner i modulet (aktive)
   lessonsDone: boolean; // alle modulets lektioner er gennemført
-  notDriven: { lesson: string; item: string }[]; // punkter, der ikke er kørt i de gennemførte lektioner
+  notDriven: { lesson: string | null; item: string }[]; // punkter, der ikke er kørt (lektion eller modulets egne punkter)
   ready: boolean; // klar til afslutning: minimum nået og alle lektioner gennemført
 };
 
@@ -89,7 +90,15 @@ export function moduleProgress(modules: PlanModule[], counts: ModuleCount[], com
           return { lesson, doneOn: done?.lesson_date ?? null, skipped: lessonItems(done?.skipped_items ?? null) };
         });
       const lessonsDone = lessons.every((l) => l.doneOn);
-      const notDriven = lessons.flatMap((l) => l.skipped.map((item) => ({ lesson: l.lesson.number, item })));
+      // Modulets egne punkter (kørsel uden lektion): et punkt er kørt, så snart det ikke er krydset af i én kørsel.
+      const topicDrives = own.filter((c) => c.kind === "driving" && !c.module_lesson_id);
+      const topicNotDriven = topicDrives.length
+        ? lessonItems(m.topics ?? null).filter((item) => topicDrives.every((c) => lessonItems(c.skipped_items ?? null).includes(item)))
+        : [];
+      const notDriven = [
+        ...lessons.flatMap((l) => l.skipped.map((item) => ({ lesson: l.lesson.number as string | null, item }))),
+        ...topicNotDriven.map((item) => ({ lesson: null, item })),
+      ];
       return { ...m, theory, driving, dark, startedOn, reached, completed, lessons, lessonsDone, notDriven, ready: reached && lessonsDone };
     });
 }

@@ -46,7 +46,7 @@ export async function loadStudents(schoolId: string) {
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
     supabase
       .from("courses")
-      .select("id, name, category_code, course_modules(id, number, name, min_theory, min_driving, min_dark, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active))")
+      .select("id, name, category_code, course_modules(id, number, name, min_theory, min_driving, min_dark, topics, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active))")
       .eq("school_id", schoolId)
       .order("name"),
   ]);

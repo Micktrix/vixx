@@ -41,7 +41,7 @@ export function CompleteForm({ token, studentId, module: m }: { token: string; s
         )}
         {m.notDriven.length > 0 && (
           <p className="text-sm text-bad" data-testid="complete-not-driven">
-            Ikke kørt: {m.notDriven.map((n) => `${n.item} (lektion ${n.lesson})`).join(" · ")}. Du kan afslutte alligevel.
+            Ikke kørt: {m.notDriven.map((n) => (n.lesson ? `${n.item} (lektion ${n.lesson})` : n.item)).join(" · ")}. Du kan afslutte alligevel.
           </p>
         )}
         <label className="flex flex-col gap-1.5 text-sm font-bold">

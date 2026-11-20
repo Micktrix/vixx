@@ -3,7 +3,7 @@
 -- Seed: "C – modulplan" har lektionsskemaet C + D (9 lektioner); Emil er C-elev, Bent er B-elev.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 create temporary table ids as
 select
@@ -45,6 +45,12 @@ select throws_ok(
   $$insert into public.module_signoffs (school_id, student_id, course_module_id, kind, lesson_count, instructor_id, module_lesson_id)
     select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', m1, 'driving', 2, '00000000-0000-4000-a200-000000000011', l2 from ids$$,
   '23514', null, 'En lektion fra et andet forløb kan ikke bruges');
+-- Kørsel uden lektion: modulets punkter, der ikke blev kørt, gemmes også.
+insert into public.module_signoffs (school_id, student_id, course_module_id, kind, lesson_count, instructor_id, skipped_items)
+select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000031', m1, 'driving', 1,
+       '00000000-0000-4000-a200-000000000011', ' 7.5 Vending og baglænskørsel ' from ids;
+select is((select skipped_items from public.module_signoffs where module_lesson_id is null and student_id = '00000000-0000-4000-ad00-000000000031'),
+  '7.5 Vending og baglænskørsel', 'Punkter, der ikke blev kørt, gemmes også uden lektion');
 select throws_ok(
   $$insert into public.module_lessons (school_id, course_module_id, number) select '00000000-0000-4000-a000-000000000001', m1, '99' from ids$$,
   '42501', null, 'Læreren kan ikke oprette lektioner');

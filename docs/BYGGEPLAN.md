@@ -322,6 +322,11 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      og en lektion køres én gang pr. elev. Modulet er "klar til afslutning", når minimum er nået og alle dets
      lektioner er kørt. Punkter, der ikke er kørt, og lektioner, der mangler, giver en advarsel, men stopper ikke
      afslutningen (fx "7.20 Kørsel i tunnel"). Eleven må køre i næste modul, før det forrige er afsluttet.
+     **Afkrydsning af modulets egne punkter (20. nov. 2026, aftalt med Michael):** ved kørsel uden skolens lektion
+     ser læreren modulets punkter (afsnittene) og krydser af, hvad der IKKE blev kørt. Scanningen starter på
+     "Kørsel". Et punkt er kørt, så snart det ikke er krydset af i én kørsel. Næste lærer ser punkterne, eleven
+     mangler, markeret "mangler" og fortsætter derfra. Er alle punkter kørt, men minimum ikke nået, viser
+     scanningen, at de næste lektioner er repetition.
      Oprindeligt ønske:
      Michael (19. nov. 2026): der skal være plads til flere modulplaner under samme kategori, fx C/E og
      "C/E med EU", på samme vilkår: hver plan har sin egen PDF, sine egne moduler og sine egne versioner, og en

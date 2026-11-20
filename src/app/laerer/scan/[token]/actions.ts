@@ -66,6 +66,8 @@ export async function countModuleLessons(_prev: ActionState, formData: FormData)
     dark: kind === "driving" && formData.get("dark") === "on",
     manual_gear: kind === "driving" && formData.get("manualGear") === "on",
     instructor_id: instructor.id,
+    // Modulets punkter, der ikke blev kørt (kørsel uden skolens lektion).
+    skipped_items: kind === "driving" ? formData.getAll("skipTopic").map(String).join("\n") || null : null,
   });
   const failed = dbError(error, "Lektionerne kunne ikke tælles. Prøv igen.");
   if (failed) return failed;

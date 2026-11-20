@@ -26,13 +26,16 @@ export function ModuleForm({
 }) {
   const { state, onSubmit, pending } = useFormAction(countModuleLessons);
   const [moduleId, setModuleId] = useState(suggestedId);
-  const [kind, setKind] = useState<"theory" | "driving">("theory");
+  const [kind, setKind] = useState<"theory" | "driving">("driving");
   const [lessonIds, setLessonIds] = useState<string[]>([]);
   const current = modules.find((m) => m.id === moduleId);
   // Skolens kørelektioner i modulet, som eleven mangler.
   const openLessons = (current?.lessons ?? []).filter((l) => !l.doneOn).map((l) => l.lesson);
   const chosen = openLessons.filter((l) => lessonIds.includes(l.id));
   const byLesson = kind === "driving" && chosen.length > 0;
+  // Punkter, eleven mangler i modulet (ikke kørt hos en tidligere lærer), og om alle punkter er kørt.
+  const missingTopics = new Set((current?.notDriven ?? []).filter((n) => !n.lesson).map((n) => n.item));
+  const topicsDone = !!current && current.driving > 0 && missingTopics.size === 0 && !current.reached;
   const toggle = (id: string) => setLessonIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   return (
@@ -116,6 +119,25 @@ export function ModuleForm({
               </div>
             ))}
             <span className="text-[13px] text-muted">Vælg ingen lektion for at tælle anden kørsel i modulet.</span>
+          </fieldset>
+        )}
+        {kind === "driving" && !byLesson && lessonItems(current?.topics ?? null).length > 0 && (
+          <fieldset className="flex flex-col gap-1 rounded-[14px] border border-line px-3 py-2.5" data-testid="scan-topics" key={moduleId}>
+            <legend className="px-1 text-[13px] font-semibold">Sæt kryds ved det, der IKKE blev kørt:</legend>
+            {topicsDone && (
+              <p className="text-[13px] text-ok" data-testid="topics-done">
+                Alle punkter er kørt. De næste lektioner er repetition, til minimum er nået.
+              </p>
+            )}
+            {lessonItems(current?.topics ?? null).map((item) => (
+              <label key={item} className="flex items-start gap-2.5 text-[14px]">
+                <input type="checkbox" name="skipTopic" value={item} className={`${check} mt-0.5`} />
+                <span>
+                  {item}
+                  {missingTopics.has(item) && <span className="ml-1.5 rounded-full bg-bad-bg px-2 text-[12px] font-semibold text-bad">mangler</span>}
+                </span>
+              </label>
+            ))}
           </fieldset>
         )}
         {!byLesson && (

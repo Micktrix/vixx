@@ -21,7 +21,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, is_demo, manual_gear, profiles(full_name), teams(name), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, module_lesson_id, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, category_code, course_modules(id, number, name, min_theory, min_driving, min_dark, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active)))",
+      "id, service_id, active, is_demo, manual_gear, profiles(full_name), teams(name), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, module_lesson_id, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, category_code, course_modules(id, number, name, min_theory, min_driving, min_dark, topics, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active)))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
