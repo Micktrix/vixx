@@ -1,7 +1,7 @@
 -- Trin E8, del 1: modulforløb. Kun admin opretter og retter, alle på skolen ser, eleven ser kun sit eget forløb.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(14);
 
 -- Seed: B-forløbet fra modulplanen (version 1.1).
 select is(
@@ -19,16 +19,8 @@ where id = '00000000-0000-4000-ad00-000000000032';
 
 -- Regler på data.
 select throws_ok(
-  $$insert into public.course_lessons (school_id, course_id, number, content)
-    select school_id, id, '1', 'x' from public.courses where name = 'B – modulplan'$$,
-  '23514', null, 'Et modulforløb kan ikke få lektioner');
-select throws_ok(
-  $$insert into public.course_modules (school_id, course_id, number, name)
-    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ab00-000000000011', 1, 'Modul')$$,
-  '23514', null, 'Et lektionsforløb kan ikke få moduler');
-select throws_ok(
   $$update public.courses set plan_kind = 'lessons' where name = 'B – modulplan'$$,
-  '23514', null, 'Forløbets type kan ikke ændres');
+  '23514', null, 'Et forløb kan ikke laves om til en lektionsplan');
 select throws_ok(
   $$update public.course_modules set min_dark = 7 where number = 4
     and course_id = (select id from public.courses where name = 'B – modulplan')$$,
@@ -41,22 +33,22 @@ set local role authenticated;
 
 -- Kontoret (Ole): ser, men opretter og retter ikke.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
-select is((select count(*) from public.course_modules), 5::bigint, 'Kontoret ser modulerne');
+select is((select count(*) from public.course_modules), 8::bigint, 'Kontoret ser modulerne (B: 5, C: 3)');
 select throws_ok(
   $$select public.create_module_course('00000000-0000-4000-a000-000000000001', 'B-1.1', 'Kontorets B')$$,
   '42501', null, 'Kontoret kan ikke oprette et modulforløb');
 update public.course_modules set min_theory = 0 where number = 1;
-select is((select min_theory from public.course_modules where number = 1), 7, 'Kontoret kan ikke rette et modul');
+select is((select min_theory from public.course_modules where number = 1 and course_id = (select id from public.courses where name = 'B – modulplan')), 7, 'Kontoret kan ikke rette et modul');
 
 -- Læreren (Lars): ser modulerne.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000011", "role": "authenticated"}', true);
-select is((select count(*) from public.course_modules), 5::bigint, 'Læreren ser modulerne');
+select is((select count(*) from public.course_modules), 8::bigint, 'Læreren ser modulerne (B: 5, C: 3)');
 
--- Eleverne: Freja ser sit B-forløbs moduler, Emil (C-forløb) ser ingen.
+-- Eleverne: Freja ser kun sit B-forløbs moduler, Emil kun C-forløbets.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000032", "role": "authenticated"}', true);
 select is((select count(*) from public.course_modules), 5::bigint, 'Eleven ser modulerne i sit eget forløb');
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000031", "role": "authenticated"}', true);
-select is((select count(*) from public.course_modules), 0::bigint, 'Eleven ser ikke moduler i andre forløb');
+select is((select count(*) from public.course_modules), 3::bigint, 'Eleven ser ikke moduler i andre forløb (Emil: kun C)');
 
 -- Admin (Anne): opretter og retter.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);

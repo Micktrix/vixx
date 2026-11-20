@@ -9,7 +9,7 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000
 select is((select count(*) from public.students), 1::bigint, 'Eleven ser kun sig selv');
 select is((select count(*) from public.teams), 1::bigint, 'Eleven ser sit hold');
 select is((select count(*) from public.schools), 1::bigint, 'Eleven ser sin skole');
-select ok((select count(*) from public.course_lessons) >= 3, 'Eleven ser forløbets lektioner');
+select is((select count(*) from public.course_modules), 3::bigint, 'Eleven ser modulerne i sit forløb (C: 3 moduler)');
 select is((select count(*) from public.profiles), 1::bigint, 'Eleven ser kun sin egen profil');
 select is((select count(*) from public.instructors), 0::bigint, 'Eleven ser ikke lærerne');
 select is((select count(*) from public.scheduled_lessons), 0::bigint, 'Eleven ser ikke kalenderen');
@@ -17,7 +17,7 @@ select is((select count(*) from public.registrations), 0::bigint, 'Eleven ser ik
 select is((select count(*) from public.bookings), 0::bigint, 'Eleven ser ikke bookinger');
 select throws_ok(
   $$insert into public.students (school_id, user_id, course_id) values
-    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000031', '00000000-0000-4000-ab00-000000000011')$$,
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000031', (select id from public.courses where name = 'C – modulplan'))$$,
   '42501', null, 'Eleven kan ikke oprette elever');
 
 -- Læreren (Lars) ser skolens elever og deres navne (til QR-kvittering).

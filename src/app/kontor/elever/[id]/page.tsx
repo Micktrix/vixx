@@ -10,24 +10,20 @@ import { formatDate, todayDk } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import {
-  addTheory,
   annulModuleCompletion,
   moveStudentPlanVersion,
   completeModuleForGuest,
-  correctTheory,
-  crossOffLesson,
   finishStudent,
-  moveSignoff,
   reopenStudent,
   resetStudentPassword,
   saveStudentTeachers,
   updateStudent,
 } from "../actions";
-import { FINISH_LABEL, loadStudents, progress, theoryProgress } from "../data";
+import { FINISH_LABEL, loadStudents, progress } from "../data";
 import { ProgressBar } from "../progress-bar";
 import { StudentFields } from "../student-fields";
 
-// Én elev: forløbet med hvad der er gennemført, og elevens oplysninger.
+// Én elev: modulplanen med hvad der er gennemført, og elevens oplysninger.
 export default async function StudentPage({ params }: PageProps<"/kontor/elever/[id]">) {
   const { id } = await params;
   const { membership } = await requireRole(["admin", "office"]);
@@ -38,7 +34,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
     supabase.from("instructors").select("id, active_until, school_members(active, profiles(full_name))").eq("school_id", membership.schoolId),
     supabase
       .from("students")
-      .select("can_request, student_instructors(instructor_id), theory_signoffs(id, lesson_count, lesson_date, instructor_name, comment)")
+      .select("can_request, student_instructors(instructor_id)")
       .eq("id", id)
       .maybeSingle(),
   ]);
@@ -47,16 +43,11 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const course = courses.find((c) => c.id === student.courseId);
   const team = teams.find((t) => t.id === student.teamId);
   const p = progress(student, course);
-  const missing = course?.lessons.filter((l) => !student.signoffs.has(l.id)) ?? [];
   const isAdmin = membership.role === "admin";
   const modules = course?.modules.length ? moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions) : [];
   const currentModule = suggestedModule(modules);
   const lastCompleted = [...modules].reverse().find((m) => m.completed);
   const annulled = student.moduleCompletions.filter((c) => c.annulled_at).sort((a, b) => a.module_number - b.module_number);
-  const theory = theoryProgress(student, course);
-  const theoryRows = ((booking?.theory_signoffs ?? []) as { id: string; lesson_count: number; lesson_date: string; instructor_name: string; comment: string | null }[]).sort(
-    (a, b) => b.lesson_date.localeCompare(a.lesson_date),
-  );
   const linked = new Set(((booking?.student_instructors ?? []) as { instructor_id: string }[]).map((l) => l.instructor_id));
   const teachers = (instructors ?? [])
     .map((i) => {
@@ -160,59 +151,6 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         </Box>
       )}
 
-      {course && !course.modules.length && (
-        <Box title="Forløb" hint={`${p.done} af ${p.total} lektioner gennemført`}>
-          <ProgressBar share={p.share} />
-          <ol className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3" data-testid="student-lessons">
-            {course.lessons.map((l) => {
-              const s = student.signoffs.get(l.id);
-              return (
-                <li
-                  key={l.id}
-                  data-lesson={l.number}
-                  className={`flex flex-col gap-0.5 rounded-xl border px-3 py-2 text-[15px] ${
-                    !s ? "border-line" : s.confirmed ? "border-ok/30 bg-ok-bg" : "border-accent-line bg-accent-bg"
-                  }`}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <b>Lektion {l.number}</b>
-                    <span className={`text-sm ${!s ? "text-muted" : s.confirmed ? "text-ok" : "text-accent-ink"}`}>
-                      {!s ? `${l.count} × 45 min.` : s.confirmed ? "Gennemført" : "Venter på eleven"}
-                    </span>
-                  </span>
-                  {s && (
-                    <span className="text-[13px] text-muted">
-                      {formatDate(s.date)}
-                      {s.instructor && ` · ${s.instructor}`}
-                      {s.skipped && ` · Ikke nået: ${s.skipped.split("\n").join(", ")}`}
-                      {s.comment && ` · ${s.comment}`}
-                    </span>
-                  )}
-                  {s && isAdmin && missing.length > 0 && (
-                    <details className="text-sm">
-                      <summary className="cursor-pointer font-semibold text-muted hover:text-ink">Ret lektion</summary>
-                      <ActionForm action={moveSignoff} submitLabel="Flyt" pendingLabel="…" primary={false} className="mt-2 flex items-end gap-2">
-                        <input type="hidden" name="id" value={s.id} />
-                        <label className="flex flex-1 flex-col gap-1 text-[13px] font-bold">
-                          Var i stedet
-                          <select name="courseLessonId" required defaultValue={missing[0].id} className={inputClass}>
-                            {missing.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                Lektion {m.number}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </ActionForm>
-                    </details>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </Box>
-      )}
-
       {isAdmin && currentModule && (
         <Box title={`Afslut modul ${currentModule.number} for en gæstelærer`} hint="Når en gæstelærer uden Vixx har afsluttet modulet">
           <ActionForm
@@ -241,81 +179,6 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               Erklæringen afgiver gæstelæreren ved at skrive under på den udskrevne modulplan. Vixx sætter ingen underskrift på.
             </p>
           </ActionForm>
-        </Box>
-      )}
-
-      {course && isAdmin && missing.length > 0 && (
-        <Box title="Kryds en lektion af" hint="Fx når en gæstelærer uden adgang til appen har kørt lektionen">
-          <ActionForm action={crossOffLesson} submitLabel="Kryds af" confirmText="Kryds lektionen af? Det kan ikke fortrydes." className="flex flex-col gap-3">
-            <input type="hidden" name="studentId" value={student.id} />
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="flex min-w-[160px] flex-col gap-1.5 text-sm font-bold">
-                Lektion
-                <select name="courseLessonId" required defaultValue={missing[0].id} className={inputClass}>
-                  {missing.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      Lektion {l.number}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <TextField label="Dato" name="date" type="date" required defaultValue={todayDk()} max={todayDk()} />
-              <TextField label="Kommentar" name="comment" required maxLength={500} placeholder="Fx kørt af gæstelærer Per Hansen" className="min-w-[260px] flex-1" />
-            </div>
-            <p className="text-[13px] text-muted">Lektionen tæller som gennemført med det samme. Den kommer ikke med på lønnen og kan ikke slettes.</p>
-          </ActionForm>
-        </Box>
-      )}
-
-      {course && theory.total > 0 && (
-        <Box title="Teori" hint={`${Math.min(theory.done, theory.total)} af ${theory.total} lektioner`}>
-          <ProgressBar share={Math.min(1, theory.done / theory.total)} />
-          <ul className="flex flex-col" data-testid="student-theory-rows">
-            {theoryRows.map((t) => (
-              <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-2 text-[15px] last:border-b-0">
-                <span>
-                  <b>
-                    {t.lesson_count} {t.lesson_count === 1 ? "lektion" : "lektioner"}
-                  </b>
-                  <span className="text-sm text-muted">
-                    {" "}
-                    · {formatDate(t.lesson_date)}
-                    {t.instructor_name && ` · ${t.instructor_name}`}
-                    {t.comment && ` · ${t.comment}`}
-                  </span>
-                </span>
-                {isAdmin && (
-                  <ActionForm action={correctTheory} submitLabel="Ret" pendingLabel="…" primary={false} className="flex items-center gap-2">
-                    <input type="hidden" name="id" value={t.id} />
-                    <select name="count" defaultValue={t.lesson_count} aria-label="Antal" className={`${inputClass} w-[80px]`}>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                        <option key={n}>{n}</option>
-                      ))}
-                    </select>
-                  </ActionForm>
-                )}
-              </li>
-            ))}
-            {!theoryRows.length && <li className="text-sm text-muted">Ingen teori endnu. Læreren scanner elevens QR-kode og vælger &quot;Teori&quot;.</li>}
-          </ul>
-          {isAdmin && (
-            <details className="text-sm">
-              <summary className="cursor-pointer font-semibold text-muted hover:text-ink">Tilføj teori (fx gæstelærer)</summary>
-              <ActionForm action={addTheory} submitLabel="Tilføj" className="mt-2 flex flex-wrap items-end gap-3">
-                <input type="hidden" name="studentId" value={student.id} />
-                <label className="flex flex-col gap-1.5 text-sm font-bold">
-                  Antal
-                  <select name="count" defaultValue="2" className={`${inputClass} w-[90px]`}>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                      <option key={n}>{n}</option>
-                    ))}
-                  </select>
-                </label>
-                <TextField label="Dato" name="date" type="date" required defaultValue={todayDk()} max={todayDk()} />
-                <TextField label="Kommentar" name="comment" required maxLength={500} placeholder="Fx teori med gæstelærer Per" className="min-w-[220px] flex-1" />
-              </ActionForm>
-            </details>
-          )}
         </Box>
       )}
 

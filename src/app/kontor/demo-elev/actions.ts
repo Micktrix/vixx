@@ -45,32 +45,19 @@ export async function createDemoStudent(_prev: ActionState, formData: FormData):
   return undefined;
 }
 
-// Bekræft på demo-elevens vegne (elevens underskrift). Kun skolens demo-elev.
-export async function confirmDemoSignoff(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin"]);
-  const demo = await demoStudent(membership.schoolId);
-  if (!demo) return { error: "Der er ingen demo-elev." };
-  const { data, error } = await createAdminClient()
-    .from("lesson_signoffs")
-    .update({ confirmed_at: new Date().toISOString() })
-    .eq("id", String(formData.get("id") ?? ""))
-    .eq("student_id", demo.id)
-    .is("confirmed_at", null)
-    .select("id");
-  if (error || !data?.length) return { error: "Lektionen kunne ikke bekræftes. Prøv igen." };
-  revalidatePath(PAGE);
-  return { message: "Tak! Lektionen er bekræftet." };
-}
-
-// Start forfra: fjern demo-elevens kvitteringer, anmodninger og lektioner (og skift evt. forløb). Kun demo-eleven; rigtige
-// kvitteringer kan aldrig slettes.
+// Start forfra: fjern demo-elevens tællinger, afsluttede moduler, anmodninger og lektioner (og skift evt. forløb).
+// Kun demo-eleven; rigtige tællinger og afslutninger kan aldrig slettes.
 export async function resetDemoStudent(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { membership } = await requireRole(["admin"]);
   const demo = await demoStudent(membership.schoolId);
   if (!demo) return { error: "Der er ingen demo-elev." };
   const admin = createAdminClient();
+  // Rækkefølgen betyder noget: afslutninger og lister peger på tællingerne og modulerne.
+  for (const table of ["module_plan_versions", "module_plan_teachers", "repetition_lessons", "module_completions", "module_signoffs"]) {
+    const { error } = await admin.from(table).delete().eq("student_id", demo.id);
+    if (error) return { error: "Demo-eleven kunne ikke nulstilles. Prøv igen." };
+  }
   const results = await Promise.all([
-    admin.from("lesson_signoffs").delete().eq("student_id", demo.id),
     admin.from("lesson_requests").delete().eq("student_id", demo.id),
     admin.from("scheduled_lessons").delete().contains("student_ids", [demo.id]),
   ]);

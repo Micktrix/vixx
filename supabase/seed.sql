@@ -247,23 +247,10 @@ truncate public.audit_log;
 drop table seed_people, seed_services;
 
 -- ---------------------------------------------------------------------------
--- Elevdelen: et C-forløb, et hold og to elever
+-- Elevdelen: et C-forløb (modulplan), et hold og to elever
 -- ---------------------------------------------------------------------------
-insert into public.courses (id, school_id, category_code, name)
-values ('00000000-0000-4000-ab00-000000000011', '00000000-0000-4000-a000-000000000001', 'C', 'C – kørselsundervisning');
-
-insert into public.course_lessons (school_id, course_id, sort_order, number, kind, lesson_count, location, content, control_topic) values
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ab00-000000000011', 10, '1', 'theory', 2, 'Teorilokale',
-   E'1.1 Køretøjets indretning
-1.2 Kontrol af lygter', null),
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ab00-000000000011', 20, '2', 'driving', 2, 'Øvelsesstrækning',
-   E'2.1 Forberedelse til kørsel
-2.2 Lastbilens spejle', 'Bremser og styretøj'),
-  ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ab00-000000000011', 30, '4', 'driving', 2, 'Øvelsesstrækning',
-   E'7.1 Igangsætning og standsning v. kantsten
-7.2 Placering under ligeudkørsel', 'Lygter og bærende dele');
-
-update public.courses set theory_lessons = 8 where id = '00000000-0000-4000-ab00-000000000011';
+-- C-forløbet er Færdselsstyrelsens modulplan for C (version 1.1); den gamle lektionsplan er fjernet (20. nov. 2026).
+select public.create_module_course('00000000-0000-4000-a000-000000000001', 'C-1.1', 'C – modulplan');
 
 -- Trin E8: et B-forløb som modulplan (Færdselsstyrelsen, version 1.1).
 select public.create_module_course('00000000-0000-4000-a000-000000000001', 'B-1.1', 'B – modulplan');
@@ -300,13 +287,13 @@ where c.name = 'B – modulplan' and m.number = 1;
 
 insert into public.teams (id, school_id, name, course_id, starts_on)
 values ('00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-a000-000000000001', 'C-hold uge 48',
-        '00000000-0000-4000-ab00-000000000011', current_date - 3);
+        (select id from public.courses where name = 'C – modulplan'), current_date - 3);
 
 insert into public.students (id, school_id, user_id, team_id, course_id, service_id) values
   ('00000000-0000-4000-ad00-000000000031', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000031',
-   '00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-ab00-000000000011', '00000000-0000-4000-a500-000000000001'),
+   '00000000-0000-4000-ac00-000000000001', (select id from public.courses where name = 'C – modulplan'), '00000000-0000-4000-a500-000000000001'),
   ('00000000-0000-4000-ad00-000000000032', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000032',
-   '00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-ab00-000000000011', '00000000-0000-4000-a500-000000000001');
+   '00000000-0000-4000-ac00-000000000001', (select id from public.courses where name = 'C – modulplan'), '00000000-0000-4000-a500-000000000001');
 
 -- Emil har Lars som fast lærer og må selv anmode om kørelektioner (trin E5). Freja har ingen.
 update public.students set can_request = true where id = '00000000-0000-4000-ad00-000000000031';

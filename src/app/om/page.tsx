@@ -123,16 +123,16 @@ export default function LandingPage() {
       <section id="eleven" className="scroll-mt-6 border-y border-line bg-surface">
         <div className="mx-auto grid w-full max-w-[1120px] items-center gap-10 px-5 py-16 md:grid-cols-2">
           <div className="flex flex-col gap-4">
-            <h2 className="text-[32px] font-bold">Elevens lektionsplan, uden papir</h2>
+            <h2 className="text-[32px] font-bold">Modulplanen, uden papir</h2>
             <p className="text-lg text-muted">
-              Skolen bygger selv forløbene pr. kørekortkategori, så de kan rettes, når der kommer nye krav. Efter lektionen scanner
-              kørelæreren elevens QR-kode og kvitterer, og eleven bekræfter i sin app. To underskrifter, som på papiret.
+              Forløbene bygges efter Færdselsstyrelsens modulplaner. Kørelæreren scanner elevens QR-kode og tæller teori og
+              kørsel i modulet, og når minimum er nået, afslutter læreren modulet med sin underskrift.
             </p>
             <ul className="flex flex-col gap-2 text-[15px]">
-              <Check>Kørselslektioner går til lønnen i samme tryk</Check>
-              <Check>Punkter, der ikke blev nået, bliver noteret</Check>
+              <Check>Vixx udfylder Færdselsstyrelsens modulplan, klar til print</Check>
+              <Check>Eleven følger sine moduler i appen</Check>
               <Check>Kontoret ser hvert holds fremskridt på én tavle</Check>
-              <Check>En kvittering kan aldrig slettes</Check>
+              <Check>En afslutning kan aldrig slettes</Check>
             </ul>
           </div>
           <div className="grid grid-cols-6 gap-1.5 rounded-[20px] border border-line bg-bg p-5" aria-hidden="true">

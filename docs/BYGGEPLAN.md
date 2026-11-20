@@ -303,6 +303,17 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      Admin kan oprette en "Modulplan uden skabelon (fx EU-moduler)" og selv tilføje og slette ubrugte moduler.
      **6c-2 (mangler):** elever med to planer (fx C/E og EU). Læreren ser modulerne fra begge planer i én liste
      ved scanning; hver plan har sin egen PDF. Venter på skolens EU/AMU-blanketter.
+     Michael (19. nov. 2026): EU tilføjes på selve forløbet (fx "Tilføj EU-moduler" på C/E-forløbet), ikke som et
+     løst forløb. EU vælges pr. elev (flueben på eleven): ikke alle elever på et C- eller C/E-hold skal have EU.
+     Kun elever med fluebenet får EU-modulerne ved scanning og en EU-modulplan at printe.
+     "Nyt forløb" er forenklet: man vælger kategorien (og evt. navn), og Vixx henter selv Færdselsstyrelsens
+     modulplan for B, C, C/E og D. Andre kategorier bliver et tomt modulforløb. "Egen modulplan" ligger under
+     "Andre muligheder".
+     **Den gamle lektionsplan er fjernet (20. nov. 2026, aftalt med Michael; intet i drift):** tabellerne
+     `course_lessons`, `lesson_signoffs` og `theory_signoffs`, lektionsplanens editor og skabeloner, QR-kvittering
+     pr. lektion med elevens bekræftelse, admins "Kryds af"/"Ret lektion" og den gamle teoritæller. Alle forløb er
+     modulplaner; et tidligere lektionsforløb bliver et tomt modulforløb. Trin E1 og E3 nedenfor er derfor
+     historik. Elevens underskrift i appen bygges igen med taxa og EU, hvor planen kræver den.
      Oprindeligt ønske:
      Michael (19. nov. 2026): der skal være plads til flere modulplaner under samme kategori, fx C/E og
      "C/E med EU", på samme vilkår: hver plan har sin egen PDF, sine egne moduler og sine egne versioner, og en

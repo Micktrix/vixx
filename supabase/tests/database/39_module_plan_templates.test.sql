@@ -1,9 +1,9 @@
 -- Trin E8, del 6c-1: modulplanens versioner (PDF). Kun admin lægger op og tager i brug; en version i brug kan
 -- ikke ændres eller slettes; nye elever får nyeste version, elever i gang beholder deres, og kun admin flytter.
--- Seed: "B – modulplan" har den indbyggede version 1.1; Bent er B-elev, Freja er på C-forløbet (lektioner).
+-- Seed: "B – modulplan" har den indbyggede version 1.1; Bent er B-elev, Freja er på C-forløbet.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(16);
 
 create temporary table ids as
 select
@@ -45,10 +45,6 @@ select throws_ok(
 select throws_ok(
   $$delete from public.module_plan_templates where version = '1.2'$$,
   '23514', null, 'En version i brug kan ikke slettes');
-select throws_ok(
-  $$insert into public.module_plan_templates (school_id, course_id, version, storage_path)
-    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ab00-000000000011', '1.0', 'c.pdf')$$,
-  '23514', null, 'Kun modulforløb har en modulplan (PDF)');
 
 -- Version pr. elev: Freja skifter til B og får nyeste version; Bent beholder 1.1.
 update public.students set course_id = (select b from ids) where id = '00000000-0000-4000-ad00-000000000032';

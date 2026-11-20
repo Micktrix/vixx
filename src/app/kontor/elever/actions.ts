@@ -53,57 +53,6 @@ export async function setTeamActive(_prev: ActionState, formData: FormData): Pro
   return undefined;
 }
 
-// Admin krydser en lektion af i elevens forløb, fx når en gæstelærer uden adgang til appen har kørt den.
-// Den tæller som gennemført med det samme, går ikke til lønnen og kan ikke slettes (databasen).
-export async function crossOffLesson(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin"]);
-  const lessonId = text(formData, "courseLessonId");
-  const comment = text(formData, "comment");
-  const date = parseDateInput(text(formData, "date"));
-  if (!lessonId) return { error: "Vælg lektionen." };
-  if (!date) return { error: "Vælg datoen." };
-  if (date > todayDk()) return { error: "Datoen kan ikke ligge frem i tiden." };
-  if (!comment) return { error: "Skriv en kommentar, fx hvem der kørte lektionen." };
-  if (comment.length > 500) return { error: "Kommentaren er for lang." };
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("lesson_signoffs").insert({
-    school_id: membership.schoolId,
-    student_id: text(formData, "studentId"),
-    course_lesson_id: lessonId,
-    lesson_number: "", // sættes af databasen fra forløbet
-    instructor_id: null,
-    lesson_date: date,
-    comment,
-  });
-  if (error?.code === "23505") return { error: "Lektionen er allerede kvitteret." };
-  if (error?.code === "23514") return { error: error.message };
-  if (error) return { error: "Lektionen kunne ikke krydses af. Prøv igen." };
-  revalidatePath(PAGE, "layout");
-  revalidatePath("/elev", "layout");
-  return { message: "Lektionen er krydset af." };
-}
-
-// Admin retter en kvittering, der er givet for den forkerte lektion, til den lektion, der blev kørt.
-// Databasen sikrer, at kun admin kan, og at lektionen hører til elevens forløb. Rettelsen logges.
-export async function moveSignoff(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole(["admin"]);
-  const lessonId = text(formData, "courseLessonId");
-  if (!lessonId) return { error: "Vælg lektionen." };
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("lesson_signoffs")
-    .update({ course_lesson_id: lessonId })
-    .eq("id", text(formData, "id"))
-    .select("id");
-  if (error?.code === "23505") return { error: "Den lektion er allerede kvitteret." };
-  if (error?.code === "23514") return { error: error.message };
-  if (error || !data?.length) return { error: "Kvitteringen kunne ikke rettes. Prøv igen." };
-  revalidatePath(PAGE, "layout");
-  revalidatePath("/elev", "layout");
-  return { message: "Kvitteringen er rettet." };
-}
-
 // Elevens faste lærere og om eleven selv må anmode om kørelektioner hos dem.
 export async function saveStudentTeachers(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { membership } = await requireRole(["admin", "office"]);
@@ -135,42 +84,6 @@ export async function saveStudentTeachers(_prev: ActionState, formData: FormData
   revalidatePath("/elev", "layout");
   revalidatePath("/kontor/demo-elev");
   return { message: "Gemt." };
-}
-
-// Teori: admin giver teorilektioner med en kommentar (fx gæstelærer) eller retter antallet på en kvittering.
-export async function addTheory(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin"]);
-  const count = Number(text(formData, "count"));
-  const date = parseDateInput(text(formData, "date"));
-  const comment = text(formData, "comment");
-  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Antal skal være mellem 1 og 12." };
-  if (!date || date > todayDk()) return { error: "Vælg en dato, der ikke ligger frem i tiden." };
-  if (!comment) return { error: "Skriv en kommentar, fx hvem der underviste." };
-  const supabase = await createClient();
-  const { error } = await supabase.from("theory_signoffs").insert({
-    school_id: membership.schoolId,
-    student_id: text(formData, "studentId"),
-    instructor_id: null,
-    lesson_count: count,
-    lesson_date: date,
-    comment,
-  });
-  if (error) return { error: error.code === "23514" ? error.message : "Teorien kunne ikke gemmes. Prøv igen." };
-  revalidatePath(PAGE, "layout");
-  revalidatePath("/elev", "layout");
-  return { message: "Teorien er tilføjet." };
-}
-
-export async function correctTheory(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole(["admin"]);
-  const count = Number(text(formData, "count"));
-  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Antal skal være mellem 1 og 12." };
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("theory_signoffs").update({ lesson_count: count }).eq("id", text(formData, "id")).select("id");
-  if (error || !data?.length) return { error: "Antallet kunne ikke rettes. Prøv igen." };
-  revalidatePath(PAGE, "layout");
-  revalidatePath("/elev", "layout");
-  return { message: "Rettet." };
 }
 
 // Afslut elevens forløb (fx bestået køreprøve): eleven bliver inaktiv og logges ud. Intet slettes, så

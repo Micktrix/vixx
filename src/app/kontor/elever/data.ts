@@ -2,16 +2,14 @@ import "server-only";
 import { type ModuleCompletion, type ModuleCount, type PlanModule } from "@/lib/module-progress";
 import { createClient } from "@/lib/supabase/server";
 
-// Hold, elever og forløb til kontorets elevsider. En lektion er gennemført, når læreren har kvitteret
-// (QR-scanning), og eleven har bekræftet.
+// Hold, elever og forløb (modulplaner) til kontorets elevsider. Et modul er gennemført, når læreren har
+// afsluttet det.
 
 export type CourseInfo = {
   id: string;
   name: string;
   category: string;
-  theory: number; // antal teorilektioner i forløbet (0 = ingen)
-  lessons: { id: string; number: string; count: number; kind: "driving" | "theory" }[];
-  modules: PlanModule[]; // modulforløb (trin E8); tom for lektionsforløb
+  modules: PlanModule[];
 };
 export type StudentInfo = {
   id: string;
@@ -27,17 +25,12 @@ export type StudentInfo = {
   serviceId: string | null;
   active: boolean;
   finished: Finished | null; // forløbet er afsluttet (fx bestået køreprøve); eleven er inaktiv
-  done: Set<string>; // course_lesson-id'er, der er kvitteret og bekræftet
-  waiting: Set<string>; // kvitteret af læreren, venter på elevens bekræftelse
-  signoffs: Map<string, Signoff>;
-  theoryCount: number; // teorilektioner talt op (scannet eller givet af admin)
-  moduleCounts: ModuleCount[]; // lektioner talt i moduler (modulforløb)
+  moduleCounts: ModuleCount[]; // lektioner talt i modulerne
   moduleCompletions: ModuleCompletion[]; // afsluttede moduler
 };
 export const FINISH_LABEL = { passed: "Bestået køreprøve", stopped: "Stoppet", other: "Afsluttet" } as const;
 export type Finished = { on: string; reason: keyof typeof FINISH_LABEL; note: string | null };
 
-export type Signoff = { id: string; date: string; instructor: string; confirmed: boolean; skipped: string | null; comment: string | null };
 export type TeamInfo = { id: string; name: string; courseId: string | null; startsOn: string | null; active: boolean };
 
 export async function loadStudents(schoolId: string) {
@@ -47,38 +40,26 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, address, manual_gear, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), lesson_signoffs(id, course_lesson_id, lesson_date, instructor_name, confirmed_at, skipped_items, comment), theory_signoffs(lesson_count), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, manual_gear, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
     supabase
       .from("courses")
-      .select("id, name, category_code, theory_lessons, course_lessons(id, number, kind, lesson_count, sort_order, active), course_modules(id, number, name, min_theory, min_driving, min_dark)")
+      .select("id, name, category_code, course_modules(id, number, name, min_theory, min_driving, min_dark)")
       .eq("school_id", schoolId)
       .order("name"),
   ]);
 
-  type LessonRow = { id: string; number: string; kind: "driving" | "theory"; lesson_count: number; sort_order: number; active: boolean };
   const courseList: CourseInfo[] = (courses ?? []).map((c) => ({
     id: c.id,
     name: c.name,
     category: c.category_code,
-    theory: c.theory_lessons,
-    lessons: ((c.course_lessons ?? []) as LessonRow[])
-      .filter((l) => l.active)
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((l) => ({ id: l.id, number: l.number, count: l.lesson_count, kind: l.kind })),
     modules: (c.course_modules ?? []) as PlanModule[],
   }));
   const studentList: StudentInfo[] = (students ?? [])
     .map((s) => {
       const p = s.profiles as unknown as { full_name: string; phone: string } | null;
-      const signoffs = new Map<string, Signoff>(
-        (s.lesson_signoffs ?? []).map((x) => [
-          x.course_lesson_id,
-          { id: x.id, date: x.lesson_date, instructor: x.instructor_name, confirmed: !!x.confirmed_at, skipped: x.skipped_items, comment: x.comment },
-        ]),
-      );
       return {
         id: s.id,
         userId: s.user_id,
@@ -93,10 +74,6 @@ export async function loadStudents(schoolId: string) {
         serviceId: s.service_id,
         active: s.active,
         finished: s.finished_on ? { on: s.finished_on, reason: s.finish_reason as Finished["reason"], note: s.finish_note } : null,
-        done: new Set([...signoffs].filter(([, x]) => x.confirmed).map(([id]) => id)),
-        waiting: new Set([...signoffs].filter(([, x]) => !x.confirmed).map(([id]) => id)),
-        signoffs,
-        theoryCount: ((s.theory_signoffs ?? []) as { lesson_count: number }[]).reduce((n, t) => n + t.lesson_count, 0),
         moduleCounts: (s.module_signoffs ?? []) as ModuleCount[],
         moduleCompletions: (s.module_completions ?? []) as ModuleCompletion[],
       };
@@ -112,21 +89,9 @@ export async function loadStudents(schoolId: string) {
   return { teams: teamList, students: studentList, courses: courseList };
 }
 
-// Andel gennemført (0–1) af elevens forløb.
-// Modulforløb: andelen af moduler, der er afsluttet.
+// Andel gennemført (0–1) af elevens forløb: moduler, der er afsluttet (annullerede tæller ikke).
 export function progress(student: StudentInfo, course: CourseInfo | undefined) {
-  if (course?.modules.length) {
-    const completed = student.moduleCompletions.filter((c) => !c.annulled_at && course.modules.some((m) => m.id === c.course_module_id)).length;
-    return { done: completed, total: course.modules.length, share: completed / course.modules.length };
-  }
-  const total = course?.lessons.length ?? 0;
-  const done = course ? course.lessons.filter((l) => student.done.has(l.id)).length : 0;
+  const total = course?.modules.length ?? 0;
+  const done = course ? student.moduleCompletions.filter((c) => !c.annulled_at && course.modules.some((m) => m.id === c.course_module_id)).length : 0;
   return { done, total, share: total ? done / total : 0 };
-}
-
-// Teori (0–total): tælleren plus teorilektioner i forløbet, der er kvitteret som lektioner.
-export function theoryProgress(student: StudentInfo, course: CourseInfo | undefined) {
-  const total = course?.theory ?? 0;
-  const asLessons = (course?.lessons ?? []).filter((l) => l.kind === "theory" && student.signoffs.has(l.id)).reduce((n, l) => n + l.count, 0);
-  return { done: student.theoryCount + asLessons, total };
 }

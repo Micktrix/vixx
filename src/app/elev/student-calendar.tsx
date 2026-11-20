@@ -45,7 +45,7 @@ export async function StudentCalendar({
   const [{ data: student }, { data: items }, { data: slots }] = await Promise.all([
     supabase
       .from("students")
-      .select("can_request, student_instructors(instructor_id), lesson_signoffs(id, lesson_number, lesson_date, instructor_name), theory_signoffs(id, lesson_count, lesson_date, instructor_name)")
+      .select("can_request, student_instructors(instructor_id), module_signoffs(id, kind, lesson_count, lesson_date, instructor_name, course_modules(number))")
       .eq("id", studentId)
       .maybeSingle(),
     supabase.rpc("student_lessons", who),
@@ -58,16 +58,16 @@ export async function StudentCalendar({
   const requests = all.filter((i) => i.kind === "request");
   const open = (slots ?? []) as Slot[];
   type Driven = { id: string; title: string; lesson_date: string; instructor_name: string };
-  const driven: Driven[] = [
-    ...((student?.lesson_signoffs ?? []) as { id: string; lesson_number: string; lesson_date: string; instructor_name: string }[]).map((d) => ({
-      ...d,
-      title: `Lektion ${d.lesson_number}`,
-    })),
-    ...((student?.theory_signoffs ?? []) as { id: string; lesson_count: number; lesson_date: string; instructor_name: string }[]).map((t) => ({
-      ...t,
-      title: `Teori · ${t.lesson_count} ${t.lesson_count === 1 ? "lektion" : "lektioner"}`,
-    })),
-  ].sort((a, b) => b.lesson_date.localeCompare(a.lesson_date));
+  // Lektioner talt i modulerne (teori og kørsel), nyeste først.
+  type Counted = { id: string; kind: "theory" | "driving"; lesson_count: number; lesson_date: string; instructor_name: string; course_modules: { number: number } | null };
+  const driven: Driven[] = ((student?.module_signoffs ?? []) as unknown as Counted[])
+    .map((c) => ({
+      id: c.id,
+      lesson_date: c.lesson_date,
+      instructor_name: c.instructor_name,
+      title: `Modul ${c.course_modules?.number ?? ""} · ${c.kind === "theory" ? "Teori" : "Kørsel"} · ${c.lesson_count} ${c.lesson_count === 1 ? "lektion" : "lektioner"}`,
+    }))
+    .sort((a, b) => b.lesson_date.localeCompare(a.lesson_date));
   const now = new Date().toISOString();
 
   return (

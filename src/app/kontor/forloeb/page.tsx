@@ -5,17 +5,15 @@ import { Pill } from "@/components/pill";
 import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { createCourse, createEmptyModuleCourse, createModuleCourse } from "./actions";
+import { createCourseWithPlan } from "./actions";
 
 type CourseRow = {
   id: string;
   name: string;
   category_code: string;
   active: boolean;
-  plan_kind: "lessons" | "modules";
   plan_version: string | null;
   course_modules: { min_theory: number; min_driving: number }[];
-  course_lessons: { lesson_count: number; active: boolean }[];
 };
 
 // Forløb pr. kørekortkategori. Admin bygger og retter dem; kontoret kan se dem.
@@ -26,7 +24,7 @@ export default async function CoursesPage() {
   const [{ data }, { data: categories }] = await Promise.all([
     supabase
       .from("courses")
-      .select("id, name, category_code, active, plan_kind, plan_version, course_modules(min_theory, min_driving), course_lessons(lesson_count, active)")
+      .select("id, name, category_code, active, plan_version, course_modules(min_theory, min_driving)")
       .eq("school_id", membership.schoolId)
       .order("name"),
     supabase.from("license_categories").select("code, name").order("sort_order"),
@@ -39,52 +37,13 @@ export default async function CoursesPage() {
       <header>
         <p className="text-sm text-muted">Indstillinger</p>
         <h1 className="text-[30px] font-bold">Forløb</h1>
-        <p className="text-muted">Elevernes lektionsplan pr. kørekortkategori. Ret dem, når ministeriet ændrer noget.</p>
+        <p className="text-muted">Forløb pr. kørekortkategori med Færdselsstyrelsens modulplan. Ret dem, når styrelsen ændrer noget.</p>
       </header>
 
       {isAdmin && (
         <Box title="Nyt forløb">
-          <ActionForm action={createCourse} submitLabel="Opret forløb" className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1.5 text-sm font-bold">
-              Kategori
-              <select name="category" required defaultValue="" className={`${inputClass.replace("w-full", "")} w-[120px]`}>
-                <option value="" disabled>
-                  Vælg
-                </option>
-                {(categories ?? []).map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <TextField label="Navn" name="name" required maxLength={80} placeholder="Fx C – kørselsundervisning" className="min-w-[240px] flex-1" />
-          </ActionForm>
-        </Box>
-      )}
-
-      {isAdmin && (
-        <Box title="Nyt forløb fra modulplanen">
-          <ActionForm action={createModuleCourse} submitLabel="Opret modulforløb" className="flex flex-col gap-3">
+          <ActionForm action={createCourseWithPlan} submitLabel="Opret forløb" className="flex flex-col gap-3">
             <div className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-col gap-1.5 text-sm font-bold">
-                Modulplan
-                <select name="template" defaultValue="B-1.1" className={`${inputClass.replace("w-full", "")} w-[260px]`}>
-                  <option value="B-1.1">B · version 1.1 (april 2026)</option>
-                  <option value="C-1.1">C · version 1.1 (april 2026)</option>
-                  <option value="CE-1.1">C/E · version 1.1 (april 2026)</option>
-                  <option value="D-1.1">D · version 1.1 (april 2026)</option>
-                </select>
-              </label>
-              <TextField label="Navn" name="name" required maxLength={80} placeholder="Fx B – modulplan" className="min-w-[240px] flex-1" />
-            </div>
-            <p className="text-[13px] text-muted">
-              Modulerne, minimum og emnerne lægges ind fra Færdselsstyrelsens modulplan og kan rettes bagefter.
-            </p>
-          </ActionForm>
-          <details className="mt-3 border-t border-line pt-3">
-            <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Modulplan uden skabelon (fx EU-moduler)</summary>
-            <ActionForm action={createEmptyModuleCourse} submitLabel="Opret tomt modulforløb" className="mt-3 flex flex-wrap items-end gap-3">
               <label className="flex flex-col gap-1.5 text-sm font-bold">
                 Kategori
                 <select name="category" required defaultValue="" className={`${inputClass.replace("w-full", "")} w-[120px]`}>
@@ -98,10 +57,29 @@ export default async function CoursesPage() {
                   ))}
                 </select>
               </label>
-              <TextField label="Navn" name="name" required maxLength={80} placeholder="Fx C/E med EU" className="min-w-[240px] flex-1" />
-            </ActionForm>
-            <p className="mt-2 text-[13px] text-muted">Du bygger modulerne og lægger Færdselsstyrelsens udfyldbare PDF op på forløbet.</p>
-          </details>
+              <TextField label="Navn (valgfrit)" name="name" maxLength={80} placeholder="Fx C – modulplan" className="min-w-[240px] flex-1" />
+            </div>
+            <p className="text-[13px] text-muted">
+              Vixx henter Færdselsstyrelsens modulplan for kategorien (B, C, C/E og D, version 1.1) med moduler, minimum,
+              emner og PDF. Alt kan rettes bagefter. Lader du navnet stå tomt, hedder forløbet fx &quot;C – modulplan&quot;.
+            </p>
+            <details className="text-[15px]">
+              <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Andre muligheder</summary>
+              <div className="mt-2 flex flex-col gap-2">
+                <label className="flex items-start gap-2.5">
+                  <input type="radio" name="plan" value="standard" defaultChecked className="mt-1 size-[18px] accent-accent" />
+                  <span>Færdselsstyrelsens modulplan for kategorien (standard)</span>
+                </label>
+                <label className="flex items-start gap-2.5">
+                  <input type="radio" name="plan" value="own" className="mt-1 size-[18px] accent-accent" />
+                  <span>
+                    Egen modulplan (fx EU-moduler)
+                    <span className="block text-[13px] text-muted">Du bygger modulerne og lægger Færdselsstyrelsens udfyldbare PDF op på forløbet.</span>
+                  </span>
+                </label>
+              </div>
+            </details>
+          </ActionForm>
         </Box>
       )}
 
@@ -114,8 +92,6 @@ export default async function CoursesPage() {
             {courses
               .filter((k) => k.category_code === c.code)
               .map((k) => {
-                const lessons = k.course_lessons.filter((l) => l.active);
-                const periods = lessons.reduce((n, l) => n + l.lesson_count, 0);
                 return (
                   <Link
                     key={k.id}
@@ -125,9 +101,9 @@ export default async function CoursesPage() {
                   >
                     <b className="text-[17px]">{k.name}</b>
                     <span className="text-sm text-muted">
-                      {k.plan_kind === "modules"
-                        ? `Modulplan ${k.plan_version} · ${k.course_modules.length} moduler · Min. ${k.course_modules.reduce((n, m) => n + m.min_theory, 0)} teori + ${k.course_modules.reduce((n, m) => n + m.min_driving, 0)} kørsel`
-                        : `${lessons.length} lektioner · ${periods} × 45 min.`}
+                      {k.plan_version ? `Modulplan ${k.plan_version} · ` : "Egen modulplan · "}
+                      {k.course_modules.length} moduler · Min. {k.course_modules.reduce((n, m) => n + m.min_theory, 0)} teori +{" "}
+                      {k.course_modules.reduce((n, m) => n + m.min_driving, 0)} kørsel
                     </span>
                     {!k.active && (
                       <span>
