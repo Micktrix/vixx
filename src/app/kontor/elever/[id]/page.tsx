@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LessonStatus } from "@/components/lesson-status";
 import { completionText, moduleProgress, progressText, suggestedModule } from "@/lib/module-progress";
 import { notFound } from "next/navigation";
 import { Box } from "@/components/box";
@@ -106,6 +107,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
                     {m.completed.comment && ` · ${m.completed.comment}`}
                   </span>
                 )}
+                <LessonStatus module={m} />
                 {isAdmin && m.id === lastCompleted?.id && m.completed && (
                   <details className="mt-1 text-sm">
                     <summary className="cursor-pointer font-semibold text-muted hover:text-ink">Annullér afslutningen</summary>

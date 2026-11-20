@@ -1,7 +1,9 @@
 import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { Box } from "@/components/box";
+import type { PlanLesson } from "@/lib/module-progress";
 import { addModule, deleteModule, updateModule } from "../actions";
+import { ModuleLessons } from "./lessons";
 
 export type ModuleRow = {
   id: string;
@@ -12,6 +14,7 @@ export type ModuleRow = {
   min_dark: number;
   topics: string | null;
   notes: string | null;
+  module_lessons: PlanLesson[];
 };
 
 // Minimum for et modul, fx "Minimum 9 teori- og 6 kørselslektioner, heraf 1 i mørke".
@@ -44,6 +47,7 @@ export function ModuleList({ modules, isAdmin }: { modules: ModuleRow[]; isAdmin
             </ul>
           )}
           {m.notes && <p className="text-sm text-muted">{m.notes}</p>}
+          {(m.module_lessons.length > 0 || isAdmin) && <ModuleLessons moduleId={m.id} lessons={m.module_lessons} isAdmin={isAdmin} />}
           {isAdmin && (
             <details className="mt-1 border-t border-line pt-2">
               <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Ret modul {m.number}</summary>

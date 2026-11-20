@@ -40,13 +40,13 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, address, manual_gear, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, manual_gear, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, module_lesson_id, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
     supabase
       .from("courses")
-      .select("id, name, category_code, course_modules(id, number, name, min_theory, min_driving, min_dark)")
+      .select("id, name, category_code, course_modules(id, number, name, min_theory, min_driving, min_dark, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active))")
       .eq("school_id", schoolId)
       .order("name"),
   ]);

@@ -4,7 +4,7 @@ import { ActionForm, TextField } from "@/components/form";
 import { Pill } from "@/components/pill";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { deleteCourse, updateCourse } from "../actions";
+import { deleteCourse, insertLessonSchedule, updateCourse } from "../actions";
 import { ModuleList, NewModuleForm, type ModuleRow } from "./modules";
 import { TemplatesBox } from "./templates-box";
 
@@ -16,7 +16,7 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
   const supabase = await createClient();
   const [{ data: course }, { data: moduleData }] = await Promise.all([
     supabase.from("courses").select("id, name, category_code, active, plan_version, min_days").eq("id", id).eq("school_id", membership.schoolId).maybeSingle(),
-    supabase.from("course_modules").select("id, number, name, min_theory, min_driving, min_dark, topics, notes").eq("course_id", id).order("number"),
+    supabase.from("course_modules").select("id, number, name, min_theory, min_driving, min_dark, topics, notes, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active)").eq("course_id", id).order("number"),
   ]);
   if (!course) notFound();
   const modules = (moduleData ?? []) as ModuleRow[];
@@ -54,6 +54,14 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
         </details>
       )}
 
+      {isAdmin && ["C", "D"].includes(course.category_code) && modules.length >= 3 && !modules.some((m) => m.module_lessons.length) && (
+        <ActionForm action={insertLessonSchedule} submitLabel="Indsæt skolens lektionsskema (C + D)" primary={false} className="flex flex-col gap-2">
+          <input type="hidden" name="courseId" value={course.id} />
+          <p className="text-sm text-muted">
+            Lektion 2, 4 og 6 i modul 1 · 9, 11 og 12 (mørke) i modul 2 · 13, 17 og 18 i modul 3. Det kan rettes bagefter.
+          </p>
+        </ActionForm>
+      )}
       <ModuleList modules={modules} isAdmin={isAdmin} />
       {!modules.length && <p className="text-muted">Ingen moduler endnu.</p>}
       {isAdmin && <NewModuleForm key={modules.length} courseId={course.id} next={(modules.at(-1)?.number ?? 0) + 1} />}

@@ -1,8 +1,39 @@
 // Fremskridt i et modulforløb (trin E8): hvor mange lektioner eleven har fået i hvert modul, sammenlignet med
-// modulets minimum. Bruges på lærerens scanning, i elevens app og hos kontoret.
+// modulets minimum, og hvilke af skolens kørelektioner der er gennemført (med punkter, der ikke blev kørt).
+// Bruges på lærerens scanning, i elevens app og hos kontoret.
 
-export type PlanModule = { id: string; number: number; name: string; min_theory: number; min_driving: number; min_dark: number };
-export type ModuleCount = { course_module_id: string; kind: "driving" | "theory"; lesson_count: number; dark: boolean; lesson_date: string };
+// Skolens kørelektion under et modul (fx lektion 2 fra lektionsskemaet). Punkterne står ét pr. linje.
+export type PlanLesson = {
+  id: string;
+  number: string;
+  lesson_count: number;
+  dark: boolean;
+  location: string | null;
+  content: string | null;
+  notes: string | null;
+  control_topic: string | null;
+  sort_order: number;
+  active: boolean;
+};
+export type PlanModule = {
+  id: string;
+  number: number;
+  name: string;
+  min_theory: number;
+  min_driving: number;
+  min_dark: number;
+  module_lessons?: PlanLesson[];
+};
+export type ModuleCount = {
+  course_module_id: string;
+  kind: "driving" | "theory";
+  lesson_count: number;
+  dark: boolean;
+  lesson_date: string;
+  module_lesson_id?: string | null; // gennemført lektion
+  skipped_items?: string | null; // punkter, der ikke blev kørt (ét pr. linje)
+};
+export type LessonProgress = { lesson: PlanLesson; doneOn: string | null; skipped: string[] };
 export type ModuleCompletion = {
   id: string;
   course_module_id: string;
@@ -26,7 +57,17 @@ export type ModuleProgress = PlanModule & {
   startedOn: string | null; // dato for første tælling i modulet = opstart
   reached: boolean; // minimum for teori, kørsel og mørke er nået
   completed: ModuleCompletion | null; // læreren har afsluttet modulet
+  lessons: LessonProgress[]; // skolens kørelektioner i modulet (aktive)
+  lessonsDone: boolean; // alle modulets lektioner er gennemført
+  notDriven: { lesson: string; item: string }[]; // punkter, der ikke er kørt i de gennemførte lektioner
+  ready: boolean; // klar til afslutning: minimum nået og alle lektioner gennemført
 };
+
+export const lessonItems = (content: string | null) =>
+  (content ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
 export function moduleProgress(modules: PlanModule[], counts: ModuleCount[], completions: ModuleCompletion[] = []): ModuleProgress[] {
   return [...modules]
@@ -40,7 +81,16 @@ export function moduleProgress(modules: PlanModule[], counts: ModuleCount[], com
       const startedOn = own.map((c) => c.lesson_date).sort()[0] ?? null;
       const reached = theory >= m.min_theory && driving >= m.min_driving && dark >= m.min_dark;
       const completed = completions.find((c) => c.course_module_id === m.id && !c.annulled_at) ?? null;
-      return { ...m, theory, driving, dark, startedOn, reached, completed };
+      const lessons = (m.module_lessons ?? [])
+        .filter((l) => l.active)
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((lesson) => {
+          const done = counts.find((c) => c.module_lesson_id === lesson.id);
+          return { lesson, doneOn: done?.lesson_date ?? null, skipped: lessonItems(done?.skipped_items ?? null) };
+        });
+      const lessonsDone = lessons.every((l) => l.doneOn);
+      const notDriven = lessons.flatMap((l) => l.skipped.map((item) => ({ lesson: l.lesson.number, item })));
+      return { ...m, theory, driving, dark, startedOn, reached, completed, lessons, lessonsDone, notDriven, ready: reached && lessonsDone };
     });
 }
 

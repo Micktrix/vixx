@@ -314,6 +314,14 @@ erstatter papirets lektionsplan med dato og to underskrifter.
      pr. lektion med elevens bekræftelse, admins "Kryds af"/"Ret lektion" og den gamle teoritæller. Alle forløb er
      modulplaner; et tidligere lektionsforløb bliver et tomt modulforløb. Trin E1 og E3 nedenfor er derfor
      historik. Elevens underskrift i appen bygges igen med taxa og EU, hvor planen kræver den.
+     **Skolens kørelektioner under modulerne (bygget 20. nov. 2026, aftalt med Michael):** tabellen `module_lessons`
+     (nummer, antal × 45 min., mørke, sted, punkter, note, kontrolstof). Skolens "Lektionsskema C + D" kan indsættes
+     på C- og D-forløb (`add_lesson_schedule`): lektion 2, 4, 6 i modul 1; 9, 11, 12 (mørke) i modul 2; 13, 17, 18
+     i modul 3. Modulfordelingen er Vixx' forslag og kan rettes. Ved scanning vælger læreren lektionen (flere kan
+     vælges, fx 17 + 18) og krydser de punkter af, der IKKE blev kørt. Lektionen tæller selv som kørsel i modulet,
+     og en lektion køres én gang pr. elev. Modulet er "klar til afslutning", når minimum er nået og alle dets
+     lektioner er kørt. Punkter, der ikke er kørt, og lektioner, der mangler, giver en advarsel, men stopper ikke
+     afslutningen (fx "7.20 Kørsel i tunnel"). Eleven må køre i næste modul, før det forrige er afsluttet.
      Oprindeligt ønske:
      Michael (19. nov. 2026): der skal være plads til flere modulplaner under samme kategori, fx C/E og
      "C/E med EU", på samme vilkår: hver plan har sin egen PDF, sine egne moduler og sine egne versioner, og en

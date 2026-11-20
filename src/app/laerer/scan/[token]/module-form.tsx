@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
-import { progressText, type ModuleProgress } from "@/lib/module-progress";
+import { lessonItems, progressText, type ModuleProgress } from "@/lib/module-progress";
 import { countModuleLessons } from "./actions";
 
 const box = "flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-4";
@@ -27,6 +27,13 @@ export function ModuleForm({
   const { state, onSubmit, pending } = useFormAction(countModuleLessons);
   const [moduleId, setModuleId] = useState(suggestedId);
   const [kind, setKind] = useState<"theory" | "driving">("theory");
+  const [lessonIds, setLessonIds] = useState<string[]>([]);
+  const current = modules.find((m) => m.id === moduleId);
+  // Skolens kørelektioner i modulet, som eleven mangler.
+  const openLessons = (current?.lessons ?? []).filter((l) => !l.doneOn).map((l) => l.lesson);
+  const chosen = openLessons.filter((l) => lessonIds.includes(l.id));
+  const byLesson = kind === "driving" && chosen.length > 0;
+  const toggle = (id: string) => setLessonIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
@@ -42,7 +49,17 @@ export function ModuleForm({
               key={m.id}
               className={`flex items-center gap-3 rounded-[14px] border px-3 py-2.5 ${m.id === moduleId ? "border-accent bg-accent-bg" : "border-line"}`}
             >
-              <input type="radio" name="moduleId" value={m.id} checked={m.id === moduleId} onChange={() => setModuleId(m.id)} className={check} />
+              <input
+                type="radio"
+                name="moduleId"
+                value={m.id}
+                checked={m.id === moduleId}
+                onChange={() => {
+                  setModuleId(m.id);
+                  setLessonIds([]);
+                }}
+                className={check}
+              />
               <span>
                 <b>Modul {m.number}</b>
                 {m.id === suggestedId && <span className="text-[13px] font-semibold text-accent-ink"> · foreslået</span>}
@@ -69,6 +86,39 @@ export function ModuleForm({
             </label>
           ))}
         </div>
+        {kind === "driving" && openLessons.length > 0 && (
+          <fieldset className="flex flex-col gap-1.5" data-testid="scan-lesson-choice">
+            <legend className="mb-1 text-sm font-bold">Hvilken lektion?</legend>
+            {openLessons.map((l) => (
+              <div key={l.id} className={`rounded-[14px] border px-3 py-2.5 ${lessonIds.includes(l.id) ? "border-accent bg-accent-bg" : "border-line"}`}>
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" name="lesson" value={l.id} checked={lessonIds.includes(l.id)} onChange={() => toggle(l.id)} className={check} />
+                  <span>
+                    <b>Lektion {l.number}</b>
+                    <span className="block text-[13px] text-muted">
+                      {l.lesson_count} × 45 min.{l.dark ? " · i mørke" : ""}
+                      {l.location ? ` · ${l.location}` : ""}
+                    </span>
+                  </span>
+                </label>
+                {lessonIds.includes(l.id) && lessonItems(l.content).length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1 border-t border-line pt-2">
+                    <span className="text-[13px] font-semibold">Sæt kryds ved det, der IKKE blev kørt:</span>
+                    {lessonItems(l.content).map((item) => (
+                      <label key={item} className="flex items-start gap-2.5 text-[14px]">
+                        <input type="checkbox" name={`skip:${l.id}`} value={item} className={`${check} mt-0.5`} />
+                        {item}
+                      </label>
+                    ))}
+                    {l.control_topic && <span className="text-[13px] text-muted">Kontrolstof: {l.control_topic}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+            <span className="text-[13px] text-muted">Vælg ingen lektion for at tælle anden kørsel i modulet.</span>
+          </fieldset>
+        )}
+        {!byLesson && (
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Antal lektioner
           <select name="count" defaultValue="2" className={inputClass}>
@@ -79,7 +129,8 @@ export function ModuleForm({
             ))}
           </select>
         </label>
-        {kind === "driving" && (
+        )}
+        {kind === "driving" && !byLesson && (
           <label className="flex items-center gap-2.5 text-[15px]">
             <input type="checkbox" name="dark" className={check} />I mørke
           </label>
@@ -99,7 +150,11 @@ export function ModuleForm({
         disabled={pending}
         className="flex h-12 w-full items-center justify-center rounded-[14px] border border-accent bg-accent text-[15px] font-bold text-ink disabled:opacity-60"
       >
-        {pending ? "Tæller …" : `Tæl ${kind === "theory" ? "teori" : "kørsel"} i modul ${modules.find((m) => m.id === moduleId)?.number ?? ""}`}
+        {pending
+          ? "Gemmer …"
+          : byLesson
+            ? `Lektion ${chosen.map((l) => l.number).join(" + ")} er kørt`
+            : `Tæl ${kind === "theory" ? "teori" : "kørsel"} i modul ${current?.number ?? ""}`}
       </button>
       <ResultBox state={state} />
     </form>

@@ -176,3 +176,87 @@ export async function createCourseWithPlan(prev: ActionState, formData: FormData
   data.set("template", `${category}-1.1`);
   return createModuleCourse(prev, data);
 }
+
+// Skolens kørelektioner under modulerne (fx lektionsskemaet C + D). Kun admin.
+type ModuleLessonValues = {
+  number: string;
+  lesson_count: number;
+  dark: boolean;
+  location: string | null;
+  content: string | null;
+  notes: string | null;
+  control_topic: string | null;
+};
+
+function readModuleLesson(formData: FormData): { error: string } | ModuleLessonValues {
+  const number = text(formData, "number");
+  const count = Number(text(formData, "lessonCount"));
+  if (!number || number.length > 20) return { error: "Skriv lektionens nummer." };
+  if (!Number.isInteger(count) || count < 1 || count > 8) return { error: "Antal × 45 min. skal være mellem 1 og 8." };
+  return {
+    number,
+    lesson_count: count,
+    dark: formData.get("dark") === "on",
+    location: text(formData, "location") || null,
+    content: String(formData.get("content") ?? "").replace(/\r\n/g, "\n").trim() || null,
+    notes: text(formData, "notes") || null,
+    control_topic: text(formData, "controlTopic") || null,
+  };
+}
+
+async function coursePathOfModule(supabase: Awaited<ReturnType<typeof createClient>>, moduleId: string) {
+  const { data } = await supabase.from("course_modules").select("course_id").eq("id", moduleId).maybeSingle();
+  return data ? `${PAGE}/${data.course_id}` : PAGE;
+}
+
+export async function addModuleLesson(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const values = readModuleLesson(formData);
+  if ("error" in values) return { error: values.error };
+  const moduleId = text(formData, "moduleId");
+  const supabase = await createClient();
+  const { data: last } = await supabase.from("module_lessons").select("sort_order").eq("course_module_id", moduleId).order("sort_order", { ascending: false }).limit(1).maybeSingle();
+  const { error } = await supabase
+    .from("module_lessons")
+    .insert({ ...values, school_id: membership.schoolId, course_module_id: moduleId, sort_order: (last?.sort_order ?? 0) + 10 });
+  if (error) return { error: "Lektionen kunne ikke tilføjes. Prøv igen." };
+  revalidatePath(await coursePathOfModule(supabase, moduleId));
+  return { message: `Lektion ${values.number} er tilføjet.` };
+}
+
+export async function updateModuleLesson(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const values = readModuleLesson(formData);
+  if ("error" in values) return { error: values.error };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("module_lessons")
+    .update({ ...values, active: formData.get("active") === "on" })
+    .eq("id", text(formData, "id"))
+    .eq("school_id", membership.schoolId)
+    .select("course_module_id");
+  if (error || !data?.length) return { error: "Lektionen kunne ikke gemmes. Prøv igen." };
+  revalidatePath(await coursePathOfModule(supabase, data[0].course_module_id));
+  return { message: `Lektion ${values.number} er gemt.` };
+}
+
+export async function deleteModuleLesson(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("module_lessons").delete().eq("id", text(formData, "id")).eq("school_id", membership.schoolId).select("course_module_id");
+  if (error?.code === "23503") return { error: "Lektionen er gennemført af en elev og kan kun slås fra." };
+  if (error || !data?.length) return { error: "Lektionen kunne ikke slettes. Prøv igen." };
+  revalidatePath(await coursePathOfModule(supabase, data[0].course_module_id));
+  return { message: "Lektionen er slettet." };
+}
+
+// Indsæt skolens lektionsskema (C + D) under forløbets moduler. Modulfordelingen er et forslag og kan rettes.
+export async function insertLessonSchedule(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["admin"]);
+  const courseId = text(formData, "courseId");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("add_lesson_schedule", { p_course_id: courseId, p_template: "CD-skema" });
+  if (error) return { error: "Lektionsskemaet kunne ikke indsættes. Prøv igen." };
+  revalidatePath(`${PAGE}/${courseId}`);
+  return { message: `${data} lektioner er indsat. Tjek, at de ligger i de rigtige moduler.` };
+}

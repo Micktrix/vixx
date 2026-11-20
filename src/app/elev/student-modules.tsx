@@ -1,4 +1,5 @@
 import { formatDate } from "@/lib/dates";
+import { LessonStatus } from "@/components/lesson-status";
 import { completionText, progressText, suggestedModule, type ModuleProgress } from "@/lib/module-progress";
 
 // Elevens modulplan (trin E8): hvert modul med lektioner talt op mod minimum, opstartsdato og emner.
@@ -43,6 +44,7 @@ export function StudentModules({
                   {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
                 </span>
                 {m.completed && <span className="text-[13px] text-ok">{completionText(m.completed, formatDate)}</span>}
+                <LessonStatus module={m} />
               </summary>
               {topics.get(m.id) && (
                 <ul className="flex flex-col gap-0.5 border-t border-line px-4 py-3 text-[14px]">

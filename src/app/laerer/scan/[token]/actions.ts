@@ -25,6 +25,33 @@ export async function countModuleLessons(_prev: ActionState, formData: FormData)
   const kind = text("kind");
   const count = Number(text("count"));
   if (!text("moduleId")) return { error: "Vælg modulet." };
+  // Skolens kørelektioner: én tælling pr. valgt lektion; databasen sætter modul, kørsel, antal og mørke.
+  const lessons = formData.getAll("lesson").map(String).filter(Boolean);
+  if (lessons.length && kind === "driving") {
+    const supabase = await createClient();
+    const { data: instructor } = await supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single();
+    if (!instructor) return { error: "Du har ikke adgang til at kvittere." };
+    const { error } = await supabase.from("module_signoffs").insert(
+      lessons.map((id) => ({
+        school_id: membership.schoolId,
+        student_id: text("studentId"),
+        course_module_id: text("moduleId"),
+        kind: "driving",
+        lesson_count: 1,
+        instructor_id: instructor.id,
+        module_lesson_id: id,
+        skipped_items: formData.getAll(`skip:${id}`).map(String).join("\n") || null,
+        manual_gear: formData.get("manualGear") === "on",
+      })),
+    );
+    if (error?.code === "23505") return { error: "Lektionen er allerede kørt." };
+    const failed = dbError(error, "Lektionen kunne ikke gemmes. Prøv igen.");
+    if (failed) return failed;
+    revalidatePath("/laerer", "layout");
+    revalidatePath("/kontor", "layout");
+    revalidatePath("/elev", "layout");
+    redirect(`/laerer/scan/${token}?kvitteret=Lektion`);
+  }
   if (kind !== "theory" && kind !== "driving") return { error: "Vælg teori eller kørsel." };
   if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Vælg antal lektioner." };
   const supabase = await createClient();

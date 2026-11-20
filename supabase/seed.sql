@@ -251,6 +251,8 @@ drop table seed_people, seed_services;
 -- ---------------------------------------------------------------------------
 -- C-forløbet er Færdselsstyrelsens modulplan for C (version 1.1); den gamle lektionsplan er fjernet (20. nov. 2026).
 select public.create_module_course('00000000-0000-4000-a000-000000000001', 'C-1.1', 'C – modulplan');
+-- Skolens kørelektioner under modulerne (lektionsskema C + D).
+select public.add_lesson_schedule((select id from public.courses where name = 'C – modulplan'), 'CD-skema');
 
 -- Trin E8: et B-forløb som modulplan (Færdselsstyrelsen, version 1.1).
 select public.create_module_course('00000000-0000-4000-a000-000000000001', 'B-1.1', 'B – modulplan');

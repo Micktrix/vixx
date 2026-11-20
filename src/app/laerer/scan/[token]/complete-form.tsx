@@ -16,12 +16,12 @@ export function CompleteForm({ token, studentId, module: m }: { token: string; s
 
   return (
     <details
-      open={m.reached}
-      className={`rounded-[20px] border p-4 ${m.reached ? "border-ok/30 bg-ok-bg" : "border-line bg-surface"}`}
+      open={m.ready}
+      className={`rounded-[20px] border p-4 ${m.ready ? "border-ok/30 bg-ok-bg" : "border-line bg-surface"}`}
       data-testid="complete-module"
     >
       <summary className="cursor-pointer font-bold">
-        {m.reached ? `Modul ${m.number} er klar til at blive afsluttet` : `Afslut modul ${m.number}`}
+        {m.ready ? `Modul ${m.number} er klar til at blive afsluttet` : `Afslut modul ${m.number}`}
       </summary>
       <form onSubmit={onSubmit} className="mt-3 flex flex-col gap-3">
         <input type="hidden" name="token" value={token} />
@@ -33,6 +33,16 @@ export function CompleteForm({ token, studentId, module: m }: { token: string; s
           </p>
         ) : (
           <p className="text-sm text-bad">Minimum er ikke nået. Modulet kan kun afsluttes, hvis eleven er overført fra lektionsplanen.</p>
+        )}
+        {!m.lessonsDone && (
+          <p className="text-sm text-bad">
+            Ikke alle modulets lektioner er kørt: {m.lessons.filter((l) => !l.doneOn).map((l) => `lektion ${l.lesson.number}`).join(", ")}.
+          </p>
+        )}
+        {m.notDriven.length > 0 && (
+          <p className="text-sm text-bad" data-testid="complete-not-driven">
+            Ikke kørt: {m.notDriven.map((n) => `${n.item} (lektion ${n.lesson})`).join(" · ")}. Du kan afslutte alligevel.
+          </p>
         )}
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Selvstudie <span className="font-normal text-muted">(valgfrit: antal lektioner og afsnit)</span>

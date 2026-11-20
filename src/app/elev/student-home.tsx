@@ -25,7 +25,7 @@ export async function StudentHome({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, teams(name), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
+      "id, teams(name), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, module_lesson_id, skipped_items), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, course_modules(id, number, name, min_theory, min_driving, min_dark, topics, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active)))",
     )
     .eq("id", studentId)
     .maybeSingle();
