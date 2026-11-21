@@ -42,6 +42,7 @@ export function ScanForm({
   const [darkChecked, setDarkChecked] = useState(false);
   const [darkConfirm, setDarkConfirm] = useState(false);
   const [transferred, setTransferred] = useState(false);
+  const [declared, setDeclared] = useState(false);
   const m = modules.find((x) => x.id === moduleId)!;
   const darkRequired = m.min_dark > 0;
   const darkTopic = m.drivingTopics.find(isDarkTopic) ?? "";
@@ -67,6 +68,7 @@ export function ScanForm({
     setDarkChecked(false);
     setDarkConfirm(false);
     setTransferred(false);
+    setDeclared(false);
   };
 
   return (
@@ -268,12 +270,20 @@ export function ScanForm({
             <input name="selfStudy" maxLength={500} className={inputClass} />
           </label>
           <label className="flex items-start gap-2.5 text-[15px]">
-            <input type="checkbox" name="declaration" className={`${check} mt-0.5`} />
+            <input
+              type="checkbox"
+              name="declaration"
+              checked={declared}
+              onChange={(e) => setDeclared(e.target.checked)}
+              className={`${check} mt-0.5`}
+            />
             Jeg erklærer, at eleven har opnået de nødvendige kompetencer og opfylder målene i undervisningsplanen for modulet.
           </label>
-          <button type="submit" name="complete" value="1" disabled={pending} className={primary}>
+          <button type="submit" name="complete" value="1" disabled={pending || !declared} className={primary}>
             {pending ? "Gemmer …" : count > 0 ? `Bekræft og afslut modul ${m.number}` : `Afslut modul ${m.number}`}
           </button>
+          {!declared && <p className="text-[13px] font-semibold text-accent-ink">Sæt flueben ved erklæringen for at afslutte modulet.</p>}
+          <ResultBox state={state} />
           <p className="text-[13px] text-muted">Dato, dit navn og din underskrift kommer på modulplanen. Afslutningen kan ikke fortrydes.</p>
           {count > 0 && (
             <button type="submit" name="complete" value="0" disabled={pending} className="self-start text-sm font-semibold text-muted underline">
@@ -286,7 +296,7 @@ export function ScanForm({
           {pending ? "Gemmer …" : `Bekræft ${word}`}
         </button>
       )}
-      <ResultBox state={state} />
+      {!canComplete && <ResultBox state={state} />}
 
       {m.id === suggestedId && (
         <details className="px-1 text-sm" data-testid="complete-module-transferred" open={transferred}>

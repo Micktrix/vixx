@@ -14,6 +14,7 @@ import { RepetitionForm } from "./repetition-form";
 import { ScanForm } from "./scan-form";
 import { createClient } from "@/lib/supabase/server";
 import { FactsStrip } from "@/components/facts-strip";
+import { ScrollToTop } from "./scroll-to-top";
 import { ModuleDetails } from "@/components/module-details";
 import type { Appointment } from "@/lib/appointments";
 import { Screen } from "../../screen";
@@ -104,6 +105,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
       {signed && (
         <p role="status" className="rounded-[16px] border border-ok/30 bg-ok-bg px-4 py-3 text-[15px]" data-testid="signoff-done">
           <b className="text-ok">{signed}{extra}</b>
+          <ScrollToTop trigger={`${signed}${extra}${JSON.stringify(sp)}`} />
         </p>
       )}
       <a
