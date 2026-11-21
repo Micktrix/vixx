@@ -21,6 +21,9 @@
   --color-bad-bg: #faebe8;
   --color-pend: #716c66;
   --color-pend-bg: #f1eee9;
+  --color-warn: #8a6a12; /* gul: booket i faktaboksen */
+  --color-warn-bg: #fbf3d4;
+  --color-warn-line: #ecd98f;
 
   --font-sans: var(--font-dm-sans), Helvetica, Arial, sans-serif;
 }

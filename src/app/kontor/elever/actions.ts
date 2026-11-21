@@ -332,3 +332,73 @@ export async function moveStudentPlanVersion(_prev: ActionState, formData: FormD
   revalidatePath(PAGE, "layout");
   return { message: "Eleven er flyttet til den valgte version." };
 }
+
+// Aftaler på eleven (21. nov. 2026): KTA, mørkekørsel, teoriprøve og køreprøve. Lærere og kontor. Blandes ikke med
+// lærernes skema eller timer.
+const KINDS = ["kta", "dark", "theory_test", "driving_test"];
+
+function appointmentDone(error: { code?: string; message: string } | null, message: string): ActionState {
+  if (error?.code === "23514") return { error: error.message };
+  if (error) return { error: "Aftalen kunne ikke gemmes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/elev", "layout");
+  return { message };
+}
+
+export async function addAppointment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin", "office"]);
+  const kind = text(formData, "kind");
+  const date = parseDateInput(text(formData, "date"));
+  const time = text(formData, "time");
+  const address = text(formData, "address");
+  if (!KINDS.includes(kind)) return { error: "Vælg hvad aftalen gælder." };
+  if (!date) return { error: "Vælg datoen." };
+  if (time && !/^\d{2}:\d{2}$/.test(time)) return { error: "Skriv klokkeslættet som 12:00." };
+  if (address.length > 200) return { error: "Adressen er for lang." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("student_appointments").insert({
+    school_id: membership.schoolId,
+    student_id: text(formData, "studentId"),
+    kind,
+    on_date: date,
+    at_time: time || null,
+    address: address || null,
+  });
+  return appointmentDone(error, "Aftalen er gemt.");
+}
+
+// Bestået / ikke bestået (eller gennemført) på en booket aftale. Kan ikke ændres bagefter.
+export async function setAppointmentStatus(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["admin", "office"]);
+  const status = text(formData, "status");
+  if (status !== "passed" && status !== "failed") return { error: "Vælg udfaldet." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("student_appointments").update({ status }).eq("id", text(formData, "id"));
+  return appointmentDone(error, status === "passed" ? "Markeret som bestået." : "Markeret som ikke bestået. Tast en ny dato, når prøven er bestilt.");
+}
+
+export async function deleteAppointment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["admin", "office"]);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("student_appointments").delete().eq("id", text(formData, "id")).select("id");
+  if (!error && !data?.length) return { error: "Kun en booket aftale kan slettes." };
+  return appointmentDone(error, "Aftalen er slettet.");
+}
+
+// KTA eller mørke markeret gennemført manuelt (når det ikke er scannet): en gennemført aftale i dag.
+export async function markFactDone(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin", "office"]);
+  const kind = text(formData, "kind");
+  if (kind !== "kta" && kind !== "dark") return { error: "Kun KTA og mørkekørsel kan markeres gennemført." };
+  const date = parseDateInput(text(formData, "date")) ?? todayDk();
+  const supabase = await createClient();
+  const { error } = await supabase.from("student_appointments").insert({
+    school_id: membership.schoolId,
+    student_id: text(formData, "studentId"),
+    kind,
+    on_date: date,
+    status: "passed",
+  });
+  return appointmentDone(error, "Markeret som gennemført.");
+}

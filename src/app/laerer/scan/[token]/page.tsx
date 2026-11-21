@@ -3,6 +3,7 @@ import { formatDate, todayDk } from "@/lib/dates";
 import {
   lessonsWord,
   moduleProgress,
+  progressText,
   suggestedModule,
   teachingDays,
   type ModuleCompletion,
@@ -12,6 +13,9 @@ import {
 import { RepetitionForm } from "./repetition-form";
 import { ScanForm } from "./scan-form";
 import { createClient } from "@/lib/supabase/server";
+import { FactsStrip } from "@/components/facts-strip";
+import { ModuleDetails } from "@/components/module-details";
+import type { Appointment } from "@/lib/appointments";
 import { Screen } from "../../screen";
 import { getTeacher } from "../../teacher-data";
 
@@ -27,7 +31,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, is_demo, manual_gear, created_at, course_start_on, profiles(full_name), teams(name, starts_on), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, category_code, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
+      "id, service_id, active, is_demo, student_appointments(id, kind, on_date, at_time, address, status, created_at), manual_gear, created_at, course_start_on, profiles(full_name), teams(name, starts_on), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, skipped_items, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, category_code, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
@@ -107,6 +111,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
       >
         Se og print modulplanen (PDF) ›
       </a>
+      <FactsStrip modules={progress} appointments={(student.student_appointments ?? []) as Appointment[]} />
       {suggested ? (
         <ScanForm
           key={signed ?? ""}
@@ -153,6 +158,20 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
           <RepetitionForm token={token} studentId={student.id} />
         </>
       )}
+      <section className="flex flex-col gap-1.5" data-testid="scan-course">
+        <h2 className="text-[17px] font-bold">Elevens forløb</h2>
+        {progress.map((m) => (
+          <details key={m.id} className={`rounded-[14px] border px-3 py-2 ${m.completed ? "border-ok/30 bg-ok-bg" : "border-line bg-surface"}`}>
+            <summary className="cursor-pointer list-none text-[15px]">
+              <b>
+                <span className="mr-1.5 text-muted">›</span>Modul {m.number}
+              </b>
+              <span className="block text-[13px] text-muted">{progressText(m, course.theory_at_scan)}</span>
+            </summary>
+            <ModuleDetails module={m} counts={signoffs} theoryAtScan={course.theory_at_scan} />
+          </details>
+        ))}
+      </section>
     </Screen>
   );
 }

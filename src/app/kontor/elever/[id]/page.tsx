@@ -21,6 +21,9 @@ import {
   updateStudent,
 } from "../actions";
 import { courseStart, FINISH_LABEL, loadStudents, progress } from "../data";
+import { ModuleDetails } from "@/components/module-details";
+import { FactsBox } from "../facts-box";
+import { facts, type Appointment } from "@/lib/appointments";
 import { ProgressBar } from "../progress-bar";
 import { PlanTeachersBox } from "../plan-teachers";
 import { StudentFields } from "../student-fields";
@@ -30,12 +33,13 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const { id } = await params;
   const { membership } = await requireRole(["admin", "office"]);
   const supabase = await createClient();
-  const [{ teams, students, courses }, { data: services }, { data: instructors }, { data: booking }, { data: planTeachers }] = await Promise.all([
+  const [{ teams, students, courses }, { data: services }, { data: instructors }, { data: booking }, { data: planTeachers }, { data: appointments }] = await Promise.all([
     loadStudents(membership.schoolId),
     supabase.from("services").select("id, name").eq("school_id", membership.schoolId).eq("active", true).order("sort_order").order("name"),
     supabase.from("instructors").select("id, active_until, school_members(active, profiles(full_name))").eq("school_id", membership.schoolId),
     supabase.from("students").select("can_request, student_instructors(instructor_id)").eq("id", id).maybeSingle(),
     supabase.from("plan_teachers").select("instructor_id").eq("student_id", id),
+    supabase.from("student_appointments").select("id, kind, on_date, at_time, address, status, created_at").eq("student_id", id),
   ]);
   const student = students.find((s) => s.id === id);
   if (!student) notFound();
@@ -102,13 +106,18 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
           <ol className="flex flex-col gap-1.5" data-testid="student-modules">
             {modules.map((m) => (
               <li key={m.id} className={`rounded-xl border px-3 py-2 text-[15px] ${m.completed ? "border-ok/30 bg-ok-bg" : "border-line"}`}>
-                <b>
-                  Modul {m.number} – {m.name}
-                </b>
-                <span className="block text-[13px] text-muted">
-                  {progressText(m, course.theoryAtScan)}
-                  {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
-                </span>
+                <details>
+                  <summary className="cursor-pointer list-none">
+                    <b>
+                      <span className="mr-1.5 text-muted">›</span>Modul {m.number} – {m.name}
+                    </b>
+                    <span className="block text-[13px] text-muted">
+                      {progressText(m, course.theoryAtScan)}
+                      {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
+                    </span>
+                  </summary>
+                  <ModuleDetails module={m} counts={student.moduleCounts} theoryAtScan={course.theoryAtScan} />
+                </details>
                 {m.completed && (
                   <span className="block text-[13px] text-ok">
                     {completionText(m.completed, formatDate)}
@@ -143,6 +152,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               </li>
             ))}
           </ol>
+          <FactsBox studentId={student.id} facts={facts(modules, (appointments ?? []) as Appointment[])} canFinish={student.active && !student.finished} />
           {student.repetitions.length > 0 && (
             <ul className="text-sm" data-testid="student-repetitions">
               {student.repetitions.map((r) => (
@@ -247,6 +257,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
           </ActionForm>
         </Box>
       ) : (
+        <div id="afslut-forloeb" className="scroll-mt-4">
         <Box title="Afslut forløb" hint="Fx når eleven har bestået køreprøven">
           <ActionForm
             action={finishStudent}
@@ -274,6 +285,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             </p>
           </ActionForm>
         </Box>
+        </div>
       )}
 
       <Box title="Login">
