@@ -156,20 +156,21 @@ insert into public.resources (id, school_id, kind, name) values
   ('00000000-0000-4000-a600-000000000005', '00000000-0000-4000-a000-000000000001', 'vehicle', 'Lastbil med trailer');
 
 -- ---------------------------------------------------------------------------
--- Lønperioder (21.–20.): forrige, nuværende og næste
+-- Lønperioder (21.–20.): to tilbage, nuværende og næste. Kun den ældste er låst, så "i går" og de seneste uger
+-- aldrig ligger i en låst periode (ellers fejler testene i dagene efter den 21.).
 -- ---------------------------------------------------------------------------
 insert into public.pay_periods (school_id, starts_on, ends_on, locked, locked_at)
 select
   '00000000-0000-4000-a000-000000000001',
   p.starts_on,
   (p.starts_on + interval '1 month' - interval '1 day')::date,
-  p.offset_months < 0,
-  case when p.offset_months < 0 then now() end
+  p.offset_months < -1,
+  case when p.offset_months < -1 then now() end
 from (
   select
     o as offset_months,
     (date_trunc('month', current_date - 20) + make_interval(months => o) + interval '20 days')::date as starts_on
-  from generate_series(-1, 1) o
+  from generate_series(-2, 1) o
 ) p;
 
 -- ---------------------------------------------------------------------------

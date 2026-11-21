@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { INSTRUCTOR, PASSWORD, loginOk } from "./helpers";
+import { PASSWORD, loginOk } from "./helpers";
+
+// Mette har ingen underskrift i seed (Lars' underskrift bruges af scanningstestene og må ikke slettes).
+const METTE = "00000000-0000-4000-a100-000000000012";
 
 test("læreren tegner sin underskrift, gemmer og låser den, og kan låse op og tegne igen", async ({ page }) => {
   const admin = localAdmin();
-  await admin.from("instructor_signatures").delete().eq("user_id", "00000000-0000-4000-a100-000000000011");
+  await admin.from("instructor_signatures").delete().eq("user_id", METTE);
   try {
-    await loginOk(page, INSTRUCTOR, PASSWORD);
+    await loginOk(page, "20000012", PASSWORD);
     await page.goto("/laerer/beskeder");
     await page.getByRole("link", { name: "Min underskrift" }).click();
 
@@ -31,6 +34,6 @@ test("læreren tegner sin underskrift, gemmer og låser den, og kan låse op og 
     await page.getByRole("button", { name: "Fortryd" }).click();
     await expect(page.getByTestId("signature-locked")).toBeVisible();
   } finally {
-    await admin.from("instructor_signatures").delete().eq("user_id", "00000000-0000-4000-a100-000000000011");
+    await admin.from("instructor_signatures").delete().eq("user_id", METTE);
   }
 });

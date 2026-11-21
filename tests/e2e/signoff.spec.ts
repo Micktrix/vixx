@@ -4,6 +4,9 @@ import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, loginOk } from "./helpers";
 
 const EMIL = "00000000-0000-4000-ad00-000000000031"; // elev på C-holdet (teori bekræftes ved afslutning)
 
+// Flere tests bruger Emil; de køres efter hinanden.
+test.describe.configure({ mode: "serial" });
+
 // Ombygningen 21. nov. 2026: modulerne én gang, antal, køreemner med flueben, mørke (7.19) og afslutning i samme tryk.
 test("læreren bekræfter kørsel og afslutter modul 1 og 2 i samme scanning; intet går til lønnen", async ({ page }) => {
   const admin = localAdmin();

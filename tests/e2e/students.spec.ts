@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { ADMIN, OFFICE, PASSWORD, chooseOwnPassword, loginOk, newPhone } from "./helpers";
+import { OFFICE, PASSWORD, chooseOwnPassword, loginOk, newPhone } from "./helpers";
 
 test("kontoret opretter et hold og en elev, og eleven ser sit forløb i sin egen app", async ({ browser, page }) => {
   const suffix = Date.now() % 100000;
@@ -21,12 +21,12 @@ test("kontoret opretter et hold og en elev, og eleven ser sit forløb i sin egen
   await page.getByRole("link", { name: "+ Elev på holdet" }).click();
   await page.getByLabel("Navn").fill(studentName);
   await page.getByLabel("Telefonnummer").fill(phone);
-  await expect(page.getByLabel("Forløb")).toHaveValue("00000000-0000-4000-ab00-000000000011");
+  await expect(page.getByLabel("Forløb").locator("option:checked")).toHaveText("C");
   await page.getByLabel("Ydelse til lønnen (valgfri)").selectOption({ label: "Amu C" });
   await page.getByRole("button", { name: "Opret elev" }).click();
   await expect(page.getByTestId("temp-password")).toHaveText(phone);
 
-  // Holdets forløbstavle har eleven med tre lektioner, intet gennemført endnu.
+  // Holdets forløbstavle har eleven med tre moduler, intet afsluttet endnu.
   await page.goto("/kontor/elever");
   await page.getByTestId("team-row").filter({ hasText: teamName }).getByRole("link", { name: teamName }).click();
   const row = page.getByTestId("board-student").filter({ hasText: studentName });
@@ -37,11 +37,10 @@ test("kontoret opretter et hold og en elev, og eleven ser sit forløb i sin egen
   await loginOk(student, phone, phone);
   await chooseOwnPassword(student, "elevens-kode");
   await expect(student).toHaveURL("/elev");
-  await expect(student.getByRole("heading", { name: "C – kørselsundervisning" })).toBeVisible();
-  await expect(student.getByTestId("student-done")).toHaveText("0");
-  await expect(student.getByTestId("student-course")).toContainText("Lektion 2");
-  await student.getByText("Lektion 2").click();
-  await expect(student.getByTestId("student-course")).toContainText("2.2 Lastbilens spejle");
+  await expect(student.getByRole("heading", { name: "C", exact: true })).toBeVisible();
+  await expect(student.getByTestId("student-modules-completed")).toHaveText("0");
+  await expect(student.getByTestId("student-modules")).toContainText("Modul 1");
+  await expect(student.getByTestId("facts-strip")).toBeVisible();
 
   // Eleven kan ikke komme ind i kontoret eller lærer-appen.
   await student.goto("/kontor");
@@ -85,59 +84,6 @@ test("et afsluttet hold ligger nederst og kan ikke få nye elever", async ({ pag
   await expect(page.getByLabel("Hold (valgfri)").locator("option", { hasText: name })).toHaveCount(0);
 
   await localAdmin().from("teams").delete().eq("name", name);
-});
-
-test("admin krydser en lektion af med kommentar; kontoret kan ikke", async ({ browser, page }) => {
-  const emil = "00000000-0000-4000-ad00-000000000031";
-  try {
-    const office = await browser.newPage();
-    await loginOk(office, OFFICE, PASSWORD);
-    await office.goto(`/kontor/elever/${emil}`);
-    await expect(office.getByRole("heading", { name: "Emil Elev" })).toBeVisible();
-    await expect(office.getByRole("heading", { name: "Kryds en lektion af" })).toHaveCount(0);
-
-    await loginOk(page, ADMIN, PASSWORD);
-    await page.goto(`/kontor/elever/${emil}`);
-    await page.getByRole("combobox", { name: "Lektion", exact: true }).selectOption({ label: "Lektion 4" });
-    const crossOff = page.locator("section").filter({ has: page.getByRole("heading", { name: "Kryds en lektion af" }) });
-    await crossOff.getByLabel("Kommentar").fill("Kørt af gæstelærer Per Hansen");
-    page.once("dialog", (d) => d.accept());
-    await page.getByRole("button", { name: "Kryds af" }).click();
-    await expect(page.getByText("1 af 3 lektioner gennemført")).toBeVisible();
-    await expect(page.getByTestId("student-lessons")).toContainText("Kørt af gæstelærer Per Hansen");
-  } finally {
-    await localAdmin().from("lesson_signoffs").delete().eq("student_id", emil);
-  }
-});
-
-test("admin retter en kvittering til den lektion, der blev kørt", async ({ page }) => {
-  const emil = "00000000-0000-4000-ad00-000000000031";
-  const admin = localAdmin();
-  const { data: lessons } = await admin.from("course_lessons").select("id, number").eq("course_id", "00000000-0000-4000-ab00-000000000011");
-  const id = (n: string) => lessons!.find((l) => l.number === n)!.id;
-  await admin.from("lesson_signoffs").insert({
-    school_id: "00000000-0000-4000-a000-000000000001",
-    student_id: emil,
-    course_lesson_id: id("2"),
-    lesson_number: "2",
-    instructor_id: "00000000-0000-4000-a200-000000000011",
-    instructor_name: "Lars Jensen",
-    signed_by: "00000000-0000-4000-a100-000000000011",
-  });
-  try {
-    await loginOk(page, ADMIN, PASSWORD);
-    await page.goto(`/kontor/elever/${emil}`);
-    const lesson2 = page.locator('[data-lesson="2"]');
-    await expect(lesson2).toContainText("Venter på eleven");
-    await lesson2.getByText("Ret lektion").click();
-    await lesson2.getByLabel("Var i stedet").selectOption({ label: "Lektion 4" });
-    await lesson2.getByRole("button", { name: "Flyt" }).click();
-
-    await expect(page.locator('[data-lesson="4"]')).toContainText("Venter på eleven");
-    await expect(lesson2).toContainText("2 × 45 min.");
-  } finally {
-    await admin.from("lesson_signoffs").delete().eq("student_id", emil);
-  }
 });
 
 test("kontoret søger en elev frem på tværs af hold, på navn eller telefon", async ({ page }) => {
