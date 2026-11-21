@@ -26,10 +26,11 @@ select throws_ok(
   $$insert into public.open_slots (school_id, instructor_id, slot_date, start_time, lesson_count)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011', current_date - 1, '10:00', 1)$$,
   '23514', 'En åben tid skal ligge frem i tiden.', 'Ikke i fortiden');
-select throws_ok(
+-- Lærerne har kontorets adgang (21. nov. 2026).
+select lives_ok(
   $$insert into public.open_slots (school_id, instructor_id, slot_date, start_time, lesson_count)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000012', current_date + 5, '12:00', 1)$$,
-  '42501', null, 'Kun for sig selv');
+  'Også for en anden lærer (kontorets adgang)');
 
 -- Freja har ingen faste lærere og må ikke anmode.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000032", "role": "authenticated"}', true);

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LessonStatus } from "@/components/lesson-status";
-import { completionText, moduleProgress, progressText, suggestedModule } from "@/lib/module-progress";
+import { completionText, moduleProgress, progressText, suggestedModule, teachingDays, type ModuleProgress } from "@/lib/module-progress";
 import { notFound } from "next/navigation";
 import { Box } from "@/components/box";
 import { ActionForm, CheckChip, TextField } from "@/components/form";
@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   annulModuleCompletion,
   moveStudentPlanVersion,
-  completeModuleForGuest,
+  completeModule,
   finishStudent,
   reopenStudent,
   resetStudentPassword,
@@ -170,47 +170,16 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         </Box>
       )}
 
-      {isAdmin && currentModule && (
-        <Box title={`Afslut modul ${currentModule.number} for en gæstelærer`} hint="Når en gæstelærer uden Vixx har afsluttet modulet">
-          <ActionForm
-            action={completeModuleForGuest}
-            submitLabel={`Afslut modul ${currentModule.number}`}
-            confirmText={`Afslut modul ${currentModule.number} for gæstelæreren?`}
-            className="flex flex-col gap-3"
-          >
-            <input type="hidden" name="studentId" value={student.id} />
-            <input type="hidden" name="moduleId" value={currentModule.id} />
-            <p className="text-sm">
-              {progressText(currentModule, course!.theoryAtScan)}
-              {currentModule.reached ? " · minimum er nået" : " · minimum er ikke nået: kun muligt, hvis eleven er overført fra lektionsplanen"}
-            </p>
-            <div className="flex flex-wrap items-end gap-3">
-              <TextField label="Gæstelærerens navn" name="guestName" required maxLength={120} className="min-w-[200px] flex-1" />
-              <TextField label="Dato" name="date" type="date" required defaultValue={todayDk()} max={todayDk()} />
-            </div>
-            <TextField label="Kommentar" name="comment" required maxLength={500} placeholder="Fx vikar uden adgang til Vixx" />
-            <TextField label="Selvstudie (valgfrit)" name="selfStudy" maxLength={500} />
-            {!course!.theoryAtScan && (
-              <TextField
-                label="Teorilektioner i modulet"
-                name="theoryLessons"
-                type="number"
-                min={0}
-                max={100}
-                required
-                defaultValue={currentModule.min_theory}
-                className="w-[200px]"
-              />
-            )}
-            <label className="flex items-center gap-2.5 text-[15px]">
-              <input type="checkbox" name="transferred" className="size-[18px] accent-accent" />
-              Overført fra lektionsplan
-            </label>
-            <p className="text-[13px] text-muted">
-              Erklæringen afgiver gæstelæreren ved at skrive under på den udskrevne modulplan. Vixx sætter ingen underskrift på.
-            </p>
-          </ActionForm>
-        </Box>
+      {currentModule && student.active && (
+        <CompleteModuleBox
+          studentId={student.id}
+          module={currentModule}
+          first={currentModule.id === modules[0].id}
+          last={currentModule.id === modules.at(-1)!.id}
+          theoryAtScan={course!.theoryAtScan}
+          teaches={membership.teaches}
+          daysWarning={daysWarning(student, team, course!)}
+        />
       )}
 
       {!team && (
@@ -323,6 +292,93 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
       </Box>
     </>
   );
+}
+
+// Afslut modul fra computeren (erstatter gæstelærer-afslutningen, 21. nov. 2026): den indloggede lærer afslutter
+// det aktuelle modul uden ny scanning, med sin egen gemte underskrift. Samme regler som ved scanning.
+function CompleteModuleBox({
+  studentId,
+  module: m,
+  first,
+  last,
+  theoryAtScan,
+  teaches,
+  daysWarning,
+}: {
+  studentId: string;
+  module: ModuleProgress;
+  first: boolean;
+  last: boolean;
+  theoryAtScan: boolean;
+  teaches: boolean;
+  daysWarning: string | null;
+}) {
+  const title = `Afslut modul ${m.number}`;
+  if (!teaches)
+    return (
+      <Box title={title}>
+        <p className="text-sm text-muted">Modulet afsluttes af en lærer: ved scanning eller her på elevens side, når læreren er logget ind.</p>
+      </Box>
+    );
+  return (
+    <Box title={title} hint="Uden ny scanning, med din underskrift">
+      <ActionForm
+        action={completeModule}
+        submitLabel={title}
+        confirmText={`${title}? Afslutningen kan ikke fortrydes.`}
+        className="flex flex-col gap-3"
+      >
+        <input type="hidden" name="studentId" value={studentId} />
+        <input type="hidden" name="moduleId" value={m.id} />
+        <p className="text-sm" data-testid="complete-status">
+          {progressText(m, theoryAtScan)}
+          {m.reached ? " · minimum er nået" : " · minimum er ikke nået: scan eleven, eller sæt flueben ved \"Overført fra lektionsplan\""}
+        </p>
+        {m.notDriven.length > 0 && <p className="text-sm text-bad">Ikke kørt endnu: {m.notDriven.join(" · ")}. Du kan afslutte alligevel.</p>}
+        {last && daysWarning && <p className="text-sm text-bad">{daysWarning}</p>}
+        <div className="flex flex-wrap items-end gap-3">
+          {!theoryAtScan && (
+            <TextField
+              label="Teorilektioner i modulet"
+              name="theoryLessons"
+              type="number"
+              min={0}
+              max={100}
+              required
+              defaultValue={m.min_theory}
+              className="w-[200px]"
+            />
+          )}
+          {!first && <TextField label="Modulet startede" name="startedOn" type="date" defaultValue={m.startedOn ?? todayDk()} max={todayDk()} />}
+        </div>
+        <TextField label="Selvstudie (valgfrit)" name="selfStudy" maxLength={500} placeholder="Antal lektioner og afsnit" />
+        {!m.reached && (
+          <label className="flex items-center gap-2.5 text-[15px]">
+            <input type="checkbox" name="transferred" className="size-[18px] accent-accent" />
+            Overført fra lektionsplan (kan afsluttes uden minimum)
+          </label>
+        )}
+        <label className="flex items-start gap-2.5 text-[15px]">
+          <input type="checkbox" name="declaration" required className="mt-0.5 size-[18px] accent-accent" />
+          Jeg erklærer, at eleven har opnået de nødvendige kompetencer og opfylder målene i undervisningsplanen for modulet.
+        </label>
+        <p className="text-[13px] text-muted">Dato, dit navn og din underskrift kommer på modulplanen. Afslutningen kan ikke fortrydes.</p>
+      </ActionForm>
+    </Box>
+  );
+}
+
+// Advarsel ved sidste modul: undervisningsdage under forløbets minimum (som ved scanning).
+function daysWarning(
+  student: Parameters<typeof courseStart>[0] & { moduleCounts: { lesson_date: string }[] },
+  team: Parameters<typeof courseStart>[1],
+  course: { theoryAtScan: boolean; minDays: number | null },
+) {
+  const start = courseStart(student, team);
+  const days = teachingDays({ theoryAtScan: course.theoryAtScan, courseStart: start, scanDates: student.moduleCounts.map((c) => c.lesson_date), today: todayDk() });
+  return course.minDays && days < course.minDays
+    ? `Eleven har haft ${days} undervisningsdage${course.theoryAtScan ? "" : ` siden ${formatDate(start)}`}. Minimum er ${course.minDays}.`
+    : null;
 }
 
 // Undervisende kørelærere i modulplanen: alle, der har talt lektioner eller afsluttet et modul, i den rækkefølge

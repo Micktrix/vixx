@@ -79,10 +79,11 @@ select lives_ok(
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', '00000000-0000-4000-a200-000000000012')$$,
   'Kontoret vælger en undervisende kørelærer på eleven uden hold');
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000011", "role": "authenticated"}', true);
-select throws_ok(
+-- Lærerne har kontorets adgang (21. nov. 2026).
+select lives_ok(
   $$insert into public.plan_teachers (school_id, student_id, instructor_id)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', '00000000-0000-4000-a200-000000000011')$$,
-  '42501', null, 'Læreren kan ikke vælge undervisende kørelærere');
+  'Læreren kan vælge undervisende kørelærere');
 reset role;
 
 select * from finish();

@@ -259,40 +259,39 @@ export async function resetStudentPassword(_prev: ActionState, formData: FormDat
   return { message: "Koden er nulstillet til telefonnummeret. Eleven er logget ud.", tempPassword };
 }
 
-// Modulplan (trin E8, del 4b): admin afslutter et modul for en gæstelærer uden app. Navn, dato og kommentar;
-// admin afgiver ikke erklæringen (gæstelæreren skriver under på den udskrevne modulplan). Databasen tjekker
-// minimum (medmindre "Overført fra lektionsplan") og rækkefølgen.
-export async function completeModuleForGuest(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { membership } = await requireRole(["admin"]);
-  const name = text(formData, "guestName");
-  const comment = text(formData, "comment");
-  const date = parseDateInput(text(formData, "date"));
-  if (!name) return { error: "Skriv gæstelærerens navn." };
-  if (!date) return { error: "Vælg datoen." };
-  if (date > todayDk()) return { error: "Datoen kan ikke ligge frem i tiden." };
-  if (!comment) return { error: "Skriv en kommentar, fx hvorfor læreren ikke har Vixx." };
-  if (name.length > 120 || comment.length > 500 || text(formData, "selfStudy").length > 500) return { error: "Teksten er for lang." };
+// Afslut modul fra computeren (21. nov. 2026, erstatter gæstelærer-afslutningen): den indloggede lærer afslutter
+// det aktuelle modul uden ny scanning, med sin egen gemte underskrift. Samme regler som ved scanning (record_scan):
+// minimum, mørke (7.19), teori, rækkefølge, erklæring og underskrift tjekkes af databasen.
+export async function completeModule(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["instructor"]);
+  const theory = text(formData, "theoryLessons");
+  const started = text(formData, "startedOn");
+  if (formData.get("declaration") !== "on") return { error: "Sæt flueben ved erklæringen." };
+  if (text(formData, "selfStudy").length > 500) return { error: "Selvstudie er for langt." };
+  if (started && started > todayDk()) return { error: "Startdatoen kan ikke ligge frem i tiden." };
   const supabase = await createClient();
-  const { error } = await supabase.from("module_completions").insert({
-    school_id: membership.schoolId,
-    student_id: text(formData, "studentId"),
-    course_module_id: text(formData, "moduleId"),
-    module_number: 0, // sættes af databasen fra modulet
-    instructor_id: null,
-    instructor_name: name,
-    completed_on: date,
-    declaration: false,
-    transferred: formData.get("transferred") === "on",
-    self_study: text(formData, "selfStudy") || null,
-    theory_lessons: text(formData, "theoryLessons") ? Number(text(formData, "theoryLessons")) : null,
-    comment,
+  const { error } = await supabase.rpc("record_scan", {
+    p_student: text(formData, "studentId"),
+    p_module: text(formData, "moduleId"),
+    p_kind: "driving",
+    p_count: 0,
+    p_skipped: null,
+    p_dark: false,
+    p_manual_gear: false,
+    p_complete: true,
+    p_theory_lessons: theory ? Number(theory) : null,
+    p_started_on: started || null,
+    p_self_study: text(formData, "selfStudy") || null,
+    p_transferred: formData.get("transferred") === "on",
   });
   if (error?.code === "23505") return { error: "Modulet er allerede afsluttet." };
-  if (error?.code === "23514") return { error: error.message };
+  if (["23514", "P0001"].includes(error?.code ?? "")) return { error: error!.message };
+  if (error?.code === "42501") return { error: "Du har ikke adgang til at afslutte modulet for denne elev." };
   if (error) return { error: "Modulet kunne ikke afsluttes. Prøv igen." };
   revalidatePath(PAGE, "layout");
+  revalidatePath("/laerer", "layout");
   revalidatePath("/elev", "layout");
-  return { message: "Modulet er afsluttet for gæstelæreren." };
+  return { message: "Modulet er afsluttet." };
 }
 
 // Admin annullerer en fejlagtig afslutning med begrundelse. Den slettes ikke, men markeres annulleret og

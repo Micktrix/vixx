@@ -119,10 +119,11 @@ select lives_ok(
             '00000000-0000-4000-a500-000000000001', current_date + 5, '08:00', 2, 'instructor')$$,
   'Lærer kan planlægge sin egen lektion');
 
-select throws_ok(
+-- Lærerne har kontorets adgang (21. nov. 2026).
+select lives_ok(
   $$insert into public.absences (school_id, instructor_id, absence_date, start_time, hours, reason)
-    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011', current_date, '08:00', 2, 'sick')$$,
-  '42501', null, 'Lærer kan ikke selv oprette fravær');
+    values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011', current_date + 60, '08:00', 2, 'sick')$$,
+  'Lærer kan oprette fravær (kontorets adgang)');
 
 insert into public.holidays (id, school_id, instructor_id, from_date, to_date, status)
 values ('00000000-0000-4000-a800-000000000001', '00000000-0000-4000-a000-000000000001',
@@ -140,10 +141,9 @@ select is(
     where instructor_id = '00000000-0000-4000-a200-000000000011' and note = 'ændret af lærer'),
   0::bigint, 'Lærer kan ikke rette en godkendt registrering');
 
-select is(
+select ok(
   (select count(*) from public.scheduled_lessons
-    where note = 'kontorlektion ændret af lærer'),
-  0::bigint, 'Lærer kan ikke ændre en lektion, kontoret har planlagt');
+    where note = 'kontorlektion ændret af lærer') > 0, 'Lærer kan ændre en lektion, kontoret har planlagt (kontorets adgang)');
 
 select is(
   (select changes ->> 'next_of_kin_phone' from public.audit_log

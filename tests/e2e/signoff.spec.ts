@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { ADMIN, INSTRUCTOR, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, loginOk } from "./helpers";
 
 const EMIL = "00000000-0000-4000-ad00-000000000031"; // elev på C-holdet (teori bekræftes ved afslutning)
 
@@ -82,5 +82,53 @@ test("B: teori scannes og tæller op hos eleven", async ({ browser }) => {
     await expect(office.getByTestId("student-modules")).toContainText("Teori 3 af 5");
   } finally {
     await admin.from("module_signoffs").delete().eq("student_id", BENT).eq("kind", "theory").gte("lesson_date", new Date().toISOString().slice(0, 10));
+  }
+});
+
+// Afslut modul fra computeren (21. nov. 2026, erstatter gæstelærer-afslutningen): den indloggede lærer afslutter
+// det aktuelle modul på elevens side med sin egen underskrift. Kontoret, der ikke underviser, kan ikke.
+test("læreren afslutter et modul fra elevens side uden ny scanning", async ({ browser }) => {
+  const admin = localAdmin();
+  const SCHOOL = "00000000-0000-4000-a000-000000000001";
+  const ANNE = "00000000-0000-4000-a100-000000000001";
+  const { data: student } = await admin.from("students").select("course_id").eq("id", EMIL).single();
+  const { data: mod } = await admin.from("course_modules").select("id").eq("course_id", student!.course_id).eq("number", 1).single();
+  const { data: lars } = await admin.from("instructors").select("id").eq("user_id", "00000000-0000-4000-a100-000000000011").single();
+  const page = await browser.newPage();
+  try {
+    await admin.from("module_signoffs").insert({
+      school_id: SCHOOL, student_id: EMIL, course_module_id: mod!.id, kind: "driving", lesson_count: 5, instructor_id: lars!.id,
+      instructor_name: "Lars Jensen", signed_by: "00000000-0000-4000-a100-000000000011",
+    });
+    const office = await browser.newPage();
+    await loginOk(office, OFFICE, PASSWORD);
+    await office.goto(`/kontor/elever/${EMIL}`);
+    await expect(office.getByText("Modulet afsluttes af en lærer")).toBeVisible();
+    await expect(office.getByText(/gæstelærer/)).toHaveCount(0);
+    await office.close();
+
+    await loginOk(page, ADMIN, PASSWORD);
+    await page.goto(`/kontor/elever/${EMIL}`);
+    await expect(page.getByTestId("complete-status")).toContainText("minimum er nået");
+    await expect(page.getByLabel("Teorilektioner i modulet")).toHaveValue("8");
+    await page.getByRole("checkbox", { name: /Jeg erklærer/ }).check();
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Afslut modul 1" }).click();
+    // Anne har ingen gemt underskrift endnu: databasen afviser.
+    await expect(page.getByText(/Gem din underskrift/)).toBeVisible();
+
+    await admin.from("instructor_signatures").insert({ school_id: SCHOOL, user_id: ANNE, strokes: "M 10 10 L 100 50" });
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Afslut modul 1" }).click();
+    await expect(page.getByText("Modulet er afsluttet.")).toBeVisible();
+    const { data: done } = await admin.from("module_completions").select("instructor_name, declaration, theory_lessons").eq("student_id", EMIL).single();
+    expect(done).toEqual({ instructor_name: "Anne Admin", declaration: true, theory_lessons: 8 });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Afslut modul 2" })).toBeVisible();
+    await expect(page.getByTestId("complete-status")).toContainText("Mangler mørke");
+  } finally {
+    await admin.from("module_completions").delete().eq("student_id", EMIL);
+    await admin.from("module_signoffs").delete().eq("student_id", EMIL);
+    await admin.from("instructor_signatures").delete().eq("user_id", ANNE);
   }
 });

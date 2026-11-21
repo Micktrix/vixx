@@ -22,11 +22,14 @@ test("ikke-indloggede sendes fra kontoret til login", async ({ page }) => {
   await expect(page).toHaveURL("/");
 });
 
-test("en lærer lander i lærerdelen og kan ikke åbne kontoret", async ({ page }) => {
+// Alle lærere har kontorets adgang (21. nov. 2026): på computeren lander de i kontoret, men admin-delene er lukkede.
+test("en lærer på computeren lander i kontoret og kan ikke åbne admins sider", async ({ page }) => {
   await loginOk(page, INSTRUCTOR, PASSWORD);
-  await expect(page).toHaveURL("/laerer");
+  await expect(page).toHaveURL("/kontor");
+  await page.goto("/kontor/elever");
+  await expect(page).toHaveURL("/kontor/elever");
   await page.goto("/kontor/loen");
-  await expect(page).toHaveURL("/laerer");
+  await expect(page).toHaveURL("/kontor");
 });
 
 test("admin kan vælge alle roller ved oprettelse", async ({ page }) => {
@@ -78,7 +81,7 @@ test("kontoret kan logge en lærer ud overalt og nulstille koden", async ({ brow
   const teacher = await browser.newPage();
   await loginOk(teacher, phone, temp);
   await chooseOwnPassword(teacher, "laererens-kode");
-  await expect(teacher).toHaveURL("/laerer");
+  await expect(teacher).toHaveURL("/kontor");
 
   // Log ud af alle enheder: lærerens session ophører med det samme.
   await office.goto(href);

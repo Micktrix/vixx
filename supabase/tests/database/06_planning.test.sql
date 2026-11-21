@@ -125,14 +125,14 @@ select throws_ok(
   '42501', null, 'En anden skole får adgang nægtet, ikke lærerens skema');
 reset role;
 
--- Læreren selv kan ikke lægge en lektion som "kontoret".
+-- Lærerne har kontorets adgang (21. nov. 2026) og kan planlægge som kontoret.
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000011", "role": "authenticated"}', true);
-select throws_ok(
+select lives_ok(
   $$insert into public.scheduled_lessons (school_id, instructor_id, service_id, lesson_date, start_time, lesson_count, origin)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a200-000000000011',
             '00000000-0000-4000-a500-000000000001', current_date + 7, '08:00', 1, 'office')$$,
-  '42501', null, 'Læreren kan ikke oprette en lektion som kontoret');
+  'Læreren kan oprette en lektion som kontoret');
 reset role;
 
 select * from finish();

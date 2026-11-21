@@ -95,7 +95,8 @@ type InstructorAccess = { active: boolean; active_until: string | null };
 
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
 
-export const isStaff = (m: Membership) => m.role === "admin" || m.role === "office";
+// Kontorets adgang: admin, kontor og alle aktive lærere (Michael, 21. nov. 2026: kun admin-delene er begrænsede).
+export const isStaff = (m: Membership) => m.role === "admin" || m.role === "office" || (m.role === "instructor" && m.teaches);
 
 // Den skole, brugeren arbejder i nu. Med én skole er det den; med flere den valgte.
 export async function getActiveMembership(user: CurrentUser): Promise<Membership | null> {
@@ -135,7 +136,7 @@ export async function requireRole(roles: Role[]): Promise<{ user: CurrentUser; m
 
   const membership = await getActiveMembership(user);
   if (!membership) redirect(await homePath(user));
-  const allowed = roles.some((r) => (r === "instructor" ? membership.teaches : membership.role === r));
+  const allowed = roles.some((r) => (r === "instructor" ? membership.teaches : r === "office" ? isStaff(membership) : membership.role === r));
   if (!allowed) redirect(await homeFor(membership));
 
   return { user, membership };

@@ -39,18 +39,19 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000011", "role": "authenticated"}', true);
 
-select is((select count(*) from public.instructors), 1::bigint, 'Lærer ser kun sig selv blandt lærerne');
+-- Lærerne har kontorets adgang (21. nov. 2026).
+select ok((select count(*) from public.instructors) > 1, 'Lærer ser skolens lærere (kontorets adgang)');
 select is((select count(*) from public.registrations where instructor_id <> '00000000-0000-4000-a200-000000000011'), 0::bigint,
   'Lærer ser ingen andres registreringer');
 select ok((select count(*) from public.registrations) >= 2, 'Lærer ser sine egne registreringer');
-select is((select count(*) from public.scheduled_lessons where instructor_id <> '00000000-0000-4000-a200-000000000011'), 0::bigint,
-  'Lærer ser ingen andres planlagte lektioner');
+select ok((select count(*) from public.scheduled_lessons where instructor_id <> '00000000-0000-4000-a200-000000000011') > 0,
+  'Lærer ser de andres planlagte lektioner (kalenderen)');
 select is((select count(*) from public.instructor_prices), 1::bigint, 'Lærer ser kun sin egen pris');
 select is((select count(*) from public.services where school_id = '00000000-0000-4000-b000-000000000001'), 0::bigint,
   'Lærer ser ikke en anden skoles ydelser');
 select ok((select count(*) from public.services) >= 11, 'Lærer ser egen skoles ydelser');
-select is((select count(*) from public.profiles p where not exists (select 1 from public.students s where s.user_id = p.id)), 1::bigint,
-  'Lærer ser kun sin egen profil blandt de ansatte (og skolens elever, til QR-kvittering)');
+select ok((select count(*) from public.profiles p where not exists (select 1 from public.students s where s.user_id = p.id)) > 1,
+  'Lærer ser de ansattes profiler (kontorets adgang)');
 reset role;
 
 -- ---------------------------------------------------------------------------

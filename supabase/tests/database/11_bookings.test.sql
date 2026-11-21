@@ -48,16 +48,17 @@ select lives_ok(
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000002', current_date + 1, '08:00', 60, 'Forberedelse',
             '00000000-0000-4000-a200-000000000011')$$,
   'Læreren kan booke et ledigt lokale til sig selv');
-select throws_ok(
+-- Lærerne har kontorets adgang (21. nov. 2026).
+select lives_ok(
   $$insert into public.bookings (school_id, resource_id, booking_date, start_time, minutes, instructor_id)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000002', current_date + 1, '13:00', 60,
             '00000000-0000-4000-a200-000000000012')$$,
-  '42501', 'Du kan kun booke til dig selv.', 'Læreren kan ikke booke til en anden');
-select throws_ok(
+  'Læreren kan booke til en anden');
+select lives_ok(
   $$insert into public.bookings (school_id, resource_id, booking_date, start_time, minutes, instructor_id)
     values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a600-000000000002', current_date - 1, '13:00', 60,
             '00000000-0000-4000-a200-000000000011')$$,
-  '23514', null, 'Læreren kan ikke booke bagud');
+  'Læreren kan booke bagud som kontoret');
 
 -- Lektionen flyttes: bilen følger med.
 update public.scheduled_lessons set start_time = '12:00'
@@ -75,12 +76,12 @@ select throws_ok(
 select lives_ok(
   $$update public.bookings set title = 'Min bil' where id = '00000000-0000-4000-a900-000000000001'$$,
   'Læreren kan rette bilen på en lektion, læreren selv har planlagt');
-select throws_ok(
+select lives_ok(
   $$delete from public.bookings where id = '00000000-0000-4000-a900-000000000002'$$,
-  '42501', null, 'Læreren kan ikke fjerne lokalet fra en lektion, kontoret har planlagt');
-select throws_ok(
+  'Læreren kan fjerne lokalet fra en lektion, kontoret har planlagt');
+select lives_ok(
   $$update public.bookings set title = 'Min' where id = '00000000-0000-4000-a900-000000000002'$$,
-  '42501', null, 'Læreren kan ikke rette bookingen på en lektion, kontoret har planlagt');
+  'Læreren kan rette bookingen på en lektion, kontoret har planlagt');
 
 -- Slettes lektionen, forsvinder bookingen.
 select lives_ok(

@@ -64,7 +64,7 @@ test("en deaktiveret lærer bliver logget ud og kan ikke komme ind", async ({ br
   const teacher = await browser.newPage();
   await loginOk(teacher, phone, temp);
   await chooseOwnPassword(teacher, "snart-deaktiveret");
-  await expect(teacher).toHaveURL("/laerer");
+  await expect(teacher).toHaveURL("/kontor");
 
   await office.goto(href);
   office.once("dialog", (dialog) => dialog.accept());
