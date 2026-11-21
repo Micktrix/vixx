@@ -1,4 +1,4 @@
-import type { ModuleProgress } from "./module-progress";
+import { isKtaTopic, type ModuleProgress } from "./module-progress";
 
 // Aftaler på eleven og faktaboksen (Michael, 21. nov. 2026): KTA, Mørke, Teoriprøve og Køreprøve.
 // grå = intet gjort, gul = booket (der er en aftale), grøn = gennemført/bestået.
@@ -33,7 +33,6 @@ export type Fact = {
   history: Appointment[]; // alle aftaler, nyeste først
 };
 
-const isKtaTopic = (t: string) => /^9\.\d/.test(t) || /^Afsnit 9 [–-]/.test(t);
 
 export function facts(modules: ModuleProgress[], appointments: Appointment[]): Fact[] {
   const ktaScanned = modules.some((m) => m.drivenTopics.some(isKtaTopic));

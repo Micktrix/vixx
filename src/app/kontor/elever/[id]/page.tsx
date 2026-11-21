@@ -47,7 +47,10 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const team = teams.find((t) => t.id === student.teamId);
   const p = progress(student, course);
   const isAdmin = membership.role === "admin";
-  const modules = course?.modules.length ? moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions, course.theoryAtScan) : [];
+  const ktaPassed = student.appointments.some((x) => x.kind === "kta" && x.status === "passed");
+  const modules = course?.modules.length
+    ? moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions, course.theoryAtScan, ktaPassed)
+    : [];
   const currentModule = suggestedModule(modules);
   const lastCompleted = [...modules].reverse().find((m) => m.completed);
   const annulled = student.moduleCompletions.filter((c) => c.annulled_at).sort((a, b) => a.module_number - b.module_number);

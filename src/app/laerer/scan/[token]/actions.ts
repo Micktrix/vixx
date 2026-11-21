@@ -35,13 +35,17 @@ export async function recordScan(_prev: ActionState, formData: FormData): Promis
   const darkChecked = !!darkTopic && driven.has(darkTopic);
   if (kind === "driving" && darkChecked && text("darkRequired") === "1" && formData.get("darkConfirm") !== "on")
     return { error: "Bekræft, at der er kørt i mørke, eller fjern fluebenet ved 7.19." };
+  const ktaTopic = text("ktaTopic");
+  const ktaChecked = kind === "driving" && !!ktaTopic && driven.has(ktaTopic);
+  if (ktaChecked && formData.get("ktaConfirm") !== "on")
+    return { error: "Bekræft, at eleven har kørt på køreteknisk anlæg, eller fjern fluebenet ved afsnit 9." };
   if (complete && formData.get("declaration") !== "on") return { error: "Sæt flueben ved erklæringen." };
   if (text("selfStudy").length > 500) return { error: "Selvstudie er for langt." };
   const theory = text("theoryLessons");
   // Overskud til næste modul: kun når modulet afsluttes i samme scanning.
   const splitRaw = text("splitHere");
   // Mørke (7.19) bekræftet: den lektion tælles altid i dette modul.
-  const here = complete && splitRaw !== "" ? Math.max(Number(splitRaw), kind === "driving" && darkChecked && text("darkRequired") === "1" && count > 0 ? 1 : 0) : count;
+  const here = complete && splitRaw !== "" ? Math.max(Number(splitRaw), kind === "driving" && ((darkChecked && text("darkRequired") === "1") || ktaChecked) && count > 0 ? 1 : 0) : count;
   if (!Number.isInteger(here) || here < 0 || here > count) return { error: "Vælg antal lektioner." };
   const nextDriven = new Set(formData.getAll("nextDriveTopic").map(String));
   const nextSkipped = formData.getAll("nextAllTopic").map(String).filter((t) => !nextDriven.has(t));

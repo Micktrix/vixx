@@ -211,3 +211,45 @@ test("mørke bekræftet ved overskud: mørkelektionen bliver i modulet, resten g
     await admin.from("module_signoffs").delete().eq("student_id", EMIL);
   }
 });
+
+// KTA (Michael 21. nov. 2026): afsnit 9 i sidste modul har ikke flueben fra start og skal bekræftes som mørke.
+// Uden KTA kan sidste modul ikke afsluttes; med "Ja, kørt på køreteknisk anlæg" kan det.
+test("KTA skal bekræftes, før sidste modul kan afsluttes", async ({ page }) => {
+  const admin = localAdmin();
+  const SCHOOL = "00000000-0000-4000-a000-000000000001";
+  const LARS = { instructor_id: "00000000-0000-4000-a200-000000000011", instructor_name: "Lars Jensen", signed_by: "00000000-0000-4000-a100-000000000011" };
+  const KTA = "Afsnit 9 – Manøvrer på køreteknisk anlæg*";
+  const { data: student } = await admin.from("students").select("qr_token, course_id").eq("id", EMIL).single();
+  const { data: mods } = await admin.from("course_modules").select("id, number").eq("course_id", student!.course_id).order("number");
+  const [m1, m2, m3] = mods!;
+  try {
+    await admin.from("module_signoffs").insert([
+      { school_id: SCHOOL, student_id: EMIL, course_module_id: m1.id, kind: "driving", lesson_count: 5, dark: false, skipped_items: null, ...LARS },
+      { school_id: SCHOOL, student_id: EMIL, course_module_id: m2.id, kind: "driving", lesson_count: 5, dark: true, skipped_items: null, ...LARS },
+      { school_id: SCHOOL, student_id: EMIL, course_module_id: m3.id, kind: "driving", lesson_count: 7, dark: false, skipped_items: KTA, ...LARS },
+    ]).then(({ error }) => expect(error).toBeNull());
+    for (const m of [m1, m2]) {
+      const { error } = await admin.from("module_completions").insert({
+        school_id: SCHOOL, student_id: EMIL, course_module_id: m.id, module_number: 0, instructor_id: LARS.instructor_id,
+        instructor_name: "Lars Jensen", declaration: true, theory_lessons: 8, completed_by: LARS.signed_by,
+      });
+      expect(error).toBeNull();
+    }
+    await loginOk(page, INSTRUCTOR, PASSWORD);
+    await page.goto(`/laerer/scan/${student!.qr_token}`);
+    await page.getByLabel(/Antal lektioner/).selectOption("1");
+    const kta = page.getByRole("checkbox", { name: /Afsnit 9/ });
+    await expect(kta).not.toBeChecked();
+    await expect(page.getByTestId("complete-module")).toHaveCount(0); // 8 af 8, men KTA mangler
+    await kta.check();
+    await expect(page.getByTestId("complete-module")).toHaveCount(0);
+    await page.getByRole("checkbox", { name: "Ja, kørt på køreteknisk anlæg" }).check();
+    await page.getByTestId("complete-module").getByRole("checkbox", { name: /Jeg erklærer/ }).check();
+    await page.getByRole("button", { name: "Bekræft og afslut modul 3" }).click();
+    await expect(page.getByTestId("signoff-done")).toHaveText("✓ 1 kørselslektion er bekræftet, og modul 3 er afsluttet.");
+    await expect(page.getByTestId("fact-kta")).toHaveAttribute("data-tone", "done");
+  } finally {
+    await admin.from("module_completions").delete().eq("student_id", EMIL);
+    await admin.from("module_signoffs").delete().eq("student_id", EMIL);
+  }
+});

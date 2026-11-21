@@ -43,21 +43,26 @@ export function ScanForm({
   const [darkConfirm, setDarkConfirm] = useState(false);
   const [transferred, setTransferred] = useState(false);
   const [declared, setDeclared] = useState(false);
+  const [ktaChecked, setKtaChecked] = useState(false);
+  const [ktaConfirm, setKtaConfirm] = useState(false);
   const m = modules.find((x) => x.id === moduleId)!;
   const darkRequired = m.min_dark > 0;
   const darkTopic = m.drivingTopics.find(isDarkTopic) ?? "";
   const darkNow = kind === "driving" && darkChecked && (!darkRequired || darkConfirm);
+  // KTA (afsnit 9) bekræftes som mørke: intet flueben fra start, og "Ja, kørt på køreteknisk anlæg".
+  const ktaNow = kind === "driving" && !!m.ktaTopic && ktaChecked && ktaConfirm;
 
   const reachesWith = (n: number) =>
     m.driving + (kind === "driving" ? n : 0) >= m.min_driving &&
     (!darkRequired || m.darkDone || darkNow) &&
+    (!m.ktaTopic || m.ktaDone || ktaNow) &&
     (!theoryAtScan || m.theory + (kind === "theory" ? n : 0) >= m.min_theory);
   const reaches = reachesWith(count);
   // Afsluttes modulet, og er der valgt flere lektioner, end modulet mangler, tælles resten i næste modul
   // (Michael 21. nov. 2026: 4 af 5 kørt + 2 lektioner = 1 i modul 1 og 1 i modul 2).
   const next = modules[modules.findIndex((x) => x.id === m.id) + 1];
   // Mindst den lektion, hvor mørke (7.19) er bekræftet, bliver i dette modul.
-  const needed = Math.max(kind === "driving" ? m.min_driving - m.driving : m.min_theory - m.theory, darkNow && !m.darkDone ? 1 : 0);
+  const needed = Math.max(kind === "driving" ? m.min_driving - m.driving : m.min_theory - m.theory, (darkNow && !m.darkDone) || (ktaNow && !m.ktaDone) ? 1 : 0);
   const split = !!next && !next.completed && !transferred && count > needed && reachesWith(needed);
   const nextDarkTopic = next && next.min_dark > 0 ? next.drivingTopics.find(isDarkTopic) : undefined;
   // Modulerne afsluttes i rækkefølge: kun det aktuelle modul kan afsluttes.
@@ -70,6 +75,8 @@ export function ScanForm({
     setDarkConfirm(false);
     setTransferred(false);
     setDeclared(false);
+    setKtaChecked(false);
+    setKtaConfirm(false);
   };
 
   return (
@@ -79,6 +86,7 @@ export function ScanForm({
       <input type="hidden" name="moduleNumber" value={m.number} />
       <input type="hidden" name="darkTopic" value={darkTopic} />
       <input type="hidden" name="darkRequired" value={darkRequired ? "1" : "0"} />
+      <input type="hidden" name="ktaTopic" value={m.ktaTopic ?? ""} />
 
       <fieldset className={box} data-testid="scan-modules">
         <legend className="sr-only">Modul</legend>
@@ -149,7 +157,19 @@ export function ScanForm({
                     className={`flex items-start gap-2.5 rounded-lg px-1.5 py-0.5 text-[14px] ${done ? "bg-ok-bg" : ""}`}
                   >
                     <input type="hidden" name="allTopic" value={item} />
-                    {isDark ? (
+                    {item === m.ktaTopic ? (
+                      <input
+                        type="checkbox"
+                        name="driveTopic"
+                        value={item}
+                        checked={ktaChecked}
+                        onChange={(e) => {
+                          setKtaChecked(e.target.checked);
+                          setKtaConfirm(false);
+                        }}
+                        className={`${check} mt-0.5`}
+                      />
+                    ) : isDark ? (
                       <input
                         type="checkbox"
                         name="driveTopic"
@@ -168,11 +188,26 @@ export function ScanForm({
                       {item}
                       {done && <span className="ml-1.5 text-[12px] font-semibold text-ok">kørt</span>}
                       {missing && <span className="ml-1.5 rounded-full bg-bad-bg px-2 text-[12px] font-semibold text-bad">mangler</span>}
+                      {item === m.ktaTopic && !ktaChecked && !done && (
+                        <span className="block text-[12px] text-muted">Sæt kun flueben, hvis eleven har kørt på køreteknisk anlæg i denne lektion.</span>
+                      )}
                       {isDark && !darkChecked && (
                         <span className="block text-[12px] text-muted">Sæt kun flueben, hvis der er kørt i mørke i denne lektion.</span>
                       )}
                     </span>
                   </label>
+                  {item === m.ktaTopic && ktaChecked && (
+                    <label className="ml-8 mt-1 flex items-start gap-2.5 rounded-lg border border-accent-line bg-accent-bg px-2 py-1.5 text-[14px] font-semibold">
+                      <input
+                        type="checkbox"
+                        name="ktaConfirm"
+                        checked={ktaConfirm}
+                        onChange={(e) => setKtaConfirm(e.target.checked)}
+                        className={`${check} mt-0.5`}
+                      />
+                      Ja, kørt på køreteknisk anlæg
+                    </label>
+                  )}
                   {isDark && darkChecked && (
                     <label className="ml-8 mt-1 flex items-start gap-2.5 rounded-lg border border-accent-line bg-accent-bg px-2 py-1.5 text-[14px] font-semibold">
                       <input

@@ -85,7 +85,14 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   }
 
   const signoffs = (student.module_signoffs ?? []) as ModuleCount[];
-  const progress = moduleProgress(course.course_modules, signoffs, (student.module_completions ?? []) as ModuleCompletion[], course.theory_at_scan);
+  const ktaPassed = ((student.student_appointments ?? []) as Appointment[]).some((x) => x.kind === "kta" && x.status === "passed");
+  const progress = moduleProgress(
+    course.course_modules,
+    signoffs,
+    (student.module_completions ?? []) as ModuleCompletion[],
+    course.theory_at_scan,
+    ktaPassed,
+  );
   const suggested = suggestedModule(progress);
   // Undervisningsdage (advarsel ved sidste modul): scanningsdage, når teori scannes, ellers hverdage fra start.
   const today = todayDk();

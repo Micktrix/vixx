@@ -41,6 +41,8 @@ export type ModuleProgress = PlanModule & {
   theory: number; // talt ved scanning (kun når teori registreres ved scanning)
   driving: number;
   darkDone: boolean; // 7.19 er bekræftet i modulet
+  ktaTopic: string | null; // modulets KTA-emne (afsnit 9), hvis modulet har det
+  ktaDone: boolean; // KTA er bekræftet ved scanning eller markeret gennemført
   startedOn: string | null; // første kørsel (eller teori) i modulet
   reached: boolean; // kørsel (og teori, når den scannes) har nået minimum, og mørke-kravet er opfyldt
   completed: ModuleCompletion | null;
@@ -60,12 +62,15 @@ export const lessonItems = (content: string | null | undefined) =>
 export const isDrivingTopic = (line: string) => /^[279]\.\d/.test(line) || /^Afsnit [279] [–-]/.test(line);
 export const drivingTopics = (topics: string | null | undefined) => lessonItems(topics).filter(isDrivingTopic);
 export const isDarkTopic = (line: string) => line.startsWith("7.19");
+// KTA = afsnit 9 (manøvrer på køreteknisk anlæg), i sidste modul. Skal bekræftes som mørke (Michael 21. nov. 2026).
+export const isKtaTopic = (line: string) => /^9\.\d/.test(line) || /^Afsnit 9 [–-]/.test(line);
 
 export function moduleProgress(
   modules: PlanModule[],
   counts: ModuleCount[],
   completions: ModuleCompletion[] = [],
   theoryAtScan = true,
+  ktaPassed = false, // KTA markeret gennemført i faktaboksen
 ): ModuleProgress[] {
   return [...modules]
     .sort((a, b) => a.number - b.number)
@@ -77,15 +82,18 @@ export function moduleProgress(
       const drives = own.filter((c) => c.kind === "driving");
       const darkDone = drives.some((c) => c.dark);
       const startedOn = own.map((c) => c.lesson_date).sort()[0] ?? null;
-      const reached = driving >= m.min_driving && (m.min_dark === 0 || darkDone) && (!theoryAtScan || theory >= m.min_theory);
       const completed = completions.find((c) => c.course_module_id === m.id && !c.annulled_at) ?? null;
       const topics = drivingTopics(m.topics);
+      const ktaTopic = topics.find(isKtaTopic) ?? null;
+      const ktaDone = !!ktaTopic && (ktaPassed || drives.some((c) => !lessonItems(c.skipped_items).includes(ktaTopic)));
+      const reached =
+        driving >= m.min_driving && (m.min_dark === 0 || darkDone) && (!ktaTopic || ktaDone) && (!theoryAtScan || theory >= m.min_theory);
       // Et emne er kørt, så snart det havde flueben i én kørsel. 7.19 er kørt, når mørke er bekræftet.
       const driven = (item: string) =>
         isDarkTopic(item) && m.min_dark > 0 ? darkDone : drives.some((c) => !lessonItems(c.skipped_items).includes(item));
       const drivenTopics = topics.filter(driven);
       const notDriven = drives.length ? topics.filter((t) => !driven(t)) : [];
-      return { ...m, theory, driving, darkDone, startedOn, reached, completed, drivingTopics: topics, drivenTopics, notDriven };
+      return { ...m, theory, driving, darkDone, ktaTopic, ktaDone, startedOn, reached, completed, drivingTopics: topics, drivenTopics, notDriven };
     });
 }
 
@@ -110,6 +118,7 @@ export function progressText(m: ModuleProgress, theoryAtScan = true): string {
   if (theoryAtScan) parts.push(`Teori ${m.theory} af ${m.min_theory}`);
   else parts.push(`Teori min. ${m.min_theory} (bekræftes ved afslutning)`);
   if (m.min_dark > 0) parts.push(m.darkDone ? "Mørke kørt" : "Mangler mørke (7.19)");
+  if (m.ktaTopic) parts.push(m.ktaDone ? "KTA kørt" : "Mangler KTA (afsnit 9)");
   return parts.join(" · ");
 }
 
