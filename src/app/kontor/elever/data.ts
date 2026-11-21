@@ -1,5 +1,6 @@
 import "server-only";
 import { type ModuleCompletion, type ModuleCount, type PlanModule } from "@/lib/module-progress";
+import { todayDk } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
 // Hold, elever og forløb (modulplaner) til kontorets elevsider. Et modul er gennemført, når læreren har
@@ -9,6 +10,10 @@ export type CourseInfo = {
   id: string;
   name: string;
   category: string;
+  kind: string; // B, C, CE, D, EU eller TAXA
+  active: boolean;
+  theoryAtScan: boolean; // "Teori registreres ved scanning"
+  minDays: number | null;
   modules: PlanModule[];
 };
 export type StudentInfo = {
@@ -18,6 +23,9 @@ export type StudentInfo = {
   phone: string;
   address: string | null; // står på modulplanen
   manualGear: boolean; // kode 78 (kun B)
+  eu: boolean; // EU slået til på eleven (C og C/E)
+  courseStartOn: string | null; // kontorets rettelse af start af modul 1
+  createdAt: string;
   planTemplateId: string | null; // elevens version af modulplanens PDF
   repetitions: { id: string; lesson_date: string; lesson_count: number; instructor_name: string }[];
   teamId: string | null;
@@ -40,14 +48,15 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, address, manual_gear, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, module_lesson_id, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
     supabase
       .from("courses")
-      .select("id, name, category_code, course_modules(id, number, name, min_theory, min_driving, min_dark, topics, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active))")
+      .select("id, name, category_code, kind, active, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics)")
       .eq("school_id", schoolId)
+      .not("kind", "is", null) // kun de faste forløb
       .order("name"),
   ]);
 
@@ -55,6 +64,10 @@ export async function loadStudents(schoolId: string) {
     id: c.id,
     name: c.name,
     category: c.category_code,
+    kind: c.kind as string,
+    active: c.active,
+    theoryAtScan: c.theory_at_scan,
+    minDays: c.min_days,
     modules: (c.course_modules ?? []) as PlanModule[],
   }));
   const studentList: StudentInfo[] = (students ?? [])
@@ -67,6 +80,9 @@ export async function loadStudents(schoolId: string) {
         phone: p?.phone ?? "",
         address: s.address,
         manualGear: s.manual_gear,
+        eu: s.eu,
+        courseStartOn: s.course_start_on,
+        createdAt: s.created_at,
         planTemplateId: s.plan_template_id,
         repetitions: ((s.repetition_lessons ?? []) as StudentInfo["repetitions"]).sort((a, b) => a.lesson_date.localeCompare(b.lesson_date)),
         teamId: s.team_id,
@@ -90,6 +106,11 @@ export async function loadStudents(schoolId: string) {
 }
 
 // Andel gennemført (0–1) af elevens forløb: moduler, der er afsluttet (annullerede tæller ikke).
+// Start af modul 1: elevens egen dato, ellers holdets startdato, ellers oprettelsesdatoen.
+export function courseStart(student: StudentInfo, team: TeamInfo | undefined): string {
+  return student.courseStartOn ?? team?.startsOn ?? todayDk(new Date(student.createdAt));
+}
+
 export function progress(student: StudentInfo, course: CourseInfo | undefined) {
   const total = course?.modules.length ?? 0;
   const done = course ? student.moduleCompletions.filter((c) => !c.annulled_at && course.modules.some((m) => m.id === c.course_module_id)).length : 0;

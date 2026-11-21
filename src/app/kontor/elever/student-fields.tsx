@@ -13,7 +13,15 @@ export function StudentFields({
   courses: CourseInfo[];
   teams: TeamInfo[];
   services: Option[];
-  value?: { courseId?: string; teamId?: string | null; serviceId?: string | null; address?: string | null; manualGear?: boolean };
+  value?: {
+    courseId?: string;
+    teamId?: string | null;
+    serviceId?: string | null;
+    address?: string | null;
+    manualGear?: boolean;
+    eu?: boolean;
+    courseStartOn?: string | null;
+  };
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
@@ -23,11 +31,13 @@ export function StudentFields({
           <option value="" disabled>
             Vælg forløb
           </option>
-          {courses.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
+          {courses
+            .filter((c) => (c.active && c.kind !== "EU") || c.id === value?.courseId)
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
         </select>
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-bold">
@@ -61,6 +71,14 @@ export function StudentFields({
       <label className="flex items-center gap-2.5 text-[15px] sm:col-span-3">
         <input type="checkbox" name="manualGear" defaultChecked={value?.manualGear ?? false} className="size-[18px] accent-accent" />
         Kode 78: forsøgsordningen med manuelt gear (kun B)
+      </label>
+      <label className="flex items-center gap-2.5 text-[15px] sm:col-span-3">
+        <input type="checkbox" name="eu" defaultChecked={value?.eu ?? false} className="size-[18px] accent-accent" />
+        EU (kun C og C/E): eleven får også EU-modulerne
+      </label>
+      <label className="flex flex-col gap-1.5 text-sm font-bold">
+        Start af modul 1 <span className="font-normal text-muted">(tom = holdets startdato, ellers oprettelsesdatoen)</span>
+        <input name="courseStartOn" type="date" defaultValue={value?.courseStartOn ?? ""} className={inputClass} />
       </label>
     </div>
   );

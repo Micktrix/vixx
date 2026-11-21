@@ -1,24 +1,31 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionForm, TextField } from "@/components/form";
+import { ActionForm } from "@/components/form";
 import { Pill } from "@/components/pill";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { deleteCourse, insertLessonSchedule, updateCourse } from "../actions";
+import { setCourseLocked, updateCourse } from "../actions";
 import { ModuleList, NewModuleForm, type ModuleRow } from "./modules";
 import { TemplatesBox } from "./templates-box";
 
-// Ét forløb (modulplan): modulerne med minimum og emner og modulplanens PDF-versioner. Kun admin.
+// Ét fast forløb: indstillinger, modulerne med minimum og emner og modulplanens PDF-versioner. Kun admin.
+// Forløbet er låst; modulerne og PDF'en kan kun rettes, når admin har låst op (logges).
 export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/[id]">) {
   const { id } = await params;
   const { membership } = await requireRole(["admin"]);
   const isAdmin = membership.role === "admin";
   const supabase = await createClient();
   const [{ data: course }, { data: moduleData }] = await Promise.all([
-    supabase.from("courses").select("id, name, category_code, active, plan_version, min_days").eq("id", id).eq("school_id", membership.schoolId).maybeSingle(),
-    supabase.from("course_modules").select("id, number, name, min_theory, min_driving, min_dark, topics, notes, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active)").eq("course_id", id).order("number"),
+    supabase
+      .from("courses")
+      .select("id, name, kind, category_code, active, locked, theory_at_scan, plan_version, min_days")
+      .eq("id", id)
+      .eq("school_id", membership.schoolId)
+      .maybeSingle(),
+    supabase.from("course_modules").select("id, number, name, min_theory, min_driving, min_dark, topics, notes").eq("course_id", id).order("number"),
   ]);
-  if (!course) notFound();
+  if (!course?.kind) notFound();
+  const editing = isAdmin && !course.locked;
   const modules = (moduleData ?? []) as ModuleRow[];
   const sum = (key: "min_theory" | "min_driving") => modules.reduce((n, m) => n + m[key], 0);
 
@@ -32,40 +39,64 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
         <p className="flex flex-wrap items-center gap-1.5 text-muted">
           Kategori {course.category_code}
           {course.plan_version && ` · Modulplan version ${course.plan_version}`} · {modules.length} moduler · Min. {sum("min_theory")} teori +{" "}
-          {sum("min_driving")} kørsel{course.min_days ? ` · Min. ${course.min_days} undervisningsdage` : ""}
-          {course.active ? <Pill tone="ok">Aktiv</Pill> : <Pill>Slået fra</Pill>}
+          {sum("min_driving")} kørsel
+          {course.min_days ? ` · Min. ${course.min_days} undervisningsdage` : ""}
+          {course.active ? <Pill tone="ok">I brug</Pill> : <Pill>Slået fra</Pill>}
         </p>
       </header>
 
       {isAdmin && (
-        <details className="rounded-[20px] border border-line bg-surface p-[18px]">
-          <summary className="cursor-pointer font-bold">Ret forløbet</summary>
-          <ActionForm action={updateCourse} submitLabel="Gem" className="mt-3 flex flex-col gap-3">
+        <section className="flex flex-col gap-3 rounded-[20px] border border-line bg-surface p-[18px]">
+          <ActionForm action={updateCourse} submitLabel="Gem indstillinger" className="flex flex-col gap-2.5">
             <input type="hidden" name="id" value={course.id} />
-            <TextField label="Navn" name="name" required maxLength={80} defaultValue={course.name} className="min-w-[240px]" />
             <label className="flex items-center gap-2.5 text-[15px]">
               <input type="checkbox" name="active" defaultChecked={course.active} className="size-[18px] accent-accent" />
-              I brug (kan vælges, når en elev oprettes)
+              {course.kind === "EU" ? "I brug (kan slås til på C- og C/E-elever)" : "I brug (kan vælges på elever og hold)"}
             </label>
+            {course.kind !== "EU" && (
+              <label className="flex items-start gap-2.5 text-[15px]">
+                <input type="checkbox" name="theoryAtScan" defaultChecked={course.theory_at_scan} className="mt-0.5 size-[18px] accent-accent" />
+                <span>
+                  Teori registreres ved scanning
+                  <span className="block text-[13px] text-muted">
+                    Til: læreren scanner teori, og hver scanningsdag er en undervisningsdag. Fra: teorien bekræftes, når modulet afsluttes.
+                  </span>
+                </span>
+              </label>
+            )}
           </ActionForm>
-          <ActionForm action={deleteCourse} submitLabel="Slet forløbet" pendingLabel="…" primary={false} confirmText={`Slet forløbet ${course.name}?`}>
-            <input type="hidden" name="id" value={course.id} />
-          </ActionForm>
-        </details>
+          <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
+            {course.locked ? (
+              <>
+                <span className="text-sm text-muted">🔒 Låst: moduler, minimum, emner og modulplanens PDF kan ikke rettes.</span>
+                <ActionForm
+                  action={setCourseLocked}
+                  submitLabel="Lås op"
+                  pendingLabel="…"
+                  primary={false}
+                  confirmText={`Lås ${course.name} op for at rette det? Det logges.`}
+                >
+                  <input type="hidden" name="id" value={course.id} />
+                  <input type="hidden" name="locked" value="0" />
+                </ActionForm>
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-semibold text-bad">Låst op: modulerne og modulplanens PDF kan rettes.</span>
+                <ActionForm action={setCourseLocked} submitLabel="Lås igen" pendingLabel="…">
+                  <input type="hidden" name="id" value={course.id} />
+                  <input type="hidden" name="locked" value="1" />
+                </ActionForm>
+              </>
+            )}
+          </div>
+        </section>
       )}
 
-      {isAdmin && ["C", "D"].includes(course.category_code) && modules.length >= 3 && !modules.some((m) => m.module_lessons.length) && (
-        <ActionForm action={insertLessonSchedule} submitLabel="Indsæt skolens lektionsskema (C + D)" primary={false} className="flex flex-col gap-2">
-          <input type="hidden" name="courseId" value={course.id} />
-          <p className="text-sm text-muted">
-            Lektion 2, 4 og 6 i modul 1 · 9, 11 og 12 (mørke) i modul 2 · 13, 17 og 18 i modul 3. Det kan rettes bagefter.
-          </p>
-        </ActionForm>
-      )}
-      <ModuleList modules={modules} isAdmin={isAdmin} />
+      <ModuleList modules={modules} isAdmin={editing} />
       {!modules.length && <p className="text-muted">Ingen moduler endnu.</p>}
-      {isAdmin && <NewModuleForm key={modules.length} courseId={course.id} next={(modules.at(-1)?.number ?? 0) + 1} />}
-      <TemplatesBox courseId={course.id} isAdmin={isAdmin} />
+      {editing && <NewModuleForm key={modules.length} courseId={course.id} next={(modules.at(-1)?.number ?? 0) + 1} />}
+      {course.kind !== "EU" || modules.length > 0 ? <TemplatesBox courseId={course.id} isAdmin={editing} /> : null}
     </>
   );
 }

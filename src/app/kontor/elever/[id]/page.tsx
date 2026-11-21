@@ -20,8 +20,9 @@ import {
   saveStudentTeachers,
   updateStudent,
 } from "../actions";
-import { FINISH_LABEL, loadStudents, progress } from "../data";
+import { courseStart, FINISH_LABEL, loadStudents, progress } from "../data";
 import { ProgressBar } from "../progress-bar";
+import { PlanTeachersBox } from "../plan-teachers";
 import { StudentFields } from "../student-fields";
 
 // Én elev: modulplanen med hvad der er gennemført, og elevens oplysninger.
@@ -29,15 +30,12 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const { id } = await params;
   const { membership } = await requireRole(["admin", "office"]);
   const supabase = await createClient();
-  const [{ teams, students, courses }, { data: services }, { data: instructors }, { data: booking }] = await Promise.all([
+  const [{ teams, students, courses }, { data: services }, { data: instructors }, { data: booking }, { data: planTeachers }] = await Promise.all([
     loadStudents(membership.schoolId),
     supabase.from("services").select("id, name").eq("school_id", membership.schoolId).eq("active", true).order("sort_order").order("name"),
     supabase.from("instructors").select("id, active_until, school_members(active, profiles(full_name))").eq("school_id", membership.schoolId),
-    supabase
-      .from("students")
-      .select("can_request, student_instructors(instructor_id)")
-      .eq("id", id)
-      .maybeSingle(),
+    supabase.from("students").select("can_request, student_instructors(instructor_id)").eq("id", id).maybeSingle(),
+    supabase.from("plan_teachers").select("instructor_id").eq("student_id", id),
   ]);
   const student = students.find((s) => s.id === id);
   if (!student) notFound();
@@ -45,15 +43,22 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
   const team = teams.find((t) => t.id === student.teamId);
   const p = progress(student, course);
   const isAdmin = membership.role === "admin";
-  const modules = course?.modules.length ? moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions) : [];
+  const modules = course?.modules.length ? moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions, course.theoryAtScan) : [];
   const currentModule = suggestedModule(modules);
   const lastCompleted = [...modules].reverse().find((m) => m.completed);
   const annulled = student.moduleCompletions.filter((c) => c.annulled_at).sort((a, b) => a.module_number - b.module_number);
   const linked = new Set(((booking?.student_instructors ?? []) as { instructor_id: string }[]).map((l) => l.instructor_id));
   const teachers = (instructors ?? [])
     .map((i) => {
-      const m = i.school_members as unknown as { active: boolean; profiles: { full_name: string } | null } | null;
-      return { id: i.id, name: m?.profiles?.full_name ?? "", active: !!m?.active && (!i.active_until || i.active_until >= todayDk()) };
+      const m = i.school_members as unknown as {
+        active: boolean;
+        profiles: { full_name: string } | null;
+      } | null;
+      return {
+        id: i.id,
+        name: m?.profiles?.full_name ?? "",
+        active: !!m?.active && (!i.active_until || i.active_until >= todayDk()),
+      };
     })
     .filter((t) => t.active || linked.has(t.id))
     .sort((a, b) => a.name.localeCompare(b.name, "da"));
@@ -88,6 +93,10 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
           >
             Print modulplan (PDF)
           </a>
+          <p className="text-sm text-muted">
+            Start af modul 1: {formatDate(courseStart(student, team))}
+            {student.eu && " · EU slået til"}
+          </p>
           <PlanVersion studentId={student.id} courseId={student.courseId} current={student.planTemplateId} isAdmin={isAdmin} />
           <ProgressBar share={p.share} />
           <ol className="flex flex-col gap-1.5" data-testid="student-modules">
@@ -97,7 +106,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
                   Modul {m.number} – {m.name}
                 </b>
                 <span className="block text-[13px] text-muted">
-                  {progressText(m)}
+                  {progressText(m, course.theoryAtScan)}
                   {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
                 </span>
                 {m.completed && (
@@ -120,7 +129,14 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
                       className="mt-2 flex flex-wrap items-end gap-2"
                     >
                       <input type="hidden" name="id" value={m.completed.id} />
-                      <TextField label="Begrundelse" name="reason" required maxLength={500} placeholder="Fx afsluttet på den forkerte elev" className="min-w-[240px] flex-1" />
+                      <TextField
+                        label="Begrundelse"
+                        name="reason"
+                        required
+                        maxLength={500}
+                        placeholder="Fx afsluttet på den forkerte elev"
+                        className="min-w-[240px] flex-1"
+                      />
                     </ActionForm>
                   </details>
                 )}
@@ -131,7 +147,8 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             <ul className="text-sm" data-testid="student-repetitions">
               {student.repetitions.map((r) => (
                 <li key={r.id}>
-                  <b>Repetition</b> {formatDate(r.lesson_date)}: {r.lesson_count} {r.lesson_count === 1 ? "lektion" : "lektioner"} · {r.instructor_name}
+                  <b>Repetition</b> {formatDate(r.lesson_date)}: {r.lesson_count} {r.lesson_count === 1 ? "lektion" : "lektioner"} ·{" "}
+                  {r.instructor_name}
                 </li>
               ))}
             </ul>
@@ -164,7 +181,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             <input type="hidden" name="studentId" value={student.id} />
             <input type="hidden" name="moduleId" value={currentModule.id} />
             <p className="text-sm">
-              {progressText(currentModule)}
+              {progressText(currentModule, course!.theoryAtScan)}
               {currentModule.reached ? " · minimum er nået" : " · minimum er ikke nået: kun muligt, hvis eleven er overført fra lektionsplanen"}
             </p>
             <div className="flex flex-wrap items-end gap-3">
@@ -173,6 +190,18 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             </div>
             <TextField label="Kommentar" name="comment" required maxLength={500} placeholder="Fx vikar uden adgang til Vixx" />
             <TextField label="Selvstudie (valgfrit)" name="selfStudy" maxLength={500} />
+            {!course!.theoryAtScan && (
+              <TextField
+                label="Teorilektioner i modulet"
+                name="theoryLessons"
+                type="number"
+                min={0}
+                max={100}
+                required
+                defaultValue={currentModule.min_theory}
+                className="w-[200px]"
+              />
+            )}
             <label className="flex items-center gap-2.5 text-[15px]">
               <input type="checkbox" name="transferred" className="size-[18px] accent-accent" />
               Overført fra lektionsplan
@@ -182,6 +211,15 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             </p>
           </ActionForm>
         </Box>
+      )}
+
+      {!team && (
+        <PlanTeachersBox
+          target="student"
+          id={student.id}
+          teachers={teachers.filter((t) => t.active)}
+          chosen={(planTeachers ?? []).map((t) => t.instructor_id)}
+        />
       )}
 
       <Box title="Kørelektioner" hint="Faste lærere og anmodning om tider">
@@ -213,7 +251,15 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
             courses={courses}
             teams={teams}
             services={services ?? []}
-            value={{ courseId: student.courseId, teamId: student.teamId, serviceId: student.serviceId, address: student.address, manualGear: student.manualGear }}
+            value={{
+              courseId: student.courseId,
+              teamId: student.teamId,
+              serviceId: student.serviceId,
+              address: student.address,
+              manualGear: student.manualGear,
+              eu: student.eu,
+              courseStartOn: student.courseStartOn,
+            }}
           />
         </ActionForm>
       </Box>
@@ -254,8 +300,8 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               <TextField label="Note (valgfri)" name="note" maxLength={300} className="min-w-[220px] flex-1" />
             </div>
             <p className="text-[13px] text-muted">
-              Eleven bliver inaktiv og logges ud. Intet slettes: kvitteringer, teori og lektioner gemmes til dokumentation, og eleven kan
-              findes med søgningen.
+              Eleven bliver inaktiv og logges ud. Intet slettes: kvitteringer, teori og lektioner gemmes til dokumentation, og eleven kan findes med
+              søgningen.
             </p>
           </ActionForm>
         </Box>
@@ -270,7 +316,9 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
           confirmText="Nulstil elevens kode til telefonnummeret og log eleven ud?"
         >
           <input type="hidden" name="id" value={student.id} />
-          <p className="text-sm text-muted">Eleven logger ind med sit telefonnummer. Har eleven glemt sin kode, så nulstil den til telefonnummeret.</p>
+          <p className="text-sm text-muted">
+            Eleven logger ind med sit telefonnummer. Har eleven glemt sin kode, så nulstil den til telefonnummeret.
+          </p>
         </ActionForm>
       </Box>
     </>
@@ -279,9 +327,19 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
 
 // Undervisende kørelærere i modulplanen: alle, der har talt lektioner eller afsluttet et modul, i den rækkefølge
 // de første gang havde eleven.
-function teachersOf(student: { moduleCounts: { instructor_name?: string; lesson_date: string }[]; moduleCompletions: { instructor_name: string; completed_on: string; annulled_at: string | null }[] }) {
+function teachersOf(student: {
+  moduleCounts: { instructor_name?: string; lesson_date: string }[];
+  moduleCompletions: {
+    instructor_name: string;
+    completed_on: string;
+    annulled_at: string | null;
+  }[];
+}) {
   const seen = [
-    ...student.moduleCounts.map((c) => ({ name: c.instructor_name ?? "", date: c.lesson_date })),
+    ...student.moduleCounts.map((c) => ({
+      name: c.instructor_name ?? "",
+      date: c.lesson_date,
+    })),
     ...student.moduleCompletions.filter((c) => !c.annulled_at).map((c) => ({ name: c.instructor_name, date: c.completed_on })),
   ]
     .filter((x) => x.name)
@@ -290,7 +348,17 @@ function teachersOf(student: { moduleCounts: { instructor_name?: string; lesson_
 }
 
 // Elevens version af modulplanens PDF. Admin kan flytte eleven til en anden version i brug af forløbet.
-async function PlanVersion({ studentId, courseId, current, isAdmin }: { studentId: string; courseId: string; current: string | null; isAdmin: boolean }) {
+async function PlanVersion({
+  studentId,
+  courseId,
+  current,
+  isAdmin,
+}: {
+  studentId: string;
+  courseId: string;
+  current: string | null;
+  isAdmin: boolean;
+}) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("module_plan_templates")
@@ -302,7 +370,11 @@ async function PlanVersion({ studentId, courseId, current, isAdmin }: { studentI
   const label = (v: { version: string; builtin: string | null }) => `Version ${v.version}${v.builtin ? " (indbygget)" : ""}`;
   const mine = versions.find((v) => v.id === current);
   if (!isAdmin || versions.length < 2) {
-    return <p className="text-sm text-muted" data-testid="plan-version">Modulplanens PDF: {mine ? label(mine) : "ingen version"}</p>;
+    return (
+      <p className="text-sm text-muted" data-testid="plan-version">
+        Modulplanens PDF: {mine ? label(mine) : "ingen version"}
+      </p>
+    );
   }
   return (
     <ActionForm action={moveStudentPlanVersion} submitLabel="Flyt" pendingLabel="…" primary={false} className="flex flex-wrap items-end gap-2">

@@ -26,7 +26,7 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
         <tbody>
           {students.map((s) => {
             const p = progress(s, course);
-            const modules = moduleProgress(course.modules, s.moduleCounts, s.moduleCompletions);
+            const modules = moduleProgress(course.modules, s.moduleCounts, s.moduleCompletions, course.theoryAtScan);
             return (
               <tr key={s.id} className="border-t border-line" data-testid="board-student">
                 <td className="sticky left-0 bg-surface px-[18px] py-2 whitespace-nowrap">
@@ -41,7 +41,7 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
                       <span
                         data-state={state}
                         className={`inline-block size-5 rounded-md ${state === "done" ? "bg-ok" : state === "started" ? "bg-accent" : "border border-line2 bg-bg"}`}
-                        title={`Modul ${m.number}: ${m.completed ? "afsluttet" : progressText(m)}`}
+                        title={`Modul ${m.number}: ${m.completed ? "afsluttet" : progressText(m, course.theoryAtScan)}`}
                       />
                     </td>
                   );

@@ -249,13 +249,8 @@ drop table seed_people, seed_services;
 -- ---------------------------------------------------------------------------
 -- Elevdelen: et C-forløb (modulplan), et hold og to elever
 -- ---------------------------------------------------------------------------
--- C-forløbet er Færdselsstyrelsens modulplan for C (version 1.1); den gamle lektionsplan er fjernet (20. nov. 2026).
-select public.create_module_course('00000000-0000-4000-a000-000000000001', 'C-1.1', 'C – modulplan');
--- Skolens kørelektioner under modulerne (lektionsskema C + D).
-select public.add_lesson_schedule((select id from public.courses where name = 'C – modulplan'), 'CD-skema');
-
--- Trin E8: et B-forløb som modulplan (Færdselsstyrelsen, version 1.1).
-select public.create_module_course('00000000-0000-4000-a000-000000000001', 'B-1.1', 'B – modulplan');
+-- Skolen har de faste forløb B, C, C/E, D (Færdselsstyrelsens plan 1.1), EU og Taxa; de oprettes automatisk med
+-- skolen (ombygningen 21. nov. 2026).
 
 -- Lars har tegnet sin underskrift (trin E8: den sættes på modulplanen).
 insert into public.instructor_signatures (school_id, user_id, strokes)
@@ -266,14 +261,14 @@ values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-0000000
 insert into public.students (id, school_id, user_id, course_id, service_id)
 select '00000000-0000-4000-ad00-000000000033', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000033',
        c.id, '00000000-0000-4000-a500-000000000001'
-from public.courses c where c.name = 'B – modulplan';
+from public.courses c where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001';
 update public.students set address = 'Elevvej 7, 8000 Aarhus C' where id = '00000000-0000-4000-ad00-000000000033';
 insert into public.module_signoffs (school_id, student_id, course_module_id, kind, lesson_count, dark, instructor_id, instructor_name, signed_by, lesson_date)
 select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', m.id, v.kind::public.course_lesson_kind, v.n, false,
        '00000000-0000-4000-a200-000000000011', 'Lars Jensen', '00000000-0000-4000-a100-000000000011', current_date - v.days_ago
 from (values (1, 'theory', 4, 10), (1, 'theory', 3, 8), (2, 'theory', 2, 3), (2, 'driving', 2, 1)) v (module, kind, n, days_ago)
 join public.course_modules m on m.number = v.module
-join public.courses c on c.id = m.course_id and c.name = 'B – modulplan';
+join public.courses c on c.id = m.course_id and c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001';
 
 -- Bent er med i forsøgsordningen med manuelt gear (kode 78); kørslen i modul 2 var i manuelt gear (del 5).
 update public.students set manual_gear = true where id = '00000000-0000-4000-ad00-000000000033';
@@ -285,17 +280,20 @@ insert into public.module_completions (school_id, student_id, course_module_id, 
 select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', m.id, current_date - 8,
        '00000000-0000-4000-a200-000000000011', 'Lars Jensen', '00000000-0000-4000-a100-000000000011', true
 from public.course_modules m join public.courses c on c.id = m.course_id
-where c.name = 'B – modulplan' and m.number = 1;
+where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 1;
 
 insert into public.teams (id, school_id, name, course_id, starts_on)
 values ('00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-a000-000000000001', 'C-hold uge 48',
-        (select id from public.courses where name = 'C – modulplan'), current_date - 3);
+        (select id from public.courses where kind = 'C' and school_id = '00000000-0000-4000-a000-000000000001'), current_date - 3);
+-- Lars er undervisende kørelærer på C-holdet (kommer øverst på elevernes modulplan).
+insert into public.plan_teachers (school_id, team_id, instructor_id)
+values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ac00-000000000001', '00000000-0000-4000-a200-000000000011');
 
 insert into public.students (id, school_id, user_id, team_id, course_id, service_id) values
   ('00000000-0000-4000-ad00-000000000031', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000031',
-   '00000000-0000-4000-ac00-000000000001', (select id from public.courses where name = 'C – modulplan'), '00000000-0000-4000-a500-000000000001'),
+   '00000000-0000-4000-ac00-000000000001', (select id from public.courses where kind = 'C' and school_id = '00000000-0000-4000-a000-000000000001'), '00000000-0000-4000-a500-000000000001'),
   ('00000000-0000-4000-ad00-000000000032', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000032',
-   '00000000-0000-4000-ac00-000000000001', (select id from public.courses where name = 'C – modulplan'), '00000000-0000-4000-a500-000000000001');
+   '00000000-0000-4000-ac00-000000000001', (select id from public.courses where kind = 'C' and school_id = '00000000-0000-4000-a000-000000000001'), '00000000-0000-4000-a500-000000000001');
 
 -- Emil har Lars som fast lærer og må selv anmode om kørelektioner (trin E5). Freja har ingen.
 update public.students set can_request = true where id = '00000000-0000-4000-ad00-000000000031';

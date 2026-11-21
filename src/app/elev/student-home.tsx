@@ -25,13 +25,13 @@ export async function StudentHome({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, teams(name), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, module_lesson_id, skipped_items), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, course_modules(id, number, name, min_theory, min_driving, min_dark, topics, module_lessons(id, number, lesson_count, dark, location, content, notes, control_topic, sort_order, active)))",
+      "id, teams(name), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, skipped_items), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, theory_at_scan, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
     )
     .eq("id", studentId)
     .maybeSingle();
   if (!student) return null;
 
-  const course = student.courses as unknown as { name: string; course_modules: (PlanModule & { topics: string | null })[] } | null;
+  const course = student.courses as unknown as { name: string; theory_at_scan: boolean; course_modules: (PlanModule & { topics: string | null })[] } | null;
   const team = student.teams as unknown as { name: string } | null;
 
   return (
@@ -47,7 +47,9 @@ export async function StudentHome({
             course.course_modules,
             (student.module_signoffs ?? []) as ModuleCount[],
             (student.module_completions ?? []) as ModuleCompletion[],
+            course.theory_at_scan,
           )}
+          theoryAtScan={course.theory_at_scan}
           topics={new Map(course.course_modules.map((m) => [m.id, m.topics]))}
         />
       ) : (

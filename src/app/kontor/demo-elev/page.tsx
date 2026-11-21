@@ -25,7 +25,7 @@ const links: Record<StudentTab, string> = {
 export default async function DemoStudentPage({ searchParams }: PageProps<"/kontor/demo-elev">) {
   const { membership } = await requireRole(["admin"]);
   const sp = await searchParams;
-  const side: StudentTab = sp.qr ? "qr" : (["kalender", "qr", "mere"] as const).find((s) => s === sp.side) ?? "forloeb";
+  const side: StudentTab = sp.qr ? "qr" : ((["kalender", "qr", "mere"] as const).find((s) => s === sp.side) ?? "forloeb");
   const supabase = await createClient();
   const [{ data: demo }, { data: courses }, { data: instructors }] = await Promise.all([
     supabase
@@ -34,14 +34,28 @@ export default async function DemoStudentPage({ searchParams }: PageProps<"/kont
       .eq("school_id", membership.schoolId)
       .eq("is_demo", true)
       .maybeSingle(),
-    supabase.from("courses").select("id, name").eq("school_id", membership.schoolId).eq("active", true).order("name"),
+    supabase
+      .from("courses")
+      .select("id, name")
+      .eq("school_id", membership.schoolId)
+      .eq("active", true)
+      .not("kind", "is", null)
+      .neq("kind", "EU")
+      .order("name"),
     supabase.from("instructors").select("id, active_until, school_members(active, profiles(full_name))").eq("school_id", membership.schoolId),
   ]);
   const linked = new Set(((demo?.student_instructors ?? []) as { instructor_id: string }[]).map((l) => l.instructor_id));
   const teachers = (instructors ?? [])
     .map((i) => {
-      const m = i.school_members as unknown as { active: boolean; profiles: { full_name: string } | null } | null;
-      return { id: i.id, name: m?.profiles?.full_name ?? "", active: !!m?.active && (!i.active_until || i.active_until >= todayDk()) };
+      const m = i.school_members as unknown as {
+        active: boolean;
+        profiles: { full_name: string } | null;
+      } | null;
+      return {
+        id: i.id,
+        name: m?.profiles?.full_name ?? "",
+        active: !!m?.active && (!i.active_until || i.active_until >= todayDk()),
+      };
     })
     .filter((t) => t.active)
     .sort((a, b) => a.name.localeCompare(b.name, "da"));
@@ -65,8 +79,8 @@ export default async function DemoStudentPage({ searchParams }: PageProps<"/kont
         <p className="text-sm text-muted">Demo</p>
         <h1 className="text-[30px] font-bold">Elevens skærm</h1>
         <p className="max-w-[720px] text-muted">
-          Sådan ser elevens app ud. Brug bundmenuen i telefonen. Demo-eleven er fiktiv, vises ikke i elevlisterne og kommer aldrig på
-          lønnen. Du handler på elevens vegne.
+          Sådan ser elevens app ud. Brug bundmenuen i telefonen. Demo-eleven er fiktiv, vises ikke i elevlisterne og kommer aldrig på lønnen. Du
+          handler på elevens vegne.
         </p>
       </header>
 
@@ -92,9 +106,7 @@ export default async function DemoStudentPage({ searchParams }: PageProps<"/kont
               {side === "kalender" && (
                 <StudentCalendar schoolId={membership.schoolId} schoolName={membership.schoolName} studentId={demo.id} demo forloebHref={PAGE} />
               )}
-              {side === "forloeb" && (
-                <StudentHome studentId={demo.id} firstName="Demo" schoolName={membership.schoolName} qrHref={links.qr} demo />
-              )}
+              {side === "forloeb" && <StudentHome studentId={demo.id} firstName="Demo" schoolName={membership.schoolName} qrHref={links.qr} demo />}
               {side === "qr" && <StudentQr token={demo.qr_token} name="Demo Elev" closeHref={PAGE} />}
               {side === "mere" && <StudentMore schoolId={membership.schoolId} studentId={demo.id} name="Demo Elev" phone="" demo />}
             </div>

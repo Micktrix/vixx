@@ -6,8 +6,8 @@ select plan(14);
 
 create temporary table ids as
 select
-  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B – modulplan' and m.number = 3) as b3,
-  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B – modulplan' and m.number = 4) as b4;
+  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 3) as b3,
+  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 4) as b4;
 grant select on ids to authenticated;
 
 -- Et modul fra et andet forløb (C/E) må ikke bruges til Bent.

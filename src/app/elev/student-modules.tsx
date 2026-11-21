@@ -8,11 +8,13 @@ export function StudentModules({
   teamName,
   modules,
   topics,
+  theoryAtScan,
 }: {
   courseName: string;
   teamName: string | null;
   modules: ModuleProgress[];
   topics: Map<string, string | null>;
+  theoryAtScan: boolean;
 }) {
   const current = suggestedModule(modules);
   const completed = modules.filter((m) => m.completed).length;
@@ -40,7 +42,7 @@ export function StudentModules({
                   Modul {m.number} – {m.name} {m.completed && <span className="text-ok">✓</span>}
                 </b>
                 <span className="text-[13px] text-muted">
-                  {progressText(m)}
+                  {progressText(m, theoryAtScan)}
                   {m.startedOn && ` · startet ${formatDate(m.startedOn)}`}
                 </span>
                 {m.completed && <span className="text-[13px] text-ok">{completionText(m.completed, formatDate)}</span>}

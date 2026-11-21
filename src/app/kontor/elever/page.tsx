@@ -26,9 +26,7 @@ export default async function StudentsPage({ searchParams }: PageProps<"/kontor/
   const teamById = new Map(teams.map((t) => [t.id, t]));
   // Aktive elever på aktive hold først; elever på afsluttede hold og inaktive elever nederst.
   const current = (s: (typeof students)[number]) => s.active && (!s.teamId || !!teamById.get(s.teamId)?.active);
-  const found = query
-    ? students.filter((s) => matchesStudent(query, s.name, s.phone)).sort((a, b) => Number(current(b)) - Number(current(a)))
-    : [];
+  const found = query ? students.filter((s) => matchesStudent(query, s.name, s.phone)).sort((a, b) => Number(current(b)) - Number(current(a))) : [];
 
   return (
     <>
@@ -66,7 +64,10 @@ export default async function StudentsPage({ searchParams }: PageProps<"/kontor/
                 const course = courseById.get(s.courseId);
                 const p = progress(s, course);
                 return (
-                  <li key={s.id} className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line py-2.5 last:border-b-0 ${current(s) ? "" : "text-muted"}`}>
+                  <li
+                    key={s.id}
+                    className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line py-2.5 last:border-b-0 ${current(s) ? "" : "text-muted"}`}
+                  >
                     <Link href={`/kontor/elever/${s.id}`} className="min-w-[180px] font-bold text-ink hover:text-accent-ink hover:underline">
                       {s.name}
                     </Link>
@@ -106,11 +107,13 @@ export default async function StudentsPage({ searchParams }: PageProps<"/kontor/
             Forløb (valgfri)
             <select name="courseId" defaultValue="" className={inputClass}>
               <option value="">Intet</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {courses
+                .filter((c) => c.active && c.kind !== "EU")
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
             </select>
           </label>
           <TextField label="Start (valgfri)" name="startsOn" type="date" />
@@ -134,9 +137,7 @@ export default async function StudentsPage({ searchParams }: PageProps<"/kontor/
               {sorted.map((t) => {
                 const members = students.filter((s) => s.teamId === t.id && s.active);
                 const course = t.courseId ? courseById.get(t.courseId) : undefined;
-                const avg = members.length
-                  ? members.reduce((n, s) => n + progress(s, courseById.get(s.courseId)).share, 0) / members.length
-                  : 0;
+                const avg = members.length ? members.reduce((n, s) => n + progress(s, courseById.get(s.courseId)).share, 0) / members.length : 0;
                 return (
                   <tr key={t.id} className={`border-t border-line ${t.active ? "" : "bg-bg text-muted"}`} data-testid="team-row">
                     <td className="px-[18px] py-2.5">
@@ -174,7 +175,6 @@ export default async function StudentsPage({ searchParams }: PageProps<"/kontor/
           </table>
         </section>
       )}
-
 
       {withoutTeam.length > 0 && (
         <Box title={`Elever uden hold (${withoutTeam.length})`}>

@@ -358,6 +358,23 @@ erstatter papirets lektionsplan med dato og to underskrifter.
 - **Færdselsstyrelsen har sagt ok til den digitale underskrift (Michael, 19. nov. 2026).** Den tegnede
   underskrift kommer derfor med i del 6a.
 
+#### E8-ombygning (bygget 21. nov. 2026, migration `20261121100000_fixed_courses_simple_scan`)
+Kun Færdselsstyrelsens modulplan, gjort enkel (aftalt med Michael 20. nov. 2026):
+- Faste forløb pr. skole: B, C, C/E, D (plan 1.1), EU og Taxa, oprettet automatisk (også for nye skoler).
+  Eksisterende forløb med plan 1.1 er lagt sammen pr. kategori (elever, hold, tællinger og afslutninger flyttet);
+  andre gamle forløb er slået fra og skjult, intet slettet. Låst som standard; admin "Lås op"/"Lås igen" (logges).
+- Skolens kørelektioner (`module_lessons`, lektionsskemaet C + D, `add_lesson_schedule`, `copy_module_lessons`) er
+  fjernet. Kan komme igen som tilvalg.
+- Scanning: én skærm (`record_scan`, alt eller intet): moduler med fremskridt, antal, køreemner (afsnit 2, 7, 9),
+  mørke via 7.19 med bekræftelse og lærerens underskrift, afslutning i samme tryk, "Overført" bag et link.
+- Teori: "Teori registreres ved scanning" (til på B). Fra: teorien bekræftes ved afslutning (`theory_lessons`).
+- Startdatoer gemmes på afslutningen (`started_on`); advarsel om undervisningsdage ved sidste modul.
+- EU-flueben på eleven (`students.eu`); EU-modulerne og EU-scanning bygges, når blanketterne er her.
+- "Undervisende kørelærere" på hold og elev (`plan_teachers`), øverst på planen.
+- Mørkekørslens underskrift (Michael 21. nov. 2026): Vixx gemmer en kopi af den kørende lærers underskrift på
+  kørslen (`dark_strokes`). Den skrives IKKE i styrelsens PDF, fordi blanketten ikke har et felt til den, og det er
+  uvist, om vi må tilføje noget (Michael). Åbent: spørg koereuddannelse@fstyr.dk, før den kommer på den printede plan.
+
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
   oprettes med login. Frivilligt afsnit "Hensyn" (ordblind, farveblind, nedsat hørelse, koncentrationsbesvær,

@@ -1,13 +1,13 @@
 -- Trin E8, del 6c-1: modulplanens versioner (PDF). Kun admin lægger op og tager i brug; en version i brug kan
 -- ikke ændres eller slettes; nye elever får nyeste version, elever i gang beholder deres, og kun admin flytter.
--- Seed: "B – modulplan" har den indbyggede version 1.1; Bent er B-elev, Freja er på C-forløbet.
+-- Seed: "B" har den indbyggede version 1.1; Bent er B-elev, Freja er på C-forløbet.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(15);
 
 create temporary table ids as
 select
-  (select id from public.courses where name = 'B – modulplan') as b,
+  (select id from public.courses where name = 'B' and school_id = '00000000-0000-4000-a000-000000000001') as b,
   (select id from public.module_plan_templates t where t.builtin = 'B-1.1') as b11;
 grant select on ids to authenticated;
 
@@ -25,10 +25,15 @@ select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000
 select throws_ok(
   $$insert into public.module_plan_templates (school_id, course_id, version, storage_path)
     select '00000000-0000-4000-a000-000000000001', b, '9.9', 'x.pdf' from ids$$,
-  '42501', null, 'Kontoret kan ikke lægge en modulplan op');
+  '23514', null, 'Kontoret kan ikke lægge en modulplan op (forløbet er låst)');
 
--- Admin (Anne).
+-- Admin (Anne): kan ikke lægge op, før forløbet er låst op.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000001", "role": "authenticated"}', true);
+select throws_ok(
+  $$insert into public.module_plan_templates (school_id, course_id, version, storage_path)
+    select '00000000-0000-4000-a000-000000000001', b, '1.2', 'skole/b-1.2.pdf' from ids$$,
+  '23514', null, 'Et låst forløb kan ikke få en ny modulplan');
+update public.courses set locked = false where id = (select b from ids);
 select lives_ok(
   $$insert into public.module_plan_templates (school_id, course_id, version, storage_path)
     select '00000000-0000-4000-a000-000000000001', b, '1.2', 'skole/b-1.2.pdf' from ids$$,
@@ -64,20 +69,10 @@ select lives_ok(
   $$update public.students set plan_template_id = (select id from public.module_plan_templates where version = '1.2')
     where id = '00000000-0000-4000-ad00-000000000033'$$,
   'Admin flytter Bent til version 1.2');
-select public.create_module_course('00000000-0000-4000-a000-000000000001', 'CE-1.1', 'Test C/E');
 select throws_ok(
-  $$update public.students set plan_template_id = (select t.id from public.module_plan_templates t join public.courses c on c.id = t.course_id where c.name = 'Test C/E')
+  $$update public.students set plan_template_id = (select t.id from public.module_plan_templates t join public.courses c on c.id = t.course_id where c.kind = 'CE' and c.school_id = '00000000-0000-4000-a000-000000000001')
     where id = '00000000-0000-4000-ad00-000000000033'$$,
   '23514', null, 'En elev kan kun flyttes til en version af sit eget forløb');
-
--- Tomt modulforløb (fx EU): kun admin.
-select lives_ok(
-  $$select public.create_empty_module_course('00000000-0000-4000-a000-000000000001', 'CE', 'C/E med EU')$$,
-  'Admin opretter et tomt modulforløb (fx EU)');
-select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
-select throws_ok(
-  $$select public.create_empty_module_course('00000000-0000-4000-a000-000000000001', 'CE', 'Kontorets EU')$$,
-  '42501', null, 'Kontoret kan ikke oprette modulforløb');
 
 -- Eleven ser ikke modulplanens versioner.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000033", "role": "authenticated"}', true);

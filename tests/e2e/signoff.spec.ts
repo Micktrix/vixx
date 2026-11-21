@@ -1,137 +1,86 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { ADMIN, OFFICE, PASSWORD, loginOk, newTeacher } from "./helpers";
+import { ADMIN, INSTRUCTOR, PASSWORD, loginOk } from "./helpers";
 
-const EMIL = "00000000-0000-4000-ad00-000000000031"; // elev på C-forløbet, ydelse Amu C
+const EMIL = "00000000-0000-4000-ad00-000000000031"; // elev på C-holdet (teori bekræftes ved afslutning)
 
-test("læreren scanner elevens kode og kvitterer, eleven bekræfter, og kontoret ser lektionen gennemført", async ({ browser }) => {
+// Ombygningen 21. nov. 2026: modulerne én gang, antal, køreemner med flueben, mørke (7.19) og afslutning i samme tryk.
+test("læreren bekræfter kørsel og afslutter modul 1 og 2 i samme scanning; intet går til lønnen", async ({ page }) => {
   const admin = localAdmin();
   const { data: student } = await admin.from("students").select("qr_token").eq("id", EMIL).single();
-  const { page: teacher, instructorId } = await newTeacher(browser, `E2E Kvittering ${Date.now() % 100000}`);
-
+  const { data: lars } = await admin.from("instructors").select("id").eq("user_id", "00000000-0000-4000-a100-000000000011").single();
+  const { count: regsBefore } = await admin.from("registrations").select("id", { count: "exact", head: true }).eq("instructor_id", lars!.id);
   try {
-    // Elevens QR-kode er et link til kvitteringen i lærer-appen.
-    const studentPage = await browser.newPage();
-    await loginOk(studentPage, "20000031", PASSWORD);
-    await studentPage.getByRole("link", { name: "Vis min QR-kode" }).click();
-    await expect(studentPage.getByTestId("student-qr").locator("svg")).toBeVisible();
+    await loginOk(page, INSTRUCTOR, PASSWORD);
+    await page.goto(`/laerer/scan/${student!.qr_token}`);
+    await expect(page.getByRole("heading", { name: "Emil Elev" })).toBeVisible();
+    // C: teori scannes ikke, så der er kun kørsel. Kun køreemner (afsnit 2, 7, 9) med flueben fra start.
+    await expect(page.getByRole("radio", { name: "Teori", exact: true })).toHaveCount(0);
+    await expect(page.getByTestId("scan-topics")).not.toContainText("Afsnit 3");
+    await page.getByLabel(/Antal lektioner/).selectOption("1");
+    await expect(page.getByRole("button", { name: "Bekræft 1 kørselslektion" })).toBeVisible();
+    await page.getByLabel(/Antal lektioner/).selectOption("2");
+    await page.getByRole("checkbox", { name: "7.7 Møde" }).uncheck();
+    await page.getByRole("button", { name: "Bekræft 2 kørselslektioner" }).click();
+    await expect(page.getByTestId("signoff-done")).toHaveText("✓ 2 kørselslektioner er bekræftet i modul 1.");
+    await expect(page.getByTestId("scan-topics").locator('[data-state="missing"]')).toContainText("7.7 Møde");
 
-    // Kørselslektion 2: kvittér og registrér til løn i samme tryk; ét punkt blev ikke nået.
-    await teacher.goto(`/laerer/scan/${student!.qr_token}`);
-    await expect(teacher.getByRole("heading", { name: "Emil Elev" })).toBeVisible();
-    await teacher.getByRole("radio", { name: /Lektion 2/ }).check();
-    await teacher.getByRole("checkbox", { name: "2.2 Lastbilens spejle" }).check();
-    await expect(teacher.getByText("Kvitteringen gælder kun elevens forløb")).toBeVisible();
-    await teacher.getByRole("button", { name: "Kvittér for lektion 2" }).click();
-    await expect(teacher.getByTestId("signoff-done")).toContainText("Lektion 2 er kvitteret");
+    // 3 mere når minimum (5): knappen skifter, og afslutningen er i samme tryk med teori udfyldt med minimum.
+    await page.getByLabel(/Antal lektioner/).selectOption("3");
+    const complete = page.getByTestId("complete-module");
+    await expect(complete).toContainText("Det her er sidste lektion i modul 1");
+    await expect(complete.getByLabel("Teorilektioner i modulet")).toHaveValue("8");
+    await complete.getByRole("checkbox", { name: /Jeg erklærer/ }).check();
+    await complete.getByRole("button", { name: "Bekræft og afslut modul 1" }).click();
+    await expect(page.getByTestId("signoff-done")).toHaveText("✓ 3 kørselslektioner er bekræftet, og modul 1 er afsluttet.");
 
-    // Teorilektion 1: kun kvittering, ingen registrering til lønnen.
-    await teacher.getByRole("radio", { name: /Lektion 1/ }).check();
-    await expect(teacher.getByText("Kvitteringen gælder kun elevens forløb")).toBeVisible();
-    await teacher.getByRole("button", { name: "Kvittér for lektion 1" }).click();
-    await expect(teacher.getByTestId("signoff-done")).toContainText("Lektion 1 er kvitteret");
+    // Modul 2 kræver mørke: 7.19 har ikke flueben fra start, og modulet kan først afsluttes, når det er bekræftet.
+    await page.getByLabel(/Antal lektioner/).selectOption("5");
+    await expect(page.getByRole("button", { name: "Bekræft 5 kørselslektioner" })).toBeVisible();
+    const dark = page.getByRole("checkbox", { name: /7\.19/ });
+    await expect(dark).not.toBeChecked();
+    await dark.check();
+    await expect(page.getByTestId("complete-module")).toHaveCount(0);
+    await page.getByRole("checkbox", { name: /Ja, kørt i mørke/ }).check();
+    await page.getByTestId("complete-module").getByRole("checkbox", { name: /Jeg erklærer/ }).check();
+    await page.getByRole("button", { name: "Bekræft og afslut modul 2" }).click();
+    await expect(page.getByTestId("signoff-done")).toContainText("modul 2 er afsluttet");
 
-    // Lektioner og timer er adskilt: scanningen laver ingen timer til lønnen.
-    const { count: regs } = await admin.from("registrations").select("id", { count: "exact", head: true }).eq("instructor_id", instructorId);
-    expect(regs).toBe(0);
-
-    // Eleven bekræfter begge lektioner.
-    await studentPage.goto("/elev");
-    const waiting = studentPage.getByTestId("student-waiting");
-    await expect(waiting).toContainText("Du har 2 lektioner at bekræfte");
-    await expect(waiting).toContainText("Ikke nået: 2.2 Lastbilens spejle");
-    await waiting.getByRole("button", { name: "Bekræft" }).first().click();
-    await expect(studentPage.getByTestId("student-waiting")).toContainText("Du har 1 lektion at bekræfte");
-    await studentPage.getByTestId("student-waiting").getByRole("button", { name: "Bekræft" }).click();
-    await expect(studentPage.getByTestId("student-waiting")).toHaveCount(0);
-    await expect(studentPage.getByTestId("student-done")).toHaveText("2");
-    await expect(studentPage.getByTestId("lesson-instructor").first()).toContainText("E2E Kvittering");
-
-    // Kontoret ser lektionerne som gennemført.
-    const office = await browser.newPage();
-    await loginOk(office, OFFICE, PASSWORD);
-    await office.goto(`/kontor/elever/${EMIL}`);
-    await expect(office.getByText("2 af 3 lektioner gennemført")).toBeVisible();
-    await expect(office.getByTestId("student-lessons")).toContainText("Ikke nået: 2.2 Lastbilens spejle");
+    const { data: darkRow } = await admin.from("module_signoffs").select("dark_strokes").eq("student_id", EMIL).eq("dark", true).single();
+    expect(darkRow?.dark_strokes).toBeTruthy(); // Lars' underskrift på mørkekørslen
+    const { count: regsAfter } = await admin.from("registrations").select("id", { count: "exact", head: true }).eq("instructor_id", lars!.id);
+    expect(regsAfter).toBe(regsBefore);
   } finally {
-    await admin.from("lesson_signoffs").delete().eq("student_id", EMIL);
-    await admin.from("registrations").delete().eq("instructor_id", instructorId);
+    await admin.from("module_completions").delete().eq("student_id", EMIL);
+    await admin.from("module_signoffs").delete().eq("student_id", EMIL);
   }
 });
 
 test("en ukendt kode viser ingen elev", async ({ page }) => {
-  await loginOk(page, "20000011", PASSWORD);
+  await loginOk(page, INSTRUCTOR, PASSWORD);
   await page.goto("/laerer/scan/00000000-0000-4000-0000-000000000000");
   await expect(page.getByRole("heading", { name: "Ukendt elev" })).toBeVisible();
 });
 
-test("admin viser elevens skærm med en fiktiv demo-elev, scanner test-koden og bekræfter; intet går til lønnen", async ({ browser, page }) => {
+test("B: teori scannes og tæller op hos eleven", async ({ browser }) => {
   const admin = localAdmin();
-  const { page: teacher, instructorId } = await newTeacher(browser, `E2E Demo ${Date.now() % 100000}`);
-  try {
-    await loginOk(page, ADMIN, PASSWORD);
-    await page.getByRole("navigation", { name: "Skift mellem kontor, lærer og elev" }).getByRole("link", { name: "Elev" }).click();
-    await expect(page.getByRole("heading", { name: "Elevens skærm" })).toBeVisible();
-    await page.getByRole("button", { name: "Opret demo-elev" }).click();
-    const phone = page.getByTestId("demo-phone");
-    await expect(phone.getByRole("heading", { name: "Hej Demo" })).toBeVisible();
-    await phone.getByRole("link", { name: "Vis min QR-kode" }).click();
-    await expect(phone.getByTestId("student-qr").locator("svg")).toBeVisible();
-    await phone.getByRole("link", { name: "‹ Tilbage" }).click();
-
-    const { data: demo } = await admin.from("students").select("id, qr_token").eq("is_demo", true).single();
-    await teacher.goto(`/laerer/scan/${demo!.qr_token}`);
-    await expect(teacher.getByRole("heading", { name: "Demo Elev" })).toBeVisible();
-    await teacher.getByRole("radio", { name: /Lektion 2/ }).check();
-    await teacher.getByRole("button", { name: "Kvittér for lektion 2" }).click();
-    await expect(teacher.getByTestId("signoff-done")).toBeVisible();
-
-    await expect(phone.getByTestId("student-waiting")).toContainText("Lektion 2", { timeout: 10000 });
-    await phone.getByRole("button", { name: "Bekræft" }).click();
-    await expect(phone.getByTestId("student-done")).toHaveText("1");
-
-    const { count } = await admin.from("registrations").select("id", { count: "exact", head: true }).eq("instructor_id", instructorId);
-    expect(count).toBe(0);
-  } finally {
-    const { data: demos } = await admin.from("students").select("id, user_id").eq("is_demo", true);
-    for (const d of demos ?? []) {
-      await admin.from("lesson_signoffs").delete().eq("student_id", d.id);
-      await admin.from("students").delete().eq("id", d.id);
-      await admin.auth.admin.deleteUser(d.user_id);
-    }
-  }
-});
-
-test("læreren scanner og kvitterer for teori, som tæller op hos eleven og kontoret", async ({ browser }) => {
-  const admin = localAdmin();
-  const { data: student } = await admin.from("students").select("qr_token").eq("id", EMIL).single();
+  const BENT = "00000000-0000-4000-ad00-000000000033";
+  const { data: student } = await admin.from("students").select("qr_token").eq("id", BENT).single();
   const teacher = await browser.newPage();
   try {
-    await loginOk(teacher, "20000011", PASSWORD);
+    await loginOk(teacher, INSTRUCTOR, PASSWORD);
     await teacher.goto(`/laerer/scan/${student!.qr_token}`);
-    await expect(teacher.getByTestId("scan-theory")).toContainText("Teori: 0 af 8");
-    await teacher.getByRole("radio", { name: /^Teori/ }).check();
-    await teacher.getByLabel("Antal teorilektioner").selectOption("3");
-    await teacher.getByRole("button", { name: "Kvittér for teori" }).click();
-    await expect(teacher.getByTestId("signoff-done")).toContainText("Teorien er kvitteret");
-    await expect(teacher.getByTestId("scan-theory")).toContainText("Teori: 3 af 8");
+    await teacher.getByRole("radio", { name: "Teori", exact: true }).check();
+    await teacher.getByLabel(/Antal lektioner/).selectOption("1");
+    await teacher.getByRole("button", { name: "Bekræft 1 teorilektion" }).click();
+    await expect(teacher.getByTestId("signoff-done")).toHaveText("✓ 1 teorilektion er bekræftet i modul 2.");
+    await expect(teacher.getByTestId("scan-modules")).toContainText("Teori 3 af 5");
 
-    const studentPage = await browser.newPage();
-    await loginOk(studentPage, "20000031", PASSWORD);
-    await expect(studentPage.getByTestId("student-theory")).toContainText("3 af 8");
-
-    // Admin retter antallet til 2 på elevens side.
     const office = await browser.newPage();
     await loginOk(office, ADMIN, PASSWORD);
-    await office.goto(`/kontor/elever/${EMIL}`);
-    const rows = office.getByTestId("student-theory-rows");
-    await expect(rows).toContainText("3 lektioner");
-    await rows.getByLabel("Antal").selectOption("2");
-    await rows.getByRole("button", { name: "Ret" }).click();
-    await expect(rows).toContainText("2 lektioner");
-    await office.goto("/kontor/elever/hold/00000000-0000-4000-ac00-000000000001");
-    await expect(office.getByTestId("board-student").filter({ hasText: "Emil Elev" }).getByTestId("board-theory")).toContainText("2/8");
+    await office.goto(`/kontor/elever/${BENT}`);
+    await expect(office.getByTestId("student-modules")).toContainText("Teori 3 af 5");
   } finally {
-    await admin.from("theory_signoffs").delete().eq("student_id", EMIL);
+    await admin.from("module_signoffs").delete().eq("student_id", BENT).eq("kind", "theory").gte("lesson_date", new Date().toISOString().slice(0, 10));
   }
 });

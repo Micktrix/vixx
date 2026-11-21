@@ -6,110 +6,61 @@ import type { ActionState } from "@/lib/action-state";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
-// Lærerens scanning af eleven: tæl lektioner i et modul, afslut et modul og registrér repetition. Det gælder kun
+// Lærerens scanning af eleven: bekræft lektioner i et modul (og afslut det) og registrér repetition. Det gælder kun
 // elevens forløb; timen til lønnen registrerer læreren i kalenderen (lektioner og timer er adskilt, 18. nov. 2026).
 
 function dbError(error: { code?: string; message: string } | null, fallback: string): ActionState {
   if (!error) return undefined;
-  if (["23P01", "23514"].includes(error.code ?? "")) return { error: error.message };
+  if (["23P01", "23514", "P0001"].includes(error.code ?? "")) return { error: error.message };
   if (error.code === "42501") return { error: "Du har ikke adgang til at kvittere for denne elev." };
   return { error: fallback };
 }
 
-// Punkterne står med flueben fra start; dem, læreren har fjernet fluebenet fra, er ikke kørt.
-function notDriven(formData: FormData, allKey: string, drivenKey: string): string | null {
-  const driven = new Set(formData.getAll(drivenKey).map(String));
-  return formData.getAll(allKey).map(String).filter((item) => !driven.has(item)).join("\n") || null;
-}
-
-// Modulforløb (trin E8): teori eller kørsel tælles i det valgte modul. Lærerens scanning er nok (ingen
-// elevunderskrift i modulplanen), og det går ikke til lønnen.
-export async function countModuleLessons(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user, membership } = await requireRole(["instructor"]);
+// Én scanning (ombygning 21. nov. 2026): lektioner i modulet og evt. afslutning af modulet i samme tryk.
+// Databasen gemmer alt eller intet og tjekker minimum, mørke (7.19), teori, rækkefølge og underskrift.
+// Køreemnerne står med flueben fra start (7.19 dog ikke, når modulet har krav om mørke); dem uden flueben er
+// ikke kørt. Det går ikke til lønnen: timen registrerer læreren i kalenderen.
+export async function recordScan(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["instructor"]);
   const text = (k: string) => String(formData.get(k) ?? "").trim();
-  const token = text("token");
-  const kind = text("kind");
+  const kind = text("kind") === "theory" ? "theory" : "driving";
   const count = Number(text("count"));
+  const complete = text("complete") === "1";
+  const transferred = formData.get("transferred") === "on";
   if (!text("moduleId")) return { error: "Vælg modulet." };
-  // Skolens kørelektioner: én tælling pr. valgt lektion; databasen sætter modul, kørsel, antal og mørke.
-  const lessons = formData.getAll("lesson").map(String).filter(Boolean);
-  if (lessons.length && kind === "driving") {
-    const supabase = await createClient();
-    const { data: instructor } = await supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single();
-    if (!instructor) return { error: "Du har ikke adgang til at kvittere." };
-    const { error } = await supabase.from("module_signoffs").insert(
-      lessons.map((id) => ({
-        school_id: membership.schoolId,
-        student_id: text("studentId"),
-        course_module_id: text("moduleId"),
-        kind: "driving",
-        lesson_count: 1,
-        instructor_id: instructor.id,
-        module_lesson_id: id,
-        skipped_items: notDriven(formData, `all:${id}`, `drive:${id}`),
-        manual_gear: formData.get("manualGear") === "on",
-      })),
-    );
-    if (error?.code === "23505") return { error: "Lektionen er allerede kørt." };
-    const failed = dbError(error, "Lektionen kunne ikke gemmes. Prøv igen.");
-    if (failed) return failed;
-    revalidatePath("/laerer", "layout");
-    revalidatePath("/kontor", "layout");
-    revalidatePath("/elev", "layout");
-    redirect(`/laerer/scan/${token}?kvitteret=Lektion`);
-  }
-  if (kind !== "theory" && kind !== "driving") return { error: "Vælg teori eller kørsel." };
-  if (!Number.isInteger(count) || count < 1 || count > 12) return { error: "Vælg antal lektioner." };
-  const supabase = await createClient();
-  const { data: instructor } = await supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single();
-  if (!instructor) return { error: "Du har ikke adgang til at kvittere." };
-  const { error } = await supabase.from("module_signoffs").insert({
-    school_id: membership.schoolId,
-    student_id: text("studentId"),
-    course_module_id: text("moduleId"),
-    kind,
-    lesson_count: count,
-    dark: kind === "driving" && formData.get("dark") === "on",
-    manual_gear: kind === "driving" && formData.get("manualGear") === "on",
-    instructor_id: instructor.id,
-    // Modulets punkter, der ikke blev kørt (kørsel uden skolens lektion).
-    skipped_items: kind === "driving" ? notDriven(formData, "allTopic", "driveTopic") : null,
-  });
-  const failed = dbError(error, "Lektionerne kunne ikke tælles. Prøv igen.");
-  if (failed) return failed;
-  revalidatePath("/laerer", "layout");
-  revalidatePath("/kontor", "layout");
-  revalidatePath("/elev", "layout");
-  redirect(`/laerer/scan/${token}?kvitteret=Modul`);
-}
-
-// Afslut elevens modul (trin E8): erklæringen skal være sat. Databasen tjekker minimum (medmindre "Overført
-// fra lektionsplan") og rækkefølgen, regner ekstra lektioner ud og gemmer dato og lærer.
-export async function completeModule(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user, membership } = await requireRole(["instructor"]);
-  const text = (k: string) => String(formData.get(k) ?? "").trim();
-  if (formData.get("declaration") !== "on") return { error: "Sæt flueben ved erklæringen." };
+  if (!Number.isInteger(count) || count < 0 || count > 8 || (count === 0 && !(complete && transferred))) return { error: "Vælg antal lektioner." };
+  const driven = new Set(formData.getAll("driveTopic").map(String));
+  const all = formData.getAll("allTopic").map(String);
+  const darkTopic = text("darkTopic");
+  const darkChecked = !!darkTopic && driven.has(darkTopic);
+  if (kind === "driving" && darkChecked && text("darkRequired") === "1" && formData.get("darkConfirm") !== "on")
+    return { error: "Bekræft, at der er kørt i mørke, eller fjern fluebenet ved 7.19." };
+  if (complete && formData.get("declaration") !== "on") return { error: "Sæt flueben ved erklæringen." };
   if (text("selfStudy").length > 500) return { error: "Selvstudie er for langt." };
+  const theory = text("theoryLessons");
   const supabase = await createClient();
-  const { data: instructor } = await supabase.from("instructors").select("id").eq("school_id", membership.schoolId).eq("user_id", user.id).single();
-  if (!instructor) return { error: "Du har ikke adgang til at afslutte moduler." };
-  const { error } = await supabase.from("module_completions").insert({
-    school_id: membership.schoolId,
-    student_id: text("studentId"),
-    course_module_id: text("moduleId"),
-    module_number: 0, // sættes af databasen fra modulet
-    instructor_id: instructor.id,
-    declaration: true,
-    transferred: formData.get("transferred") === "on",
-    self_study: text("selfStudy") || null,
+  const { error } = await supabase.rpc("record_scan", {
+    p_student: text("studentId"),
+    p_module: text("moduleId"),
+    p_kind: kind,
+    p_count: count,
+    p_skipped: kind === "driving" ? all.filter((t) => !driven.has(t)).join("\n") || null : null,
+    p_dark: kind === "driving" && darkChecked,
+    p_manual_gear: formData.get("manualGear") === "on",
+    p_complete: complete,
+    p_theory_lessons: complete && theory ? Number(theory) : null,
+    p_started_on: complete && text("startedOn") ? text("startedOn") : null,
+    p_self_study: complete ? text("selfStudy") || null : null,
+    p_transferred: complete && transferred,
   });
   if (error?.code === "23505") return { error: "Modulet er allerede afsluttet." };
-  const failed = dbError(error, "Modulet kunne ikke afsluttes. Prøv igen.");
+  const failed = dbError(error, "Scanningen kunne ikke gemmes. Prøv igen.");
   if (failed) return failed;
   revalidatePath("/laerer", "layout");
   revalidatePath("/kontor", "layout");
   revalidatePath("/elev", "layout");
-  redirect(`/laerer/scan/${text("token")}?kvitteret=Afsluttet`);
+  const q = new URLSearchParams({ n: String(count), k: kind, m: text("moduleNumber"), a: complete ? "1" : "0" });
+  redirect(`/laerer/scan/${text("token")}?${q}`);
 }
 
 // Repetitionslektioner efter ikke bestået praktisk prøve (trin E8, del 5). Databasen kræver, at alle moduler

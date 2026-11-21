@@ -12,7 +12,7 @@ test("kontoret opretter et hold og en elev, og eleven ser sit forløb i sin egen
   await page.goto("/kontor/elever");
   const newTeam = page.locator("form").filter({ has: page.getByRole("button", { name: "Opret hold" }) });
   await newTeam.getByLabel("Navn").fill(teamName);
-  await newTeam.getByLabel("Forløb (valgfri)").selectOption({ label: "C – kørselsundervisning" });
+  await newTeam.getByLabel("Forløb (valgfri)").selectOption({ label: "C" });
   await newTeam.getByRole("button", { name: "Opret hold" }).click();
   await page.waitForURL(/\/kontor\/elever\/hold\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { name: teamName })).toBeVisible();

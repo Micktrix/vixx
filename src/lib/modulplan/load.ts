@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { todayDk } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -32,6 +33,10 @@ type StudentRow = {
   address: string | null;
   manual_gear: boolean;
   plan_template_id: string | null;
+  team_id: string | null;
+  created_at: string;
+  course_start_on: string | null;
+  teams: { starts_on: string | null } | null;
   profiles: { full_name: string; phone: string } | null;
   courses: { name: string; category_code: string; plan_kind: string; course_modules: { id: string; number: number }[] } | null;
   module_signoffs: { course_module_id: string; lesson_date: string; kind: string; lesson_count: number; manual_gear: boolean }[];
@@ -40,6 +45,7 @@ type StudentRow = {
     id: string;
     course_module_id: string;
     completed_on: string;
+    started_on: string | null;
     instructor_name: string;
     extra_theory: number;
     extra_driving: number;
@@ -47,7 +53,7 @@ type StudentRow = {
     transferred: boolean;
     annulled_at: string | null;
   }[];
-  module_plan_teachers: { id: string; instructor_name: string; first_on: string }[];
+  module_plan_teachers: { id: string; instructor_id: string | null; instructor_name: string; first_on: string }[];
 };
 
 export async function loadModulePlan(studentId: string) {
@@ -55,7 +61,7 @@ export async function loadModulePlan(studentId: string) {
   const { data } = await supabase
     .from("students")
     .select(
-      "id, school_id, address, manual_gear, plan_template_id, profiles(full_name, phone), courses(name, category_code, plan_kind, course_modules(id, number)), module_signoffs(course_module_id, lesson_date, kind, lesson_count, manual_gear), repetition_lessons(id, lesson_date, lesson_count), module_completions(id, course_module_id, completed_on, instructor_name, extra_theory, extra_driving, self_study, transferred, annulled_at), module_plan_teachers(id, instructor_name, first_on)",
+      "id, school_id, address, manual_gear, plan_template_id, team_id, created_at, course_start_on, teams(starts_on), profiles(full_name, phone), courses(name, category_code, plan_kind, course_modules(id, number)), module_signoffs(course_module_id, lesson_date, kind, lesson_count, manual_gear), repetition_lessons(id, lesson_date, lesson_count), module_completions(id, course_module_id, completed_on, started_on, instructor_name, extra_theory, extra_driving, self_study, transferred, annulled_at), module_plan_teachers(id, instructor_id, instructor_name, first_on)",
     )
     .eq("id", studentId)
     .maybeSingle();
@@ -75,7 +81,15 @@ export async function loadModulePlan(studentId: string) {
   // Underskrifterne (service role).
   const admin = createAdminClient();
   const completions = student.module_completions.filter((c) => !c.annulled_at);
-  const teacherRows = [...student.module_plan_teachers].sort((a, b) => a.first_on.localeCompare(b.first_on));
+  // Undervisende kørelærere: først dem, kontoret har valgt (på holdet eller eleven), så dem, der har haft eleven.
+  const { data: chosenRows } = await supabase
+    .from("plan_teachers")
+    .select("instructor_id, created_at")
+    .or(student.team_id ? `team_id.eq.${student.team_id},student_id.eq.${student.id}` : `student_id.eq.${student.id}`)
+    .order("created_at");
+  const chosenIds = [...new Set((chosenRows ?? []).map((t) => t.instructor_id as string))];
+  const autoRows = [...student.module_plan_teachers].sort((a, b) => a.first_on.localeCompare(b.first_on));
+  const teacherRows = autoRows;
   const repetitions = [...student.repetition_lessons].sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
   const [{ data: completionStrokes }, { data: teacherStrokes }, { data: repetitionStrokes }] = await Promise.all([
     admin.from("module_completions").select("id, strokes").in("id", completions.length ? completions.map((c) => c.id) : [randomUUID()]),
@@ -83,6 +97,22 @@ export async function loadModulePlan(studentId: string) {
     admin.from("repetition_lessons").select("id, strokes").in("id", repetitions.length ? repetitions.map((r) => r.id) : [randomUUID()]),
   ]);
   const strokesOf = (rows: { id: string; strokes: string | null }[] | null, id: string) => rows?.find((r) => r.id === id)?.strokes ?? null;
+  // De valgte læreres navn og gemte underskrift (service role; underskriften kommer på, når læreren har gemt den).
+  const { data: chosenInfo } = chosenIds.length ? await admin.from("instructors").select("id, user_id").in("id", chosenIds) : { data: [] };
+  const userIds = (chosenInfo ?? []).map((i) => i.user_id as string);
+  const [{ data: chosenNames }, { data: chosenSigs }] = await Promise.all([
+    admin.from("profiles").select("id, full_name").in("id", userIds.length ? userIds : [randomUUID()]),
+    admin.from("instructor_signatures").select("user_id, strokes").eq("school_id", student.school_id).in("user_id", userIds.length ? userIds : [randomUUID()]),
+  ]);
+  const chosen = chosenIds.flatMap((id) => {
+    const userId = (chosenInfo ?? []).find((x) => x.id === id)?.user_id;
+    if (!userId) return [];
+    const name = (chosenNames ?? []).find((p) => p.id === userId)?.full_name ?? "";
+    return [{ id, name, strokes: (chosenSigs ?? []).find((g) => g.user_id === userId)?.strokes ?? null }];
+  });
+  // Start af modul 1: elevens egen dato, ellers holdets startdato, ellers oprettelsesdatoen.
+  const courseStart = student.course_start_on ?? student.teams?.starts_on ?? todayDk(new Date(student.created_at));
+  const firstNumber = Math.min(...course.course_modules.map((m) => m.number));
 
   const plan: PlanData = {
     student: {
@@ -96,14 +126,23 @@ export async function loadModulePlan(studentId: string) {
       address: school?.address ?? "",
       phone: school?.contact_phone ? formatPhone(school.contact_phone) : "",
     },
-    teachers: teacherRows.map((t) => ({ name: t.instructor_name, strokes: strokesOf(teacherStrokes, t.id) })),
+    teachers: [
+      ...chosen.map((t) => ({ name: t.name, strokes: t.strokes })),
+      ...teacherRows
+        .filter((t) => !chosen.some((c) => c.id === t.instructor_id))
+        .map((t) => ({ name: t.instructor_name, strokes: strokesOf(teacherStrokes, t.id) })),
+    ],
     modules: [...course.course_modules]
       .sort((a, b) => a.number - b.number)
       .map((m) => {
         const c = completions.find((x) => x.course_module_id === m.id);
         return {
           number: m.number,
-          startedOn: student.module_signoffs.filter((s) => s.course_module_id === m.id).map((s) => s.lesson_date).sort()[0] ?? null,
+          startedOn:
+            c?.started_on ??
+            (m.number === firstNumber
+              ? courseStart
+              : (student.module_signoffs.filter((s) => s.course_module_id === m.id).map((s) => s.lesson_date).sort()[0] ?? null)),
           completion: c
             ? {
                 completedOn: c.completed_on,

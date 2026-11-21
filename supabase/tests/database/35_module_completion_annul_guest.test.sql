@@ -7,8 +7,8 @@ select plan(15);
 
 create temporary table ids as
 select
-  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B – modulplan' and m.number = 1) as b1,
-  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B – modulplan' and m.number = 2) as b2;
+  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 1) as b1,
+  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 2) as b2;
 grant select on ids to authenticated;
 
 set local role authenticated;

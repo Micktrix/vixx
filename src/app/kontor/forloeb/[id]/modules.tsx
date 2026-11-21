@@ -1,9 +1,7 @@
 import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { Box } from "@/components/box";
-import type { PlanLesson } from "@/lib/module-progress";
 import { addModule, deleteModule, updateModule } from "../actions";
-import { ModuleLessons } from "./lessons";
 
 export type ModuleRow = {
   id: string;
@@ -14,12 +12,11 @@ export type ModuleRow = {
   min_dark: number;
   topics: string | null;
   notes: string | null;
-  module_lessons: PlanLesson[];
 };
 
 // Minimum for et modul, fx "Minimum 9 teori- og 6 kørselslektioner, heraf 1 i mørke".
 export function moduleMinimum(m: Pick<ModuleRow, "min_theory" | "min_driving" | "min_dark">) {
-  const dark = m.min_dark > 0 ? `, heraf ${m.min_dark} i mørke` : "";
+  const dark = m.min_dark > 0 ? ", heraf kørsel i mørke (7.19)" : "";
   if (!m.min_driving) return `Minimum ${m.min_theory} teorilektioner`;
   if (!m.min_theory) return `Minimum ${m.min_driving} kørselslektioner${dark}`;
   return `Minimum ${m.min_theory} teori- og ${m.min_driving} kørselslektioner${dark}`;
@@ -47,7 +44,6 @@ export function ModuleList({ modules, isAdmin }: { modules: ModuleRow[]; isAdmin
             </ul>
           )}
           {m.notes && <p className="text-sm text-muted">{m.notes}</p>}
-          {(m.module_lessons.length > 0 || isAdmin) && <ModuleLessons moduleId={m.id} lessons={m.module_lessons} isAdmin={isAdmin} />}
           {isAdmin && (
             <details className="mt-1 border-t border-line pt-2">
               <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Ret modul {m.number}</summary>
@@ -56,8 +52,24 @@ export function ModuleList({ modules, isAdmin }: { modules: ModuleRow[]; isAdmin
                 <TextField label="Navn" name="name" required maxLength={120} defaultValue={m.name} />
                 <div className="flex flex-wrap gap-3">
                   <TextField label="Min. teori" name="minTheory" type="number" min={0} max={100} defaultValue={m.min_theory} className="w-[130px]" />
-                  <TextField label="Min. kørsel" name="minDriving" type="number" min={0} max={100} defaultValue={m.min_driving} className="w-[130px]" />
-                  <TextField label="Heraf i mørke" name="minDark" type="number" min={0} max={100} defaultValue={m.min_dark} className="w-[130px]" />
+                  <TextField
+                    label="Min. kørsel"
+                    name="minDriving"
+                    type="number"
+                    min={0}
+                    max={100}
+                    defaultValue={m.min_driving}
+                    className="w-[130px]"
+                  />
+                  <TextField
+                    label="Mørke (1 = krav)"
+                    name="minDark"
+                    type="number"
+                    min={0}
+                    max={100}
+                    defaultValue={m.min_dark}
+                    className="w-[130px]"
+                  />
                 </div>
                 <label className="flex flex-col gap-1.5 text-sm font-bold">
                   Emner (én linje pr. afsnit)
@@ -96,7 +108,7 @@ export function NewModuleForm({ courseId, next }: { courseId: string; next: numb
         <div className="flex flex-wrap gap-3">
           <TextField label="Min. teori" name="minTheory" type="number" min={0} max={100} defaultValue={0} className="w-[130px]" />
           <TextField label="Min. kørsel" name="minDriving" type="number" min={0} max={100} defaultValue={0} className="w-[130px]" />
-          <TextField label="Heraf i mørke" name="minDark" type="number" min={0} max={100} defaultValue={0} className="w-[130px]" />
+          <TextField label="Mørke (1 = krav)" name="minDark" type="number" min={0} max={100} defaultValue={0} className="w-[130px]" />
         </div>
         <label className="flex flex-col gap-1.5 text-sm font-bold">
           Emner (én linje pr. afsnit)

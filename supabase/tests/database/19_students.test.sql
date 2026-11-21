@@ -17,7 +17,7 @@ select is((select count(*) from public.registrations), 0::bigint, 'Eleven ser ik
 select is((select count(*) from public.bookings), 0::bigint, 'Eleven ser ikke bookinger');
 select throws_ok(
   $$insert into public.students (school_id, user_id, course_id) values
-    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000031', (select id from public.courses where name = 'C – modulplan'))$$,
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a100-000000000031', (select id from public.courses where name = 'C' and school_id = '00000000-0000-4000-a000-000000000001'))$$,
   '42501', null, 'Eleven kan ikke oprette elever');
 
 -- Læreren (Lars) ser skolens elever og deres navne (til QR-kvittering).

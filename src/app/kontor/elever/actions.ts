@@ -42,6 +42,23 @@ export async function saveTeam(_prev: ActionState, formData: FormData): Promise<
   return { message: "Holdet er gemt." };
 }
 
+// "Undervisende kørelærere" på holdet (alle holdets elever) eller på eleven uden hold. De kommer øverst på
+// elevens modulplan med navn og gemt underskrift. Listen erstattes af det valgte.
+export async function savePlanTeachers(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin", "office"]);
+  const column = text(formData, "target") === "team" ? "team_id" : "student_id";
+  const id = text(formData, "id");
+  const chosen = [...new Set(formData.getAll("planTeachers").map(String).filter(Boolean))];
+  const supabase = await createClient();
+  const { error: delError } = await supabase.from("plan_teachers").delete().eq(column, id).eq("school_id", membership.schoolId);
+  const { error } = chosen.length
+    ? await supabase.from("plan_teachers").insert(chosen.map((instructor_id) => ({ school_id: membership.schoolId, [column]: id, instructor_id })))
+    : { error: null };
+  if (delError || error) return { error: "Kørelærerne kunne ikke gemmes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  return { message: "Undervisende kørelærere er gemt." };
+}
+
 // Afslut eller genåbn et hold. Et afsluttet hold kan ikke få nye elever (databasen).
 export async function setTeamActive(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { membership } = await requireRole(["admin", "office"]);
@@ -128,9 +145,14 @@ function readStudent(formData: FormData) {
   if (!courseId) return { error: "Vælg et forløb." } as const;
   const address = text(formData, "address");
   if (address.length > 200) return { error: "Adressen er for lang." } as const;
+  const startRaw = text(formData, "courseStartOn");
+  const courseStartOn = startRaw ? parseDateInput(startRaw) : null;
+  if (startRaw && !courseStartOn) return { error: "Startdatoen er ikke gyldig." } as const;
   return {
     address: address || null,
     manual_gear: formData.get("manualGear") === "on",
+    eu: formData.get("eu") === "on",
+    course_start_on: courseStartOn,
     course_id: courseId,
     team_id: text(formData, "teamId") || null,
     service_id: text(formData, "serviceId") || null,
@@ -262,6 +284,7 @@ export async function completeModuleForGuest(_prev: ActionState, formData: FormD
     declaration: false,
     transferred: formData.get("transferred") === "on",
     self_study: text(formData, "selfStudy") || null,
+    theory_lessons: text(formData, "theoryLessons") ? Number(text(formData, "theoryLessons")) : null,
     comment,
   });
   if (error?.code === "23505") return { error: "Modulet er allerede afsluttet." };

@@ -8,9 +8,9 @@ select plan(18);
 
 create temporary table ids as
 select
-  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B – modulplan' and m.number = 1) as b1,
-  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B – modulplan' and m.number = 2) as b2,
-  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B – modulplan' and m.number = 3) as b3,
+  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 1) as b1,
+  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 2) as b2,
+  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 3) as b3,
   (select strokes from public.instructor_signatures where user_id = '00000000-0000-4000-a100-000000000011') as lars_old;
 grant select on ids to authenticated;
 

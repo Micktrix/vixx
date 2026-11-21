@@ -7,7 +7,7 @@ select plan(14);
 
 create temporary table ids as
 select
-  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B – modulplan' and m.number = 2) as b2;
+  (select m.id from public.course_modules m join public.courses c on c.id = m.course_id where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 2) as b2;
 grant select on ids to authenticated;
 
 select is(
@@ -46,7 +46,7 @@ insert into public.module_completions (school_id, student_id, course_module_id, 
 select '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000033', m.id, '00000000-0000-4000-a200-000000000011',
        'Lars Jensen', '00000000-0000-4000-a100-000000000011', true, true, current_date - 1
 from public.course_modules m join public.courses c on c.id = m.course_id
-where c.name = 'B – modulplan' and m.number between 2 and 5 order by m.number;
+where c.name = 'B' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number between 2 and 5 order by m.number;
 set local role authenticated;
 
 select lives_ok(
