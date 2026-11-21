@@ -38,12 +38,18 @@ export async function recordScan(_prev: ActionState, formData: FormData): Promis
   if (complete && formData.get("declaration") !== "on") return { error: "Sæt flueben ved erklæringen." };
   if (text("selfStudy").length > 500) return { error: "Selvstudie er for langt." };
   const theory = text("theoryLessons");
+  // Overskud til næste modul: kun når modulet afsluttes i samme scanning.
+  const splitRaw = text("splitHere");
+  const here = complete && splitRaw !== "" ? Number(splitRaw) : count;
+  if (!Number.isInteger(here) || here < 0 || here > count) return { error: "Vælg antal lektioner." };
+  const nextDriven = new Set(formData.getAll("nextDriveTopic").map(String));
+  const nextSkipped = formData.getAll("nextAllTopic").map(String).filter((t) => !nextDriven.has(t));
   const supabase = await createClient();
   const { error } = await supabase.rpc("record_scan", {
     p_student: text("studentId"),
     p_module: text("moduleId"),
     p_kind: kind,
-    p_count: count,
+    p_count: here,
     p_skipped: kind === "driving" ? all.filter((t) => !driven.has(t)).join("\n") || null : null,
     p_dark: kind === "driving" && darkChecked,
     p_manual_gear: formData.get("manualGear") === "on",
@@ -52,6 +58,8 @@ export async function recordScan(_prev: ActionState, formData: FormData): Promis
     p_started_on: complete && text("startedOn") ? text("startedOn") : null,
     p_self_study: complete ? text("selfStudy") || null : null,
     p_transferred: complete && transferred,
+    p_next_count: count - here,
+    p_next_skipped: kind === "driving" ? nextSkipped.join("\n") || null : null,
   });
   if (error?.code === "23505") return { error: "Modulet er allerede afsluttet." };
   const failed = dbError(error, "Scanningen kunne ikke gemmes. Prøv igen.");
@@ -59,7 +67,8 @@ export async function recordScan(_prev: ActionState, formData: FormData): Promis
   revalidatePath("/laerer", "layout");
   revalidatePath("/kontor", "layout");
   revalidatePath("/elev", "layout");
-  const q = new URLSearchParams({ n: String(count), k: kind, m: text("moduleNumber"), a: complete ? "1" : "0" });
+  const q = new URLSearchParams({ n: String(here), k: kind, m: text("moduleNumber"), a: complete ? "1" : "0" });
+  if (count > here) q.set("x", String(count - here));
   redirect(`/laerer/scan/${text("token")}?${q}`);
 }
 

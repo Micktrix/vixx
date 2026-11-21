@@ -1,15 +1,19 @@
 import Link from "next/link";
+import { FACT_TONE } from "@/components/facts-strip";
+import { factText, facts, KIND_LABEL } from "@/lib/appointments";
+import { formatDate } from "@/lib/dates";
 import { moduleProgress, progressText } from "@/lib/module-progress";
 import { progress, type CourseInfo, type StudentInfo } from "./data";
 
 // Forløbstavle: én række pr. elev og én kolonne pr. modul. Grøn = afsluttet, orange = i gang (lektioner talt),
-// grå = ikke startet.
+// grå = ikke startet. Til højre faktaboksen: KTA, Mørke, Teoriprøve, Køreprøve (grå/gul/grøn).
+const SHORT = { kta: "KTA", dark: "Mørke", theory_test: "Teori", driving_test: "Køre" } as const;
 export function ProgressBoard({ course, students }: { course: CourseInfo; students: StudentInfo[] }) {
   return (
     <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-[18px] py-3">
         <h2 className="text-lg font-bold">{course.name}</h2>
-        <span className="text-[13px] text-muted">Modul nr. øverst · grøn = afsluttet · orange = i gang</span>
+        <span className="text-[13px] text-muted">Modul nr. øverst · grøn = afsluttet · orange = i gang · gul = booket</span>
       </div>
       <table className="w-full text-left text-[14px]">
         <thead className="text-[12px] text-muted">
@@ -21,6 +25,12 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
               </th>
             ))}
             <th className="px-[18px] py-2 text-right font-semibold">Afsluttet</th>
+            {Object.entries(SHORT).map(([k, label]) => (
+              <th key={k} className="px-1 py-2 text-center font-semibold">
+                {label}
+              </th>
+            ))}
+            <th className="w-[18px]" />
           </tr>
         </thead>
         <tbody>
@@ -50,6 +60,19 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
                   <b>{p.done}</b>
                   <span className="text-muted">/{p.total}</span>
                 </td>
+                {facts(modules, s.appointments).map((f) => (
+                  <td key={f.kind} className="px-1 py-2 text-center">
+                    <span
+                      data-testid={`board-fact-${f.kind}`}
+                      data-tone={f.tone}
+                      className={`inline-block rounded-md border px-1.5 py-0.5 text-[12px] font-semibold whitespace-nowrap ${FACT_TONE[f.tone]}`}
+                      title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`}
+                    >
+                      {f.tone === "done" ? "✓" : f.tone === "booked" && f.current ? shortDate(f.current.on_date) : "–"}
+                    </span>
+                  </td>
+                ))}
+                <td />
               </tr>
             );
           })}
@@ -58,3 +81,6 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
     </section>
   );
 }
+
+// "23/11" til tavlen.
+const shortDate = (iso: string) => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;

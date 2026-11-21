@@ -132,3 +132,39 @@ test("læreren afslutter et modul fra elevens side uden ny scanning", async ({ b
     await admin.from("instructor_signatures").delete().eq("user_id", ANNE);
   }
 });
+
+// Michael 21. nov. 2026: 4 af 5 kørt i modul 1, og læreren vælger 2 lektioner og afslutter: 1 lektion afslutter
+// modul 1, og 1 tælles i modul 2 (med modul 2's køreemner).
+test("lektioner ud over minimum tælles i næste modul, når modulet afsluttes", async ({ page }) => {
+  const admin = localAdmin();
+  const { data: student } = await admin.from("students").select("qr_token, course_id").eq("id", EMIL).single();
+  const { data: mods } = await admin.from("course_modules").select("id, number").eq("course_id", student!.course_id).in("number", [1, 2]).order("number");
+  const [m1, m2] = mods!;
+  try {
+    await admin.from("module_signoffs").insert({
+      school_id: "00000000-0000-4000-a000-000000000001", student_id: EMIL, course_module_id: m1.id, kind: "driving", lesson_count: 4,
+      instructor_id: "00000000-0000-4000-a200-000000000011", instructor_name: "Lars Jensen", signed_by: "00000000-0000-4000-a100-000000000011",
+    });
+    await loginOk(page, INSTRUCTOR, PASSWORD);
+    await page.goto(`/laerer/scan/${student!.qr_token}`);
+    await page.getByLabel(/Antal lektioner/).selectOption("2");
+    const split = page.getByTestId("scan-split");
+    await expect(split).toContainText("1 kørselslektion afslutter modul 1, og 1 kørselslektion tælles i modul 2.");
+    await split.getByRole("checkbox").first().uncheck(); // første køreemne i modul 2 blev ikke kørt
+    await page.getByTestId("complete-module").getByRole("checkbox", { name: /Jeg erklærer/ }).check();
+    await page.getByRole("button", { name: "Bekræft og afslut modul 1" }).click();
+    await expect(page.getByTestId("signoff-done")).toHaveText(
+      "✓ 1 kørselslektion er bekræftet, og modul 1 er afsluttet. 1 kørselslektion er talt i modul 2.",
+    );
+    const { data: rows } = await admin.from("module_signoffs").select("course_module_id, lesson_count, skipped_items").eq("student_id", EMIL);
+    expect(rows!.filter((r) => r.course_module_id === m1.id).reduce((n, r) => n + r.lesson_count, 0)).toBe(5);
+    const inM2 = rows!.filter((r) => r.course_module_id === m2.id);
+    expect(inM2.map((r) => r.lesson_count)).toEqual([1]);
+    expect(inM2[0].skipped_items).toBeTruthy();
+    const { count } = await admin.from("module_completions").select("id", { count: "exact", head: true }).eq("student_id", EMIL).eq("course_module_id", m1.id);
+    expect(count).toBe(1);
+  } finally {
+    await admin.from("module_completions").delete().eq("student_id", EMIL);
+    await admin.from("module_signoffs").delete().eq("student_id", EMIL);
+  }
+});

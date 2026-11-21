@@ -1,6 +1,7 @@
 import "server-only";
 import { type ModuleCompletion, type ModuleCount, type PlanModule } from "@/lib/module-progress";
 import { todayDk } from "@/lib/dates";
+import type { Appointment } from "@/lib/appointments";
 import { createClient } from "@/lib/supabase/server";
 
 // Hold, elever og forløb (modulplaner) til kontorets elevsider. Et modul er gennemført, når læreren har
@@ -35,6 +36,7 @@ export type StudentInfo = {
   finished: Finished | null; // forløbet er afsluttet (fx bestået køreprøve); eleven er inaktiv
   moduleCounts: ModuleCount[]; // lektioner talt i modulerne
   moduleCompletions: ModuleCompletion[]; // afsluttede moduler
+  appointments: Appointment[]; // aftaler: KTA, mørke, teoriprøve, køreprøve (faktaboksen)
 };
 export const FINISH_LABEL = { passed: "Bestået køreprøve", stopped: "Stoppet", other: "Afsluttet" } as const;
 export type Finished = { on: string; reason: keyof typeof FINISH_LABEL; note: string | null };
@@ -48,7 +50,7 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), student_appointments(id, kind, on_date, at_time, address, status, created_at), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
@@ -92,6 +94,7 @@ export async function loadStudents(schoolId: string) {
         finished: s.finished_on ? { on: s.finished_on, reason: s.finish_reason as Finished["reason"], note: s.finish_note } : null,
         moduleCounts: (s.module_signoffs ?? []) as ModuleCount[],
         moduleCompletions: (s.module_completions ?? []) as ModuleCompletion[],
+        appointments: (s.student_appointments ?? []) as Appointment[],
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "da"));

@@ -75,3 +75,24 @@ test("læreren ruller et modul ud og skriver prøver og KTA ind på eleven; elev
     await admin.from("student_appointments").delete().eq("student_id", BENT);
   }
 });
+
+// Holdtavlen viser KTA, Mørke, Teoriprøve og Køreprøve, så man ikke skal ind på hver elev.
+test("holdtavlen viser elevens prøver og aftaler", async ({ page }) => {
+  const admin = localAdmin();
+  const EMIL = "00000000-0000-4000-ad00-000000000031";
+  const { data: student } = await admin.from("students").select("team_id").eq("id", EMIL).single();
+  const later = new Date(Date.now() + 3 * 864e5).toLocaleDateString("sv-SE", { timeZone: "Europe/Copenhagen" });
+  try {
+    await admin.from("student_appointments").insert({
+      school_id: "00000000-0000-4000-a000-000000000001", student_id: EMIL, kind: "theory_test", on_date: later,
+    });
+    await loginOk(page, INSTRUCTOR, PASSWORD);
+    await page.goto(`/kontor/elever/hold/${student!.team_id}`);
+    const row = page.getByTestId("board-student").filter({ hasText: "Emil Elev" });
+    await expect(row.getByTestId("board-fact-theory_test")).toHaveAttribute("data-tone", "booked");
+    await expect(row.getByTestId("board-fact-theory_test")).toHaveText(`${Number(later.slice(8, 10))}/${Number(later.slice(5, 7))}`);
+    await expect(row.getByTestId("board-fact-kta")).toHaveAttribute("data-tone", "none");
+  } finally {
+    await admin.from("student_appointments").delete().eq("student_id", EMIL);
+  }
+});

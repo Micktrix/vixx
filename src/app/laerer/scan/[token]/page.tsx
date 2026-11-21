@@ -70,6 +70,10 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
           ? `✓ ${lessonsWord(n, sp.k === "theory" ? "theory" : "driving")} er bekræftet${sp.a === "1" ? `, og modul ${sp.m} er afsluttet.` : ` i modul ${sp.m}.`}`
           : `✓ Modul ${sp.m} er afsluttet.`
         : null;
+  // Overskud talt i næste modul, fx "… og 1 kørselslektion er talt i modul 2."
+  const extra = Number(sp.x) > 0 && typeof sp.m === "string"
+    ? ` ${lessonsWord(Number(sp.x), sp.k === "theory" ? "theory" : "driving")} er talt i modul ${Number(sp.m) + 1}.`
+    : "";
 
   if (!course?.course_modules.length) {
     return (
@@ -99,7 +103,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
     <Screen title={name} sub={[team?.name, course.name].filter(Boolean).join(" · ")} back={close}>
       {signed && (
         <p role="status" className="rounded-[16px] border border-ok/30 bg-ok-bg px-4 py-3 text-[15px]" data-testid="signoff-done">
-          <b className="text-ok">{signed}</b>
+          <b className="text-ok">{signed}{extra}</b>
         </p>
       )}
       <a

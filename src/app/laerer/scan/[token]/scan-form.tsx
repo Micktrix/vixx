@@ -47,9 +47,17 @@ export function ScanForm({
   const darkTopic = m.drivingTopics.find(isDarkTopic) ?? "";
   const darkNow = kind === "driving" && darkChecked && (!darkRequired || darkConfirm);
 
-  const driving = m.driving + (kind === "driving" ? count : 0);
-  const theory = m.theory + (kind === "theory" ? count : 0);
-  const reaches = driving >= m.min_driving && (!darkRequired || m.darkDone || darkNow) && (!theoryAtScan || theory >= m.min_theory);
+  const reachesWith = (n: number) =>
+    m.driving + (kind === "driving" ? n : 0) >= m.min_driving &&
+    (!darkRequired || m.darkDone || darkNow) &&
+    (!theoryAtScan || m.theory + (kind === "theory" ? n : 0) >= m.min_theory);
+  const reaches = reachesWith(count);
+  // Afsluttes modulet, og er der valgt flere lektioner, end modulet mangler, tælles resten i næste modul
+  // (Michael 21. nov. 2026: 4 af 5 kørt + 2 lektioner = 1 i modul 1 og 1 i modul 2).
+  const next = modules[modules.findIndex((x) => x.id === m.id) + 1];
+  const needed = Math.max(kind === "driving" ? m.min_driving - m.driving : m.min_theory - m.theory, 0);
+  const split = !!next && !next.completed && !transferred && count > needed && reachesWith(needed);
+  const nextDarkTopic = next && next.min_dark > 0 ? next.drivingTopics.find(isDarkTopic) : undefined;
   // Modulerne afsluttes i rækkefølge: kun det aktuelle modul kan afsluttes.
   const canComplete = m.id === suggestedId && (reaches || transferred);
   const word = lessonsWord(count, kind);
@@ -193,11 +201,37 @@ export function ScanForm({
 
       {canComplete ? (
         <section className="flex flex-col gap-3 rounded-[20px] border border-ok/30 bg-ok-bg p-4" data-testid="complete-module" key={moduleId}>
+          {split && <input type="hidden" name="splitHere" value={needed} />}
           <b className="text-[17px]">
             {transferred && !reaches
               ? `Afslut modul ${m.number} (overført fra lektionsplan)`
               : `Det her er sidste lektion i modul ${m.number}. Afslut modulet nu.`}
           </b>
+          {split && (
+            <div className="flex flex-col gap-2 rounded-[14px] border border-accent-line bg-surface px-3 py-2.5" data-testid="scan-split">
+              <p className="text-[15px] font-semibold">
+                {needed > 0 ? `${lessonsWord(needed, kind)} afslutter modul ${m.number}, og ` : `Modul ${m.number} har nået minimum, og `}
+                {lessonsWord(count - needed, kind)} tælles i modul {next.number}.
+              </p>
+              {kind === "driving" && next.drivingTopics.length > 0 && (
+                <fieldset className="flex flex-col gap-1" key={next.id}>
+                  <legend className="text-[13px] font-semibold">Køreemner i modul {next.number} – fjern fluebenet ved det, der ikke blev kørt:</legend>
+                  {next.drivingTopics.map((item) =>
+                    item === nextDarkTopic ? (
+                      <input key={item} type="hidden" name="nextAllTopic" value={item} />
+                    ) : (
+                      <label key={item} className="flex items-start gap-2.5 px-1.5 py-0.5 text-[14px]">
+                        <input type="hidden" name="nextAllTopic" value={item} />
+                        <input type="checkbox" name="nextDriveTopic" value={item} defaultChecked className={`${check} mt-0.5`} />
+                        {item}
+                      </label>
+                    ),
+                  )}
+                  {nextDarkTopic && <span className="text-[12px] text-muted">Mørke (7.19) i modul {next.number} bekræftes ved en senere scanning.</span>}
+                </fieldset>
+              )}
+            </div>
+          )}
           {m.notDriven.length > 0 && (
             <p className="text-sm text-bad" data-testid="complete-not-driven">
               Ikke kørt endnu: {m.notDriven.join(" · ")}. Du kan afslutte alligevel.
