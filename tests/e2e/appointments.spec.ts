@@ -38,22 +38,30 @@ test("læreren ruller et modul ud og skriver prøver og KTA ind på eleven; elev
     await book(page, "Teoriprøve", today);
     await expect(theory).toHaveAttribute("data-tone", "booked");
     await expect(theory).toContainText("kl. 12:00, Prøvecentret, Aarhus");
-    await page.getByTestId("fact-actions-theory_test").getByRole("button", { name: "Ikke bestået" }).click();
+    await theory.locator("summary").click();
+    await theory.getByRole("button", { name: "Ikke bestået" }).click();
     await expect(theory).toHaveAttribute("data-tone", "none");
     await expect(theory).toContainText("Ikke bestået");
     await book(page, "Teoriprøve", today);
     await expect(theory).toHaveAttribute("data-tone", "booked");
-    await page.getByTestId("fact-actions-theory_test").getByRole("button", { name: "Bestået", exact: true }).click();
+    if ((await theory.getAttribute("open")) === null) await theory.locator("summary").click();
+    await theory.getByRole("button", { name: "Bestået", exact: true }).click();
     await expect(theory).toHaveAttribute("data-tone", "done");
-    await expect(page.getByTestId("fact-actions-theory_test")).toContainText("Ikke bestået"); // historikken
+    await expect(theory).toContainText("Ikke bestået"); // historikken
 
     // KTA markeres gennemført manuelt, når det ikke er scannet.
-    await page.getByTestId("fact-actions-kta").getByRole("button", { name: "Markér gennemført" }).click();
+    await page.getByTestId("fact-kta").locator("summary").click();
+    await page.getByTestId("fact-kta").getByRole("button", { name: "Markér gennemført" }).click();
     await expect(page.getByTestId("fact-kta")).toHaveAttribute("data-tone", "done");
 
     // Køreprøven bestået: Vixx foreslår at afslutte forløbet.
-    await book(page, "Køreprøve", today);
-    await page.getByTestId("fact-actions-driving_test").getByRole("button", { name: "Bestået", exact: true }).click();
+    // Køreprøven bookes frem i tiden; markeres den bestået, er den overstået i dag.
+    const later = new Date(Date.now() + 5 * 864e5).toLocaleDateString("sv-SE", { timeZone: "Europe/Copenhagen" });
+    await book(page, "Køreprøve", later);
+    const driving = page.getByTestId("fact-driving_test");
+    await driving.locator("summary").click();
+    await driving.getByRole("button", { name: "Bestået", exact: true }).click();
+    await expect(driving).toHaveAttribute("data-tone", "done");
     await expect(page.getByRole("link", { name: "Afslut forløb (bestået køreprøve)?" })).toBeVisible();
 
     // Eleven ser prøverne i sin app.

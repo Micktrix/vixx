@@ -374,7 +374,12 @@ export async function setAppointmentStatus(_prev: ActionState, formData: FormDat
   const status = text(formData, "status");
   if (status !== "passed" && status !== "failed") return { error: "Vælg udfaldet." };
   const supabase = await createClient();
-  const { error } = await supabase.from("student_appointments").update({ status }).eq("id", text(formData, "id"));
+  const id = text(formData, "id");
+  const today = todayDk();
+  // Markeres den før datoen, er den overstået i dag.
+  const { data: row } = await supabase.from("student_appointments").select("on_date").eq("id", id).maybeSingle();
+  const change = row && row.on_date > today ? { status, on_date: today } : { status };
+  const { error } = await supabase.from("student_appointments").update(change).eq("id", id);
   return appointmentDone(error, status === "passed" ? "Markeret som bestået." : "Markeret som ikke bestået. Tast en ny dato, når prøven er bestilt.");
 }
 
