@@ -171,3 +171,43 @@ test("lektioner ud over minimum tælles i næste modul, når modulet afsluttes",
     await admin.from("module_signoffs").delete().eq("student_id", EMIL);
   }
 });
+
+// Michael 21. nov. 2026: modul 2 har nået kørslen (5 af 5), men mangler mørke. Læreren vælger 2 lektioner og
+// bekræfter 7.19: lektionen med mørke bliver i modul 2 (som afsluttes), og den anden tælles i modul 3.
+test("mørke bekræftet ved overskud: mørkelektionen bliver i modulet, resten går videre", async ({ page }) => {
+  const admin = localAdmin();
+  const SCHOOL = "00000000-0000-4000-a000-000000000001";
+  const LARS = { instructor_id: "00000000-0000-4000-a200-000000000011", instructor_name: "Lars Jensen", signed_by: "00000000-0000-4000-a100-000000000011" };
+  const { data: student } = await admin.from("students").select("qr_token, course_id").eq("id", EMIL).single();
+  const { data: mods } = await admin.from("course_modules").select("id, number").eq("course_id", student!.course_id).order("number");
+  const [m1, m2, m3] = mods!;
+  try {
+    await admin.from("module_signoffs").insert([
+      { school_id: SCHOOL, student_id: EMIL, course_module_id: m1.id, kind: "driving", lesson_count: 5, ...LARS },
+      { school_id: SCHOOL, student_id: EMIL, course_module_id: m2.id, kind: "driving", lesson_count: 5, ...LARS },
+    ]);
+    const { error } = await admin.from("module_completions").insert({
+      school_id: SCHOOL, student_id: EMIL, course_module_id: m1.id, module_number: 0, instructor_id: LARS.instructor_id,
+      instructor_name: "Lars Jensen", declaration: true, theory_lessons: 8, completed_by: LARS.signed_by,
+    });
+    expect(error).toBeNull();
+
+    await loginOk(page, INSTRUCTOR, PASSWORD);
+    await page.goto(`/laerer/scan/${student!.qr_token}`);
+    await page.getByLabel(/Antal lektioner/).selectOption("2");
+    await page.getByRole("checkbox", { name: /7\.19/ }).check();
+    await page.getByRole("checkbox", { name: /Ja, kørt i mørke/ }).check();
+    await expect(page.getByTestId("scan-split")).toContainText("1 kørselslektion afslutter modul 2, og 1 kørselslektion tælles i modul 3.");
+    await page.getByTestId("complete-module").getByRole("checkbox", { name: /Jeg erklærer/ }).check();
+    await page.getByRole("button", { name: "Bekræft og afslut modul 2" }).click();
+    await expect(page.getByTestId("signoff-done")).toHaveText(
+      "✓ 1 kørselslektion er bekræftet, og modul 2 er afsluttet. 1 kørselslektion er talt i modul 3.",
+    );
+    const { data: rows } = await admin.from("module_signoffs").select("course_module_id, lesson_count, dark").eq("student_id", EMIL);
+    expect(rows!.some((r) => r.course_module_id === m2.id && r.dark && r.lesson_count === 1)).toBe(true);
+    expect(rows!.filter((r) => r.course_module_id === m3.id).map((r) => r.lesson_count)).toEqual([1]);
+  } finally {
+    await admin.from("module_completions").delete().eq("student_id", EMIL);
+    await admin.from("module_signoffs").delete().eq("student_id", EMIL);
+  }
+});

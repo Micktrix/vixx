@@ -40,7 +40,8 @@ export async function recordScan(_prev: ActionState, formData: FormData): Promis
   const theory = text("theoryLessons");
   // Overskud til næste modul: kun når modulet afsluttes i samme scanning.
   const splitRaw = text("splitHere");
-  const here = complete && splitRaw !== "" ? Number(splitRaw) : count;
+  // Mørke (7.19) bekræftet: den lektion tælles altid i dette modul.
+  const here = complete && splitRaw !== "" ? Math.max(Number(splitRaw), kind === "driving" && darkChecked && text("darkRequired") === "1" && count > 0 ? 1 : 0) : count;
   if (!Number.isInteger(here) || here < 0 || here > count) return { error: "Vælg antal lektioner." };
   const nextDriven = new Set(formData.getAll("nextDriveTopic").map(String));
   const nextSkipped = formData.getAll("nextAllTopic").map(String).filter((t) => !nextDriven.has(t));

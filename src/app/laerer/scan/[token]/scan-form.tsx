@@ -56,7 +56,8 @@ export function ScanForm({
   // Afsluttes modulet, og er der valgt flere lektioner, end modulet mangler, tælles resten i næste modul
   // (Michael 21. nov. 2026: 4 af 5 kørt + 2 lektioner = 1 i modul 1 og 1 i modul 2).
   const next = modules[modules.findIndex((x) => x.id === m.id) + 1];
-  const needed = Math.max(kind === "driving" ? m.min_driving - m.driving : m.min_theory - m.theory, 0);
+  // Mindst den lektion, hvor mørke (7.19) er bekræftet, bliver i dette modul.
+  const needed = Math.max(kind === "driving" ? m.min_driving - m.driving : m.min_theory - m.theory, darkNow && !m.darkDone ? 1 : 0);
   const split = !!next && !next.completed && !transferred && count > needed && reachesWith(needed);
   const nextDarkTopic = next && next.min_dark > 0 ? next.drivingTopics.find(isDarkTopic) : undefined;
   // Modulerne afsluttes i rækkefølge: kun det aktuelle modul kan afsluttes.
