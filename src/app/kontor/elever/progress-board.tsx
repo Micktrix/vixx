@@ -38,7 +38,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                     </Link>
                   </td>
                   <td className="py-3 pr-[18px] pl-1">
-                    <div className="flex flex-wrap items-end justify-between gap-x-2.5 gap-y-2">
+                    <div className="flex flex-wrap items-end gap-x-1.5 gap-y-2">
                       {lessons.length
                         ? lessons.map((l) => {
                             const done = s.lessonSignoffs.find((x) => x.school_lesson_id === l.id);
@@ -83,6 +83,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                           )}
                         </span>
                       </Cell>
+                      <span className="ml-auto flex items-end gap-x-2 pl-4">
                       {facts(modules, s.appointments).map((f) => (
                         <Cell key={f.kind} label={SHORT[f.kind as keyof typeof SHORT] ?? KIND_LABEL[f.kind]}>
                           <span
@@ -95,6 +96,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                           </span>
                         </Cell>
                       ))}
+                      </span>
                     </div>
                   </td>
                 </tr>
@@ -137,7 +139,7 @@ function EuLine({ s, totals, modules }: { s: StudentInfo; totals: EuTotals; modu
   const tests = facts(modules, s.appointments, euTestKinds(totals.kind)).filter((f) => f.kind === "lastsikring" || f.kind === "multitest");
   const box = "inline-block min-w-[28px] rounded-md border px-1.5 py-0.5 text-center text-[12px] font-semibold whitespace-nowrap";
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+    <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
       <Cell label={totals.name}>
         <span className={`${box} ${FACT_TONE[done >= total && total > 0 ? "done" : "none"]}`} data-testid="board-eu-lessons">
           {done}/{total} lekt.
