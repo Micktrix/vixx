@@ -375,6 +375,27 @@ Kun Færdselsstyrelsens modulplan, gjort enkel (aftalt med Michael 20. nov. 2026
   kørslen (`dark_strokes`). Den skrives IKKE i styrelsens PDF, fordi blanketten ikke har et felt til den, og det er
   uvist, om vi må tilføje noget (Michael). Åbent: spørg koereuddannelse@fstyr.dk, før den kommer på den printede plan.
 
+### Trin E9 – EU-lektionsplaner (aftalt med Michael 26. nov. 2026, ikke bygget)
+Kilde: skolens fire blanketter i `C:\Users\admin\OneDrive\Skrivebord\EU\` (skolens egen Word-blanket med logo efter
+styrelsens skabelon, BEK 322/2020; ingen udfyldbare felter).
+- **Fire EU-dele, alle i brug:** Gods (grundlæggende/intensiv), Bus, "Personbefordring for lastbilchauffører" (3 uger,
+  37 t heraf 3 køretimer) og den tilsvarende 3-ugers gods-del. Hvilken afhænger af elevens kørekort.
+- **Vælges på eleven** af kontoret (ingen, eller én EU-del). Aldrig på holdet: elever på samme hold kan have forskellige
+  eller ingen EU-dele. Erstatter det nuværende EU-flueben (`students.eu`).
+- **Emner:** hver EU-del har sine emner (fx 1.1 … 3.8 Repetition) med mål og **fast "faktisk anvendt tid"** som på
+  blanketten (fx 1.2 = 12 t). Tiden rettes ikke i Vixx.
+- **Scanning:** læreren scanner elevens QR-kode og bekræfter, hvilke EU-emner der er gennemført (og køretimer: dato,
+  emne fx "Energirigtig kørsel", timer). Dato og lærer gemmes; lærerens gemte underskrift sættes på ved print.
+- **Ingen elektronisk elevunderskrift** (for nu): planen printes til sidst, og eleven skriver under med kuglepen ved
+  hvert emne og hver køretime.
+- **Print:** Vixx laver selv PDF'en som en kopi af skolens blanket: forside (elevens navn og tlf.; CPR i hånden),
+  lærerliste med gemte underskrifter, emner med dato, tid og underviserens underskrift, køretimetabel, tid i alt og
+  prøvedatoer. Lærere, kontor og admin kan printe; eleven kan ikke.
+- **Prøver:** praktisk prøve i lastsikring (gods) og Multitest kommer i faktaboksen og på planen.
+- **Fremskridt:** EU tæller med i elevens fremskridt alle steder (elevens side, holdtavle, scanning, elevens app).
+- Åbent: kan en elev have EU uden et kørekortforløb i Vixx (kun EU)? Intensiv eller grundlæggende afkrydses på planen
+  ud fra EU-delen.
+
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
   oprettes med login. Frivilligt afsnit "Hensyn" (ordblind, farveblind, nedsat hørelse, koncentrationsbesvær,
