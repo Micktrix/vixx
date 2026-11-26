@@ -11,7 +11,7 @@ export type CourseInfo = {
   id: string;
   name: string;
   category: string;
-  kind: string; // B, C, CE, D, EU eller TAXA
+  kind: string; // B, C, CE, D, TAXA eller et EU-forløb (EU_GODS, EU_BUS, EU_GODS3, EU_BUS3)
   active: boolean;
   theoryAtScan: boolean; // "Teori registreres ved scanning"
   minDays: number | null;
@@ -24,7 +24,7 @@ export type StudentInfo = {
   phone: string;
   address: string | null; // står på modulplanen
   manualGear: boolean; // kode 78 (kun B)
-  eu: boolean; // EU slået til på eleven (C og C/E)
+  euCourseId: string | null; // elevens EU-forløb oven i kørekortforløbet (trin E9)
   courseStartOn: string | null; // kontorets rettelse af start af modul 1
   createdAt: string;
   planTemplateId: string | null; // elevens version af modulplanens PDF
@@ -38,6 +38,9 @@ export type StudentInfo = {
   moduleCompletions: ModuleCompletion[]; // afsluttede moduler
   appointments: Appointment[]; // aftaler: KTA, mørke, teoriprøve, køreprøve (faktaboksen)
 };
+// EU-forløbene vælges som "EU-forløb" på eleven, aldrig som kørekortforløb.
+export const isEuKind = (kind: string | null | undefined) => !!kind && kind.startsWith("EU");
+
 export const FINISH_LABEL = { passed: "Bestået køreprøve", stopped: "Stoppet", other: "Afsluttet" } as const;
 export type Finished = { on: string; reason: keyof typeof FINISH_LABEL; note: string | null };
 
@@ -50,7 +53,7 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), student_appointments(id, kind, on_date, at_time, address, status, created_at), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu_course_id, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), student_appointments(id, kind, on_date, at_time, address, status, created_at), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
@@ -82,7 +85,7 @@ export async function loadStudents(schoolId: string) {
         phone: p?.phone ?? "",
         address: s.address,
         manualGear: s.manual_gear,
-        eu: s.eu,
+        euCourseId: s.eu_course_id,
         courseStartOn: s.course_start_on,
         createdAt: s.created_at,
         planTemplateId: s.plan_template_id,

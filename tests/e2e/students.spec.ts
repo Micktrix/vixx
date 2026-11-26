@@ -21,7 +21,7 @@ test("kontoret opretter et hold og en elev, og eleven ser sit forløb i sin egen
   await page.getByRole("link", { name: "+ Elev på holdet" }).click();
   await page.getByLabel("Navn").fill(studentName);
   await page.getByLabel("Telefonnummer").fill(phone);
-  await expect(page.getByLabel("Forløb").locator("option:checked")).toHaveText("C");
+  await expect(page.locator('select[name="courseId"] option:checked')).toHaveText("C");
   await page.getByLabel("Ydelse til lønnen (valgfri)").selectOption({ label: "Amu C" });
   await page.getByRole("button", { name: "Opret elev" }).click();
   await expect(page.getByTestId("temp-password")).toHaveText(phone);

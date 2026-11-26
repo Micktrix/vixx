@@ -10,6 +10,9 @@ import { TemplatesBox } from "./templates-box";
 
 // Ét fast forløb: indstillinger, modulerne med minimum og emner og modulplanens PDF-versioner. Kun admin.
 // Forløbet er låst; modulerne og PDF'en kan kun rettes, når admin har låst op (logges).
+import { isEuKind } from "../../elever/data";
+import { EuTopicList } from "./eu-topics";
+
 export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/[id]">) {
   const { id } = await params;
   const { membership } = await requireRole(["admin"]);
@@ -51,9 +54,9 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
             <input type="hidden" name="id" value={course.id} />
             <label className="flex items-center gap-2.5 text-[15px]">
               <input type="checkbox" name="active" defaultChecked={course.active} className="size-[18px] accent-accent" />
-              {course.kind === "EU" ? "I brug (kan slås til på C- og C/E-elever)" : "I brug (kan vælges på elever og hold)"}
+              {isEuKind(course.kind) ? "I brug (kan vælges som EU-forløb på eleven)" : "I brug (kan vælges på elever og hold)"}
             </label>
-            {course.kind !== "EU" && (
+            {!isEuKind(course.kind) && (
               <label className="flex items-start gap-2.5 text-[15px]">
                 <input type="checkbox" name="theoryAtScan" defaultChecked={course.theory_at_scan} className="mt-0.5 size-[18px] accent-accent" />
                 <span>
@@ -93,10 +96,16 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
         </section>
       )}
 
-      <ModuleList modules={modules} isAdmin={editing} />
-      {!modules.length && <p className="text-muted">Ingen moduler endnu.</p>}
-      {editing && <NewModuleForm key={modules.length} courseId={course.id} next={(modules.at(-1)?.number ?? 0) + 1} />}
-      {course.kind !== "EU" || modules.length > 0 ? <TemplatesBox courseId={course.id} isAdmin={editing} /> : null}
+      {isEuKind(course.kind) ? (
+        <EuTopicList courseId={course.id} />
+      ) : (
+        <>
+          <ModuleList modules={modules} isAdmin={editing} />
+          {!modules.length && <p className="text-muted">Ingen moduler endnu.</p>}
+          {editing && <NewModuleForm key={modules.length} courseId={course.id} next={(modules.at(-1)?.number ?? 0) + 1} />}
+          <TemplatesBox courseId={course.id} isAdmin={editing} />
+        </>
+      )}
     </>
   );
 }

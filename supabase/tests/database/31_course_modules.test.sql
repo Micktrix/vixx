@@ -29,7 +29,7 @@ select throws_ok(
 select results_eq(
   $$select string_agg(name || ':' || active::text || ':' || theory_at_scan::text || ':' || locked::text, ' ' order by name)
     from public.courses where school_id = '00000000-0000-4000-a000-000000000001'$$,
-  $$values ('B:true:true:true C:true:false:true C/E:true:false:true D:true:false:true EU:false:false:true Taxa:false:false:true')$$,
+  $$values ('B:true:true:true C:true:false:true C/E:true:false:true D:true:false:true EU Bus:true:false:true EU Bus 3 uger:true:false:true EU Gods:true:false:true EU Gods 3 uger:true:false:true Taxa:false:false:true')$$,
   'Skolen har de faste forløb; teori scannes på B; alle er låst');
 
 set local role authenticated;
@@ -82,7 +82,7 @@ insert into public.school_members (school_id, user_id, role) values ('00000000-0
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-c100-000000000077", "role": "authenticated"}', true);
 select is((select count(*) from public.course_modules where school_id = '00000000-0000-4000-a000-000000000001'), 0::bigint, 'En anden skole ser ikke modulerne');
-select is((select count(*) from public.courses where kind is not null), 6::bigint, 'En ny skole får selv de seks faste forløb');
+select is((select count(*) from public.courses where kind is not null), 9::bigint, 'En ny skole får selv de ni faste forløb (inkl. fire EU)');
 reset role;
 
 select * from finish();

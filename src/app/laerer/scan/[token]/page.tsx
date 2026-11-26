@@ -14,6 +14,8 @@ import { RepetitionForm } from "./repetition-form";
 import { ScanForm } from "./scan-form";
 import { createClient } from "@/lib/supabase/server";
 import { FactsStrip } from "@/components/facts-strip";
+import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euProgress, type EuSignoff, type EuTopic } from "@/lib/eu";
+import { EuScanForm } from "./eu-scan-form";
 import { ScrollToTop } from "./scroll-to-top";
 import { ModuleDetails } from "@/components/module-details";
 import type { Appointment } from "@/lib/appointments";
@@ -32,11 +34,14 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, is_demo, student_appointments(id, kind, on_date, at_time, address, status, created_at), manual_gear, created_at, course_start_on, profiles(full_name), teams(name, starts_on), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, skipped_items, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason), courses(name, category_code, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
+      "id, service_id, active, is_demo, eu_course_id, student_appointments(id, kind, on_date, at_time, address, status, created_at), manual_gear, created_at, course_start_on, profiles(full_name), teams(name, starts_on), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, skipped_items, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason), courses!students_school_id_course_id_fkey(name, category_code, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
     .maybeSingle();
+
+  // EU-forløbet oven i kørekortet (trin E9a).
+  const eu = student?.eu_course_id ? await loadEu(supabase, student.id, student.eu_course_id) : null;
 
   const close = { href: "/laerer/scan", label: "Scan en anden elev" };
   if (!student || !student.active) {
@@ -64,7 +69,9 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   // Besked efter gem, fx "✓ 2 kørselslektioner er bekræftet i modul 2."
   const n = Number(sp.n);
   const signed =
-    typeof sp.kvitteret === "string"
+    typeof sp.eu === "string"
+      ? `✓ EU er bekræftet (${sp.eu}).`
+      : typeof sp.kvitteret === "string"
       ? "✓ Repetitionslektionerne er registreret."
       : typeof sp.m === "string"
         ? n > 0
@@ -171,6 +178,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
           <RepetitionForm token={token} studentId={student.id} />
         </>
       )}
+      {eu && <EuScanForm token={token} studentId={student.id} courseName={eu.name} progress={eu.progress} />}
       <section className="flex flex-col gap-1.5" data-testid="scan-course">
         <h2 className="text-[17px] font-bold">Elevens forløb</h2>
         {progress.map((m) => (
@@ -187,4 +195,13 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
       </section>
     </Screen>
   );
+}
+
+async function loadEu(supabase: Awaited<ReturnType<typeof createClient>>, studentId: string, courseId: string) {
+  const [{ data: course }, { data: topics }, { data: signoffs }] = await Promise.all([
+    supabase.from("courses").select("name").eq("id", courseId).single(),
+    supabase.from("eu_topics").select(EU_TOPIC_FIELDS).eq("course_id", courseId),
+    supabase.from("eu_signoffs").select(EU_SIGNOFF_FIELDS).eq("student_id", studentId),
+  ]);
+  return { name: course?.name ?? "EU", progress: euProgress((topics ?? []) as EuTopic[], (signoffs ?? []) as EuSignoff[]) };
 }

@@ -93,7 +93,7 @@ export async function fillModulePlan(template: Uint8Array, data: PlanData, field
 }
 
 // Tegner underskriften (stregdata "M x y L x y …" fra et felt på 600 × 200) ind i feltets rektangel.
-function drawStrokes(page: PDFPage, strokes: string, box: { x: number; y: number; width: number; height: number }) {
+export function drawStrokes(page: PDFPage, strokes: string, box: { x: number; y: number; width: number; height: number }) {
   const nums = strokes.match(/-?[0-9.]+/g)?.map(Number) ?? [];
   const xs = nums.filter((_, i) => i % 2 === 0);
   const ys = nums.filter((_, i) => i % 2 === 1);

@@ -151,7 +151,7 @@ function readStudent(formData: FormData) {
   return {
     address: address || null,
     manual_gear: formData.get("manualGear") === "on",
-    eu: formData.get("eu") === "on",
+    eu_course_id: text(formData, "euCourseId") || null,
     course_start_on: courseStartOn,
     course_id: courseId,
     team_id: text(formData, "teamId") || null,

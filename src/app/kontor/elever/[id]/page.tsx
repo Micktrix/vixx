@@ -22,6 +22,7 @@ import {
 } from "../actions";
 import { courseStart, FINISH_LABEL, loadStudents, progress } from "../data";
 import { ModuleDetails } from "@/components/module-details";
+import { EuBox } from "../eu-box";
 import { FactsBox } from "../facts-box";
 import { facts, type Appointment } from "@/lib/appointments";
 import { ProgressBar } from "../progress-bar";
@@ -102,7 +103,6 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
           </a>
           <p className="text-sm text-muted">
             Start af modul 1: {formatDate(courseStart(student, team))}
-            {student.eu && " · EU slået til"}
           </p>
           <PlanVersion studentId={student.id} courseId={student.courseId} current={student.planTemplateId} isAdmin={isAdmin} />
           <ProgressBar share={p.share} />
@@ -183,6 +183,8 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         </Box>
       )}
 
+      {student.euCourseId && <EuBox studentId={student.id} courseId={student.euCourseId} />}
+
       {currentModule && student.active && (
         <CompleteModuleBox
           studentId={student.id}
@@ -239,7 +241,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               serviceId: student.serviceId,
               address: student.address,
               manualGear: student.manualGear,
-              eu: student.eu,
+              euCourseId: student.euCourseId,
               courseStartOn: student.courseStartOn,
             }}
           />

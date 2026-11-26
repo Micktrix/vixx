@@ -14,9 +14,12 @@ type CourseRow = {
   course_modules: { min_theory: number; min_driving: number }[];
 };
 
-const ORDER = ["B", "C", "CE", "D", "EU", "TAXA"];
+const ORDER = ["B", "C", "CE", "D", "EU_GODS", "EU_BUS", "EU_GODS3", "EU_BUS3", "TAXA"];
 const NOTE: Record<string, string> = {
-  EU: 'Slås til på eleven (flueben "EU") oven i C eller C/E. Planen lægges op, når blanketterne er her.',
+  EU_GODS: "EU-lektionsplan (godstransport). Vælges på eleven oven i kørekortet.",
+  EU_BUS: "EU-lektionsplan (personbefordring). Vælges på eleven oven i kørekortet.",
+  EU_GODS3: "Godstransport for buschauffører (3 uger). Vælges på eleven.",
+  EU_BUS3: "Personbefordring for lastbilchauffører (3 uger). Vælges på eleven.",
   TAXA: "Taxi-lektionsplanen. Planen lægges op senere.",
 };
 

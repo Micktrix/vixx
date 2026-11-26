@@ -14,7 +14,7 @@ select
     where c.kind = 'C' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 1) as c1,
   (select m.id from public.course_modules m join public.courses c on c.id = m.course_id
     where c.kind = 'C' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 2) as c2,
-  (select id from public.courses where kind = 'EU' and school_id = '00000000-0000-4000-a000-000000000001') as eu;
+  (select id from public.courses where kind = 'EU_GODS' and school_id = '00000000-0000-4000-a000-000000000001') as eu;
 grant select on ids to authenticated;
 
 set local role authenticated;
@@ -71,7 +71,7 @@ select throws_ok(
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000002", "role": "authenticated"}', true);
 select throws_ok(
   $$update public.students set course_id = (select eu from ids) where id = '00000000-0000-4000-ad00-000000000032'$$,
-  '23514', null, 'EU vælges med fluebenet, ikke som forløb');
+  '23514', null, 'Et EU-forløb kan ikke være elevens kørekortforløb');
 
 -- Undervisende kørelærere: kontoret vælger, læreren kan ikke.
 select lives_ok(

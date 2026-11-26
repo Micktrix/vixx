@@ -7,7 +7,7 @@ test("admin ser de faste forløb, låser B op, retter et modul og låser igen", 
   const admin = localAdmin();
   await loginOk(page, ADMIN, PASSWORD);
   await page.goto("/kontor/forloeb");
-  await expect(page.getByTestId("course-card")).toHaveText([/^B/, /^CModul/, /^C\/E/, /^D/, /^EU/, /^Taxa/]);
+  await expect(page.getByTestId("course-card")).toHaveText([/^B/, /^CModul/, /^C\/E/, /^D/, /^EU Gods/, /^EU Bus/, /^EU Gods 3/, /^EU Bus 3/, /^Taxa/]);
   await expect(page.getByRole("button", { name: "Opret forløb" })).toHaveCount(0);
 
   await page.getByTestId("course-card").filter({ hasText: /^B/ }).click();

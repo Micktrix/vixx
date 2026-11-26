@@ -6,7 +6,7 @@ import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
 import { saveTeam } from "../../actions";
-import { loadStudents } from "../../data";
+import { isEuKind, loadStudents } from "../../data";
 import { PlanTeachersBox } from "../../plan-teachers";
 import { ProgressBoard } from "../../progress-board";
 import { createClient } from "@/lib/supabase/server";
@@ -91,7 +91,7 @@ export default async function TeamPage({ params }: PageProps<"/kontor/elever/hol
               <select name="courseId" defaultValue={team.courseId ?? ""} className={inputClass}>
                 <option value="">Intet</option>
                 {courses
-                  .filter((c) => (c.active && c.kind !== "EU") || c.id === team.courseId)
+                  .filter((c) => (c.active && !isEuKind(c.kind)) || c.id === team.courseId)
                   .map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}

@@ -375,7 +375,10 @@ Kun Færdselsstyrelsens modulplan, gjort enkel (aftalt med Michael 20. nov. 2026
   kørslen (`dark_strokes`). Den skrives IKKE i styrelsens PDF, fordi blanketten ikke har et felt til den, og det er
   uvist, om vi må tilføje noget (Michael). Åbent: spørg koereuddannelse@fstyr.dk, før den kommer på den printede plan.
 
-### Trin E9 – EU-lektionsplaner (aftalt med Michael 26. nov. 2026, ikke bygget)
+### Trin E9 – EU-lektionsplaner (aftalt med Michael 26. nov. 2026)
+**E9a bygget 26. nov. 2026** (migration `20261126100000_eu_plans`): de fire forløb med emner og køretimer, valg på
+eleven, scanning, EU-boks på elevens side og print. **Mangler (E9b):** ret emner/timer og læg ny PDF op under Forløb
+(Lås op), lastsikring og Multitest i faktaboksen og på planen, EU i holdtavlen og elevens app, arkiv af printede udgaver.
 Kilde: skolens fire blanketter i `C:\Users\admin\OneDrive\Skrivebord\EU\` (skolens egen Word-blanket med logo efter
 styrelsens skabelon, BEK 322/2020; ingen udfyldbare felter).
 - **Fire EU-dele, alle i brug:** Gods (grundlæggende/intensiv), Bus, "Personbefordring for lastbilchauffører" (3 uger,

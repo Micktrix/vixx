@@ -298,5 +298,9 @@ insert into public.students (id, school_id, user_id, team_id, course_id, service
 
 -- Emil har Lars som fast lærer og må selv anmode om kørelektioner (trin E5). Freja har ingen.
 update public.students set can_request = true where id = '00000000-0000-4000-ad00-000000000031';
+-- Emil tager også EU Gods (trin E9).
+update public.students set eu_course_id = (
+  select id from public.courses where kind = 'EU_GODS' and school_id = '00000000-0000-4000-a000-000000000001')
+where id = '00000000-0000-4000-ad00-000000000031';
 insert into public.student_instructors (school_id, student_id, instructor_id)
 values ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-ad00-000000000031', '00000000-0000-4000-a200-000000000011');

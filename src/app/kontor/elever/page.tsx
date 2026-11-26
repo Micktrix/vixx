@@ -8,7 +8,7 @@ import { formatDate } from "@/lib/dates";
 import { formatPhone } from "@/lib/phone";
 import { matchesStudent } from "@/lib/student-search";
 import { saveTeam, setTeamActive } from "./actions";
-import { FINISH_LABEL, loadStudents, progress } from "./data";
+import { FINISH_LABEL, isEuKind, loadStudents, progress } from "./data";
 import { ProgressBar } from "./progress-bar";
 
 const linkButton = "inline-flex h-11 items-center rounded-xl border border-accent bg-accent px-4 text-[15px] font-bold text-ink";
@@ -108,7 +108,7 @@ export default async function StudentsPage({ searchParams }: PageProps<"/kontor/
             <select name="courseId" defaultValue="" className={inputClass}>
               <option value="">Intet</option>
               {courses
-                .filter((c) => c.active && c.kind !== "EU")
+                .filter((c) => c.active && !isEuKind(c.kind))
                 .map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}

@@ -1,5 +1,5 @@
 import { inputClass } from "@/components/styles";
-import type { CourseInfo, TeamInfo } from "./data";
+import { isEuKind, type CourseInfo, type TeamInfo } from "./data";
 
 type Option = { id: string; name: string };
 
@@ -19,7 +19,7 @@ export function StudentFields({
     serviceId?: string | null;
     address?: string | null;
     manualGear?: boolean;
-    eu?: boolean;
+    euCourseId?: string | null;
     courseStartOn?: string | null;
   };
 }) {
@@ -32,7 +32,7 @@ export function StudentFields({
             Vælg forløb
           </option>
           {courses
-            .filter((c) => (c.active && c.kind !== "EU") || c.id === value?.courseId)
+            .filter((c) => (c.active && !isEuKind(c.kind)) || c.id === value?.courseId)
             .map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -72,9 +72,18 @@ export function StudentFields({
         <input type="checkbox" name="manualGear" defaultChecked={value?.manualGear ?? false} className="size-[18px] accent-accent" />
         Kode 78: forsøgsordningen med manuelt gear (kun B)
       </label>
-      <label className="flex items-center gap-2.5 text-[15px] sm:col-span-3">
-        <input type="checkbox" name="eu" defaultChecked={value?.eu ?? false} className="size-[18px] accent-accent" />
-        EU (kun C og C/E): eleven får også EU-modulerne
+      <label className="flex flex-col gap-1.5 text-sm font-bold">
+        EU-forløb <span className="font-normal text-muted">(oven i kørekortet)</span>
+        <select name="euCourseId" defaultValue={value?.euCourseId ?? ""} className={inputClass} data-testid="eu-course">
+          <option value="">Intet EU</option>
+          {courses
+            .filter((c) => isEuKind(c.kind) && (c.active || c.id === value?.euCourseId))
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+        </select>
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-bold">
         Start af modul 1 <span className="font-normal text-muted">(tom = holdets startdato, ellers oprettelsesdatoen)</span>

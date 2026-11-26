@@ -61,7 +61,7 @@ export async function loadModulePlan(studentId: string) {
   const { data } = await supabase
     .from("students")
     .select(
-      "id, school_id, address, manual_gear, plan_template_id, team_id, created_at, course_start_on, teams(starts_on), profiles(full_name, phone), courses(name, category_code, plan_kind, course_modules(id, number)), module_signoffs(course_module_id, lesson_date, kind, lesson_count, manual_gear), repetition_lessons(id, lesson_date, lesson_count), module_completions(id, course_module_id, completed_on, started_on, instructor_name, extra_theory, extra_driving, self_study, transferred, annulled_at), module_plan_teachers(id, instructor_id, instructor_name, first_on)",
+      "id, school_id, address, manual_gear, plan_template_id, team_id, created_at, course_start_on, teams(starts_on), profiles(full_name, phone), courses!students_school_id_course_id_fkey(name, category_code, plan_kind, course_modules(id, number)), module_signoffs(course_module_id, lesson_date, kind, lesson_count, manual_gear), repetition_lessons(id, lesson_date, lesson_count), module_completions(id, course_module_id, completed_on, started_on, instructor_name, extra_theory, extra_driving, self_study, transferred, annulled_at), module_plan_teachers(id, instructor_id, instructor_name, first_on)",
     )
     .eq("id", studentId)
     .maybeSingle();

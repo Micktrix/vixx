@@ -100,3 +100,32 @@ export async function registerRepetition(_prev: ActionState, formData: FormData)
   revalidatePath("/elev", "layout");
   redirect(`/laerer/scan/${text("token")}?kvitteret=Repetition`);
 }
+
+// EU ved scanning (trin E9a): de gennemførte emner og evt. én køretime i ét tryk. Databasen tjekker, at emnerne
+// hører til elevens EU-forløb, og sætter dato, navn og lærerens underskrift på.
+export async function recordEuScan(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["instructor"]);
+  const text = (k: string) => String(formData.get(k) ?? "").trim();
+  const topics = formData.getAll("topic").map(String);
+  const drive = text("drive");
+  const title = text("driveTitle");
+  const lessons = Number(text("driveLessons") || "0");
+  if (drive === "other" && (!title || title.length > 80)) return { error: "Skriv køretimens emne." };
+  if (drive === "other" && (!Number.isInteger(lessons) || lessons < 1 || lessons > 8)) return { error: "Vælg antal køretimer." };
+  if (!topics.length && !drive) return { error: "Vælg mindst ét emne eller en køretime." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_eu_scan", {
+    p_student: text("studentId"),
+    p_topics: topics,
+    p_drive: drive && drive !== "other" ? drive : null,
+    p_drive_title: drive === "other" ? title : null,
+    p_drive_lessons: drive === "other" ? lessons : null,
+  });
+  if (error?.code === "23505") return { error: "Et af emnerne er allerede bekræftet." };
+  const failed = dbError(error, "EU kunne ikke gemmes. Prøv igen.");
+  if (failed) return failed;
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/kontor", "layout");
+  const parts = [topics.length ? `${topics.length} ${topics.length === 1 ? "emne" : "emner"}` : "", drive ? "1 køretime" : ""].filter(Boolean);
+  redirect(`/laerer/scan/${text("token")}?${new URLSearchParams({ eu: parts.join(" og ") })}`);
+}

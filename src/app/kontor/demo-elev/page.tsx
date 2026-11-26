@@ -40,7 +40,7 @@ export default async function DemoStudentPage({ searchParams }: PageProps<"/kont
       .eq("school_id", membership.schoolId)
       .eq("active", true)
       .not("kind", "is", null)
-      .neq("kind", "EU")
+      .not("kind", "like", "EU%")
       .order("name"),
     supabase.from("instructors").select("id, active_until, school_members(active, profiles(full_name))").eq("school_id", membership.schoolId),
   ]);
