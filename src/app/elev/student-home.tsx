@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../laerer/screen";
 import { StudentModules } from "./student-modules";
 import { FactsStrip } from "@/components/facts-strip";
-import type { Appointment } from "@/lib/appointments";
+import { euTestKinds, type Appointment } from "@/lib/appointments";
+import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euProgress, hoursText, type EuSignoff, type EuTopic } from "@/lib/eu";
+import { formatDate } from "@/lib/dates";
 
 // Elevens forside: QR-koden, som læreren scanner, og modulplanen med lektioner talt op mod minimum, opstart og
 // afslutning pr. modul. Bruges af elevens app og af admins demo-elev i kontoret.
@@ -27,7 +29,7 @@ export async function StudentHome({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, teams(name), student_appointments(id, kind, on_date, at_time, address, status, created_at), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, skipped_items), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses!students_school_id_course_id_fkey(name, theory_at_scan, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
+      "id, eu_course_id, teams(name), student_appointments(id, kind, on_date, at_time, address, status, created_at), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, skipped_items), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses!students_school_id_course_id_fkey(name, theory_at_scan, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
     )
     .eq("id", studentId)
     .maybeSingle();
@@ -35,6 +37,7 @@ export async function StudentHome({
 
   const course = student.courses as unknown as { name: string; theory_at_scan: boolean; course_modules: (PlanModule & { topics: string | null })[] } | null;
   const team = student.teams as unknown as { name: string } | null;
+  const eu = student.eu_course_id ? await loadStudentEu(supabase, student.id, student.eu_course_id) : null;
   const modules = course
     ? moduleProgress(
         course.course_modules,
@@ -51,7 +54,13 @@ export async function StudentHome({
       </Link>
       {course?.course_modules.length ? (
         <>
-        <FactsStrip title="Prøver og aftaler" modules={modules!} appointments={(student.student_appointments ?? []) as Appointment[]} />
+        <FactsStrip
+          title="Prøver og aftaler"
+          modules={modules!}
+          appointments={(student.student_appointments ?? []) as Appointment[]}
+          extra={euTestKinds(eu?.kind)}
+        />
+        {eu && <StudentEu eu={eu} />}
         <StudentModules
           courseName={course.name}
           teamName={team?.name ?? null}
@@ -64,5 +73,35 @@ export async function StudentHome({
         <p className="rounded-[16px] bg-soft px-4 py-3 text-[15px]">Dit forløb er ikke sat op endnu. Spørg på kontoret.</p>
       )}
     </Screen>
+  );
+}
+
+// Elevens EU-forløb (trin E9b): timer og emner, som lærerne har bekræftet.
+async function loadStudentEu(supabase: Awaited<ReturnType<typeof createClient>>, studentId: string, courseId: string) {
+  const [{ data: course }, { data: topics }, { data: signoffs }] = await Promise.all([
+    supabase.from("courses").select("name, kind").eq("id", courseId).maybeSingle(),
+    supabase.from("eu_topics").select(EU_TOPIC_FIELDS).eq("course_id", courseId),
+    supabase.from("eu_signoffs").select(EU_SIGNOFF_FIELDS).eq("student_id", studentId),
+  ]);
+  return { name: course?.name ?? "EU", kind: course?.kind as string | undefined, progress: euProgress((topics ?? []) as EuTopic[], (signoffs ?? []) as EuSignoff[]) };
+}
+
+function StudentEu({ eu }: { eu: NonNullable<Awaited<ReturnType<typeof loadStudentEu>>> }) {
+  const p = eu.progress;
+  return (
+    <section className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-4" data-testid="student-eu">
+      <h2 className="text-xl font-bold">{eu.name}</h2>
+      <p className="text-[14px] text-muted">
+        {hoursText(p.hoursDone)} af {hoursText(p.hoursTotal)} · {p.driveLessons} køretimer á 45 min.
+      </p>
+      <ul className="flex flex-col gap-0.5 text-[14px]">
+        {p.topics.map((t) => (
+          <li key={t.id} className={t.done ? "text-ok" : "text-muted"}>
+            {t.done ? "✓" : "○"} <b>{t.code}</b> {t.goal}
+            {t.done && ` · ${formatDate(t.done.signed_on)}`}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

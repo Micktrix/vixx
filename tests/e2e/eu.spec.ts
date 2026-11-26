@@ -34,3 +34,45 @@ test("læreren bekræfter EU ved scanning, og EU-planen kan printes", async ({ b
     await admin.from("eu_signoffs").delete().eq("student_id", EMIL);
   }
 });
+
+// Trin E9b: Lastsikring og Multitest i faktaboksen (EU Gods), EU-kolonnen på holdtavlen og EU i elevens app.
+test("EU-prøverne, holdtavlen og elevens app viser EU", async ({ browser }) => {
+  const admin = localAdmin();
+  const { data: student } = await admin.from("students").select("team_id").eq("id", EMIL).single();
+  const office = await browser.newPage();
+  await loginOk(office, ADMIN, PASSWORD);
+  await office.goto(`/kontor/elever/${EMIL}`);
+  await expect(office.getByTestId("fact-lastsikring")).toHaveAttribute("data-tone", "none");
+  await expect(office.getByTestId("fact-multitest")).toBeVisible();
+  await office.goto(`/kontor/elever/hold/${student!.team_id}`);
+  await expect(office.getByTestId("board-student").filter({ hasText: "Emil Elev" }).getByTestId("board-eu")).toHaveText("0/138 t");
+
+  const app = await browser.newPage();
+  await loginOk(app, "20000031", PASSWORD);
+  await expect(app.getByTestId("student-eu")).toContainText("EU Gods");
+  await expect(app.getByTestId("fact-multitest")).toBeVisible();
+});
+
+// Trin E9b: admin låser EU Gods op, retter et emnes timer og låser igen.
+test("admin retter et EU-emne, når forløbet er låst op", async ({ page }) => {
+  const admin = localAdmin();
+  const { data: course } = await admin.from("courses").select("id").eq("kind", "EU_GODS").eq("school_id", "00000000-0000-4000-a000-000000000001").single();
+  try {
+    page.on("dialog", (d) => d.accept());
+    await loginOk(page, ADMIN, PASSWORD);
+    await page.goto(`/kontor/forloeb/${course!.id}`);
+    await expect(page.getByTestId("eu-topics")).toContainText("I alt 138 t");
+    await page.getByRole("button", { name: "Lås op" }).click();
+    const topic = page.getByTestId("eu-topics").locator("details").filter({ hasText: "1.1" }).first();
+    await topic.locator("summary").click();
+    await topic.getByLabel("Timer").fill("5");
+    await topic.getByRole("button", { name: "Gem" }).click();
+    await expect(page.getByTestId("eu-topics")).toContainText("I alt 139 t");
+    await expect(page.getByTestId("eu-files")).toContainText("Læg ny blanket op (PDF)");
+    await page.getByRole("button", { name: "Lås igen" }).click();
+    await expect(page.getByRole("button", { name: "Lås op" })).toBeVisible();
+  } finally {
+    await admin.from("eu_topics").update({ hours: 4 }).eq("course_id", course!.id).eq("code", "1.1");
+    await admin.from("courses").update({ locked: true }).eq("id", course!.id);
+  }
+});

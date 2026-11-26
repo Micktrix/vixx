@@ -4,7 +4,11 @@ import { isKtaTopic, type ModuleProgress } from "./module-progress";
 // grå = intet gjort, gul = booket (der er en aftale), grøn = gennemført/bestået.
 // KTA og Mørke bliver grønne af sig selv ved scanning (afsnit 9 kørt / 7.19 bekræftet) eller manuelt.
 
-export const APPOINTMENT_KINDS = ["kta", "dark", "theory_test", "driving_test"] as const;
+export const APPOINTMENT_KINDS = ["kta", "dark", "theory_test", "driving_test", "lastsikring", "multitest"] as const;
+// Faktaboksens faste felter; EU-prøverne kommer kun med, når eleven har et EU-forløb (trin E9b).
+const BASE_KINDS = ["kta", "dark", "theory_test", "driving_test"] as const;
+export const euTestKinds = (euKind: string | null | undefined): AppointmentKind[] =>
+  !euKind ? [] : euKind === "EU_GODS" ? ["lastsikring", "multitest"] : ["multitest"];
 export type AppointmentKind = (typeof APPOINTMENT_KINDS)[number];
 export type AppointmentStatus = "booked" | "passed" | "failed";
 export type Appointment = {
@@ -22,8 +26,10 @@ export const KIND_LABEL: Record<AppointmentKind, string> = {
   dark: "Mørkekørsel",
   theory_test: "Teoriprøve",
   driving_test: "Køreprøve",
+  lastsikring: "Lastsikring",
+  multitest: "Multitest",
 };
-export const isTest = (k: AppointmentKind) => k === "theory_test" || k === "driving_test";
+export const isTest = (k: AppointmentKind) => k !== "kta" && k !== "dark";
 
 export type Fact = {
   kind: AppointmentKind;
@@ -34,10 +40,10 @@ export type Fact = {
 };
 
 
-export function facts(modules: ModuleProgress[], appointments: Appointment[]): Fact[] {
+export function facts(modules: ModuleProgress[], appointments: Appointment[], extra: AppointmentKind[] = []): Fact[] {
   const ktaScanned = modules.some((m) => m.drivenTopics.some(isKtaTopic));
   const darkScanned = modules.some((m) => m.min_dark > 0 && m.darkDone);
-  return APPOINTMENT_KINDS.map((kind) => {
+  return [...BASE_KINDS, ...extra].map((kind) => {
     const history = appointments
       .filter((a) => a.kind === kind)
       .sort((a, b) => b.on_date.localeCompare(a.on_date) || b.created_at.localeCompare(a.created_at));

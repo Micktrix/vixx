@@ -377,8 +377,9 @@ Kun Færdselsstyrelsens modulplan, gjort enkel (aftalt med Michael 20. nov. 2026
 
 ### Trin E9 – EU-lektionsplaner (aftalt med Michael 26. nov. 2026)
 **E9a bygget 26. nov. 2026** (migration `20261126100000_eu_plans`): de fire forløb med emner og køretimer, valg på
-eleven, scanning, EU-boks på elevens side og print. **Mangler (E9b):** ret emner/timer og læg ny PDF op under Forløb
-(Lås op), lastsikring og Multitest i faktaboksen og på planen, EU i holdtavlen og elevens app, arkiv af printede udgaver.
+eleven, scanning, EU-boks på elevens side og print. **E9b bygget 26. nov. 2026** (migration `20261126120000_eu_edit_tests`): ret emner/timer og læg ny blanket op (Lås op),
+Lastsikring og Multitest i faktaboksen og på planen, EU på holdtavlen og i elevens app. Mangler: arkiv af printede
+EU-udgaver (som modulplanen).
 Kilde: skolens fire blanketter i `C:\Users\admin\OneDrive\Skrivebord\EU\` (skolens egen Word-blanket med logo efter
 styrelsens skabelon, BEK 322/2020; ingen udfyldbare felter).
 - **Fire EU-dele, alle i brug:** Gods (grundlæggende/intensiv), Bus, "Personbefordring for lastbilchauffører" (3 uger,

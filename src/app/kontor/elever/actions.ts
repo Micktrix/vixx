@@ -335,7 +335,7 @@ export async function moveStudentPlanVersion(_prev: ActionState, formData: FormD
 
 // Aftaler på eleven (21. nov. 2026): KTA, mørkekørsel, teoriprøve og køreprøve. Lærere og kontor. Blandes ikke med
 // lærernes skema eller timer.
-const KINDS = ["kta", "dark", "theory_test", "driving_test"];
+const KINDS = ["kta", "dark", "theory_test", "driving_test", "lastsikring", "multitest"];
 
 function appointmentDone(error: { code?: string; message: string } | null, message: string): ActionState {
   if (error?.code === "23514") return { error: error.message };

@@ -57,7 +57,7 @@ select throws_ok(
 
 -- Emil (eleven) og en anden skole ser ingen bekræftelser.
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-a100-000000000031", "role": "authenticated"}', true);
-select is((select count(*) from public.eu_signoffs), 0::bigint, 'Eleven ser ikke bekræftelserne');
+select is((select count(*) from public.eu_signoffs), 2::bigint, 'Eleven ser sine egne EU-bekræftelser (trin E9b)');
 select set_config('request.jwt.claims', '{"sub": "00000000-0000-4000-b100-000000000002", "role": "authenticated"}', true);
 select is((select count(*) from public.eu_signoffs), 0::bigint, 'En anden skole ser intet');
 

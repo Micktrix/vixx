@@ -55,6 +55,7 @@ type EuPlan = {
   teachers: { name: string; strokes: string | null }[];
   progress: EuProgress;
   strokes: Map<string, string | null>; // underskrift pr. bekræftelse
+  passed: { lastsikring: string | null; multitest: string | null }; // beståede prøver (faktaboksen)
 };
 
 // Data til planen. RLS afgør, om brugeren kan se eleven; underskrifterne læses med service role.
@@ -67,7 +68,7 @@ export async function loadEuPlan(studentId: string): Promise<EuPlan | null> {
     .maybeSingle();
   const kind = (s?.eu as unknown as { kind: string } | null)?.kind;
   if (!s?.eu_course_id || !kind || !EU_INFO[kind]) return null;
-  const [{ data: topics }, { data: signoffs }, { data: school }, { data: chosenRows }] = await Promise.all([
+  const [{ data: topics }, { data: signoffs }, { data: school }, { data: chosenRows }, { data: tests }] = await Promise.all([
     supabase.from("eu_topics").select(EU_TOPIC_FIELDS).eq("course_id", s.eu_course_id),
     supabase.from("eu_signoffs").select(`${EU_SIGNOFF_FIELDS}, instructor_id`).eq("student_id", studentId).order("signed_on"),
     supabase.from("schools").select("name, address, contact_phone").eq("id", s.school_id).single(),
@@ -76,7 +77,9 @@ export async function loadEuPlan(studentId: string): Promise<EuPlan | null> {
       .select("instructor_id, created_at")
       .or(s.team_id ? `team_id.eq.${s.team_id},student_id.eq.${s.id}` : `student_id.eq.${s.id}`)
       .order("created_at"),
+    supabase.from("student_appointments").select("kind, on_date").eq("student_id", studentId).eq("status", "passed").in("kind", ["lastsikring", "multitest"]),
   ]);
+  const passedOn = (k: string) => (tests ?? []).filter((t) => t.kind === k).map((t) => t.on_date as string).sort()[0] ?? null;
   const rows = (signoffs ?? []) as (EuSignoff & { instructor_id: string })[];
   const admin = createAdminClient();
   const { data: strokeRows } = await admin.from("eu_signoffs").select("id, strokes").in("id", rows.length ? rows.map((r) => r.id) : [randomUUID()]);
@@ -101,6 +104,7 @@ export async function loadEuPlan(studentId: string): Promise<EuPlan | null> {
     teachers,
     progress: euProgress((topics ?? []) as EuTopic[], rows),
     strokes: new Map((strokeRows ?? []).map((r) => [r.id as string, r.strokes as string | null])),
+    passed: { lastsikring: passedOn("lastsikring"), multitest: passedOn("multitest") },
   };
 }
 
@@ -257,10 +261,10 @@ export async function renderEuPlan(plan: EuPlan): Promise<Uint8Array> {
   field("Faktisk anvendt tid i alt:", allDone ? String(doneHours).replace(".", ",") : "", M, 300, 130);
   y -= 28;
   if (info.lastsikring) {
-    field("Praktisk prøve i lastsikring bestået d.:", "", M, 340, 200);
+    field("Praktisk prøve i lastsikring bestået d.:", plan.passed.lastsikring ? date(plan.passed.lastsikring) : "", M, 340, 200);
     y -= 28;
   }
-  field("Skriftlig prøve i Multitest bestået d.:", "", M, 340, 200);
+  field("Skriftlig prøve i Multitest bestået d.:", plan.passed.multitest ? date(plan.passed.multitest) : "", M, 340, 200);
   y -= 34;
   write("Lektionsplanen skal opbevares af uddannelsescentret i mindst 2 år efter afslutningen af kvalifikationsuddannelsen.", { f: bold, size: 10 });
 

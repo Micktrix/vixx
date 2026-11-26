@@ -97,7 +97,7 @@ export default async function CoursePage({ params }: PageProps<"/kontor/forloeb/
       )}
 
       {isEuKind(course.kind) ? (
-        <EuTopicList courseId={course.id} />
+        <EuTopicList courseId={course.id} editing={editing} />
       ) : (
         <>
           <ModuleList modules={modules} isAdmin={editing} />

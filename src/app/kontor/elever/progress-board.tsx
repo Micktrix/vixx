@@ -8,7 +8,8 @@ import { progress, type CourseInfo, type StudentInfo } from "./data";
 // Forløbstavle: én række pr. elev og én kolonne pr. modul. Grøn = afsluttet, orange = i gang (lektioner talt),
 // grå = ikke startet. Til højre faktaboksen: KTA, Mørke, Teoriprøve, Køreprøve (grå/gul/grøn).
 const SHORT = { kta: "KTA", dark: "Mørke", theory_test: "Teori", driving_test: "Køre" } as const;
-export function ProgressBoard({ course, students }: { course: CourseInfo; students: StudentInfo[] }) {
+export function ProgressBoard({ course, students, euHours }: { course: CourseInfo; students: StudentInfo[]; euHours: Map<string, Map<string, number>> }) {
+  const anyEu = students.some((s) => s.euCourseId);
   return (
     <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-[18px] py-3">
@@ -30,6 +31,7 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
                 {label}
               </th>
             ))}
+            {anyEu && <th className="px-2 py-2 text-center font-semibold">EU</th>}
             <th className="w-[18px]" />
           </tr>
         </thead>
@@ -72,6 +74,11 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
                     </span>
                   </td>
                 ))}
+                {anyEu && (
+                  <td className="px-2 py-2 text-center text-[12px] whitespace-nowrap" data-testid="board-eu">
+                    {s.euCourseId ? euText(s, euHours.get(s.euCourseId)) : "–"}
+                  </td>
+                )}
                 <td />
               </tr>
             );
@@ -84,3 +91,11 @@ export function ProgressBoard({ course, students }: { course: CourseInfo; studen
 
 // "23/11" til tavlen.
 const shortDate = (iso: string) => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
+
+// "16/138 t": bekræftede EU-emners faste timer af forløbets i alt.
+function euText(s: StudentInfo, hours: Map<string, number> | undefined) {
+  if (!hours) return "–";
+  const total = [...hours.values()].reduce((n, h) => n + h, 0);
+  const done = s.euSignoffs.filter((x) => x.kind === "topic" && x.eu_topic_id).reduce((n, x) => n + (hours.get(x.eu_topic_id!) ?? 0), 0);
+  return `${done}/${total} t`;
+}

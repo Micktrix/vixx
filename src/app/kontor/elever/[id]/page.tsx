@@ -24,7 +24,7 @@ import { courseStart, FINISH_LABEL, loadStudents, progress } from "../data";
 import { ModuleDetails } from "@/components/module-details";
 import { EuBox } from "../eu-box";
 import { FactsBox } from "../facts-box";
-import { facts, type Appointment } from "@/lib/appointments";
+import { euTestKinds, facts, type Appointment } from "@/lib/appointments";
 import { ProgressBar } from "../progress-bar";
 import { PlanTeachersBox } from "../plan-teachers";
 import { StudentFields } from "../student-fields";
@@ -155,7 +155,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               </li>
             ))}
           </ol>
-          <FactsBox studentId={student.id} facts={facts(modules, (appointments ?? []) as Appointment[])} canFinish={student.active && !student.finished} />
+          <FactsBox studentId={student.id} facts={facts(modules, (appointments ?? []) as Appointment[], euTestKinds(courses.find((c) => c.id === student.euCourseId)?.kind))} canFinish={student.active && !student.finished} />
           {student.repetitions.length > 0 && (
             <ul className="text-sm" data-testid="student-repetitions">
               {student.repetitions.map((r) => (

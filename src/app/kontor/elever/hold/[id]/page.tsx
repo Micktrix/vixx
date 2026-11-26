@@ -6,7 +6,7 @@ import { inputClass } from "@/components/styles";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
 import { saveTeam } from "../../actions";
-import { isEuKind, loadStudents } from "../../data";
+import { isEuKind, loadEuHours, loadStudents } from "../../data";
 import { PlanTeachersBox } from "../../plan-teachers";
 import { ProgressBoard } from "../../progress-board";
 import { createClient } from "@/lib/supabase/server";
@@ -17,10 +17,11 @@ export default async function TeamPage({ params }: PageProps<"/kontor/elever/hol
   const { id } = await params;
   const { membership } = await requireRole(["admin", "office"]);
   const supabase = await createClient();
-  const [{ teams, students, courses }, { data: chosen }, { data: instructors }] = await Promise.all([
+  const [{ teams, students, courses }, { data: chosen }, { data: instructors }, euHours] = await Promise.all([
     loadStudents(membership.schoolId),
     supabase.from("plan_teachers").select("instructor_id").eq("team_id", id),
     supabase.from("instructors").select("id, active_until, school_members(active, profiles(full_name))").eq("school_id", membership.schoolId),
+    loadEuHours(membership.schoolId),
   ]);
   const teachers = (instructors ?? [])
     .filter((i) => {
@@ -74,7 +75,7 @@ export default async function TeamPage({ params }: PageProps<"/kontor/elever/hol
       </header>
 
       {groups.map((g) => (
-        <ProgressBoard key={g.course.id} course={g.course} students={g.students} />
+        <ProgressBoard key={g.course.id} course={g.course} students={g.students} euHours={euHours} />
       ))}
       {!active.length && <p className="text-muted">Ingen elever på holdet endnu.</p>}
 

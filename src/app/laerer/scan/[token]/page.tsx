@@ -18,7 +18,7 @@ import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euProgress, type EuSignoff, type Eu
 import { EuScanForm } from "./eu-scan-form";
 import { ScrollToTop } from "./scroll-to-top";
 import { ModuleDetails } from "@/components/module-details";
-import type { Appointment } from "@/lib/appointments";
+import { euTestKinds, type Appointment } from "@/lib/appointments";
 import { Screen } from "../../screen";
 import { getTeacher } from "../../teacher-data";
 
@@ -131,7 +131,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
       >
         Se og print modulplanen (PDF) ›
       </a>
-      <FactsStrip modules={progress} appointments={(student.student_appointments ?? []) as Appointment[]} />
+      <FactsStrip modules={progress} appointments={(student.student_appointments ?? []) as Appointment[]} extra={euTestKinds(eu?.kind)} />
       {suggested ? (
         <ScanForm
           key={signed ?? ""}
@@ -199,9 +199,9 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
 
 async function loadEu(supabase: Awaited<ReturnType<typeof createClient>>, studentId: string, courseId: string) {
   const [{ data: course }, { data: topics }, { data: signoffs }] = await Promise.all([
-    supabase.from("courses").select("name").eq("id", courseId).single(),
+    supabase.from("courses").select("name, kind").eq("id", courseId).single(),
     supabase.from("eu_topics").select(EU_TOPIC_FIELDS).eq("course_id", courseId),
     supabase.from("eu_signoffs").select(EU_SIGNOFF_FIELDS).eq("student_id", studentId),
   ]);
-  return { name: course?.name ?? "EU", progress: euProgress((topics ?? []) as EuTopic[], (signoffs ?? []) as EuSignoff[]) };
+  return { name: course?.name ?? "EU", kind: course?.kind as string | undefined, progress: euProgress((topics ?? []) as EuTopic[], (signoffs ?? []) as EuSignoff[]) };
 }
