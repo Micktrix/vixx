@@ -10,16 +10,17 @@ import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./da
 // 1–9 (lektionsplanen) eller modulerne (B), "Kørt"/"Afsluttet", og faktaboksen KTA, Mørke, Teori, Køre (grå/gul/grøn).
 // Har eleven EU, står EU på en linje under. Grøn = kørt/afsluttet/bestået, orange = modul i gang, gul = booket.
 const SHORT = { kta: "KTA", dark: "Mørke", theory_test: "Teori", driving_test: "Køre" } as const;
-const square = "inline-block size-5 rounded-md";
+// Samme felt som faktaboksen: ✓ (grøn), "…" (gul, modul i gang) eller "–" (grå).
+const box = "inline-block min-w-[28px] rounded-md border px-1.5 py-0.5 text-center text-[12px] font-semibold whitespace-nowrap";
 export function ProgressBoard({ course, students, euHours }: { course: CourseInfo; students: StudentInfo[]; euHours: Map<string, EuTotals> }) {
   // KTA står i faktaboksen (grøn, når KTA-lektionen er kørt eller KTA er markeret), ikke i lektionsrækken.
   const lessons = course.lessons.filter((l) => l.kind !== "kta");
   return (
-    <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-[18px] py-3">
+    <section className="w-fit max-w-full overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-line px-[18px] py-3">
         <h2 className="text-lg font-bold">{course.name}</h2>
         <span className="text-[13px] text-muted">
-          {course.lessons.length ? "Grøn = kørt" : "Grøn = afsluttet · orange = i gang"} · gul = booket
+          {course.lessons.length ? "✓ = kørt · gul = booket" : "✓ = afsluttet · … = i gang · gul = booket"}
         </span>
       </div>
       <table className="w-full text-left text-[14px]">
@@ -45,9 +46,11 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                               <Cell key={l.id} label={String(l.number)}>
                                 <span
                                   data-state={done ? "done" : "missing"}
-                                  className={`${square} ${done ? "bg-ok" : "border border-line2 bg-bg"}`}
+                                  className={`${box} ${FACT_TONE[done ? "done" : "none"]}`}
                                   title={`${l.title}: ${done ? `kørt ${done.lesson_date} · ${done.instructor_name}` : "mangler"}`}
-                                />
+                                >
+                                  {done ? "✓" : "–"}
+                                </span>
                               </Cell>
                             );
                           })
@@ -57,9 +60,11 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                               <Cell key={m.id} label={`M${m.number}`}>
                                 <span
                                   data-state={state}
-                                  className={`${square} ${state === "done" ? "bg-ok" : state === "started" ? "bg-accent" : "border border-line2 bg-bg"}`}
+                                  className={`${box} ${FACT_TONE[state === "done" ? "done" : state === "started" ? "booked" : "none"]}`}
                                   title={`Modul ${m.number}: ${m.completed ? "afsluttet" : progressText(m, course.theoryAtScan)}`}
-                                />
+                                >
+                                  {state === "done" ? "✓" : state === "started" ? "…" : "–"}
+                                </span>
                               </Cell>
                             );
                           })}
