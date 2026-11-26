@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
-import { formatDate } from "@/lib/dates";
 import { hoursText, type EuProgress } from "@/lib/eu";
 import { recordEuScan } from "./actions";
 
@@ -92,27 +91,6 @@ export function EuScanForm({ token, studentId, courseName, progress }: { token: 
       <ResultBox state={state} />
       <p className="text-[13px] text-muted">Dato, dit navn og din underskrift kommer på EU-planen. Eleven skriver under med kuglepen, når planen printes.</p>
 
-      {progress.topics.some((t) => t.done) || progress.drives.some((d) => d.done) ? (
-        <details className="text-[13px]">
-          <summary className="cursor-pointer font-semibold text-muted">Bekræftet indtil nu</summary>
-          <ul className="mt-1 flex flex-col gap-0.5 text-ok">
-            {progress.topics
-              .filter((t) => t.done)
-              .map((t) => (
-                <li key={t.id}>
-                  ✓ {t.code} · {formatDate(t.done!.signed_on)} · {t.done!.instructor_name}
-                </li>
-              ))}
-            {progress.drives
-              .filter((d) => d.done)
-              .map((d) => (
-                <li key={d.done!.id}>
-                  ✓ {d.title} ({d.lessons} × 45 min.) · {formatDate(d.done!.signed_on)} · {d.done!.instructor_name}
-                </li>
-              ))}
-          </ul>
-        </details>
-      ) : null}
     </form>
   );
 }

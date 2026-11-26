@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
-import { formatDate } from "@/lib/dates";
 import { isCheckable, lengthText, lessonLabel, lessonLines, modulesToComplete, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
 import type { ModuleProgress } from "@/lib/module-progress";
 import { recordLessonScan } from "./actions";
@@ -59,15 +58,12 @@ export function LessonScanForm({
 
       <fieldset className="flex flex-col gap-1.5 rounded-[20px] border border-line bg-surface p-4" data-testid="lesson-list">
         <legend className="sr-only">Lektion</legend>
-        {lessons.map((l) =>
-          l.done ? (
-            <div key={l.id} className="px-3 py-1 text-[15px]">
-              <b>{lessonLabel(l)}</b> <span className="text-ok">✓</span>
-              <span className="block text-[13px] text-ok">
-                {formatDate(l.done.lesson_date)} · {l.done.instructor_name}
-              </span>
-            </div>
-          ) : (
+        {/* Kørte lektioner vises ikke ved scanning (Michael 26. nov. 2026), kun hvor mange der er kørt. */}
+        <p className="px-1 text-[13px] text-muted" data-testid="lessons-done">
+          {lessons.length - open.length} af {lessons.length} lektioner kørt
+        </p>
+        {open.map((l) =>
+          (
             <div key={l.id} className={`rounded-[14px] border ${chosenIds.includes(l.id) ? "border-accent bg-accent-bg" : "border-line"}`}>
               <label className="flex items-center gap-3 px-3 py-2.5">
                 <input type="checkbox" name="lesson" value={l.id} checked={chosenIds.includes(l.id)} onChange={(e) => toggle(l.id, e.target.checked)} className={check} />
