@@ -26,6 +26,9 @@ export const lessonLines = (items: string) =>
 // Et punkt med en kode ("7.9 Overhaling") kan krydses af; overskrifter og intervaller ("1.1–1.7 …") er kun tekst.
 export const isCheckable = (line: string) => /^(\d+\.\d+|Afsnit \d+)\s/.test(line);
 export const lengthText = (l: Pick<SchoolLesson, "units">) => `${l.units.length} × 45 min.`;
+// "Lektion 6 (mørke)", "KTA (køreteknisk anlæg)".
+export const lessonLabel = (l: Pick<SchoolLesson, "title" | "kind">) =>
+  l.kind === "dark" ? `${l.title} (mørke)` : l.kind === "kta" ? `${l.title} (køreteknisk anlæg)` : l.title;
 
 export function lessonProgress(lessons: SchoolLesson[], signoffs: LessonSignoff[]) {
   const list = [...lessons]

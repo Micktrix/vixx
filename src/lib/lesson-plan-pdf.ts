@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { LESSON_FIELDS, LESSON_SIGNOFF_FIELDS, lengthText, lessonLines, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
+import { LESSON_FIELDS, LESSON_SIGNOFF_FIELDS, lengthText, lessonLabel, lessonLines, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
 import { drawStrokes } from "@/lib/modulplan/fill";
 import { formatPhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -107,7 +107,7 @@ export async function renderLessonPlan(plan: Plan): Promise<Uint8Array> {
       y = H - M;
     }
     const top = y;
-    text(l.title.toUpperCase(), M, 11.5, bold);
+    text(lessonLabel(l).toUpperCase(), M, 11.5, bold);
     y -= 15;
     text(lengthText(l), M, 9.5);
     y -= 14;

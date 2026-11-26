@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { formatDate } from "@/lib/dates";
-import { isCheckable, lengthText, lessonLines, modulesToComplete, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
+import { isCheckable, lengthText, lessonLabel, lessonLines, modulesToComplete, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
 import type { ModuleProgress } from "@/lib/module-progress";
 import { recordLessonScan } from "./actions";
 
@@ -62,64 +62,65 @@ export function LessonScanForm({
         {lessons.map((l) =>
           l.done ? (
             <div key={l.id} className="px-3 py-1 text-[15px]">
-              <b>{l.title}</b> <span className="text-ok">✓</span>
+              <b>{lessonLabel(l)}</b> <span className="text-ok">✓</span>
               <span className="block text-[13px] text-ok">
                 {formatDate(l.done.lesson_date)} · {l.done.instructor_name}
               </span>
             </div>
           ) : (
-            <label
-              key={l.id}
-              className={`flex items-center gap-3 rounded-[14px] border px-3 py-2.5 ${chosenIds.includes(l.id) ? "border-accent bg-accent-bg" : "border-line"}`}
-            >
-              <input type="checkbox" name="lesson" value={l.id} checked={chosenIds.includes(l.id)} onChange={(e) => toggle(l.id, e.target.checked)} className={check} />
-              <span>
-                <b>{l.title}</b>
-                {l.id === next?.id && <span className="text-[13px] font-semibold text-accent-ink"> · næste</span>}
-                <span className="block text-[13px] text-muted">
-                  {lengthText(l)}
-                  {l.control && ` · ${l.control}`}
+            <div key={l.id} className={`rounded-[14px] border ${chosenIds.includes(l.id) ? "border-accent bg-accent-bg" : "border-line"}`}>
+              <label className="flex items-center gap-3 px-3 py-2.5">
+                <input type="checkbox" name="lesson" value={l.id} checked={chosenIds.includes(l.id)} onChange={(e) => toggle(l.id, e.target.checked)} className={check} />
+                <span>
+                  <b>{lessonLabel(l)}</b>
+                  {l.id === next?.id && <span className="text-[13px] font-semibold text-accent-ink"> · næste</span>}
+                  <span className="block text-[13px] text-muted">
+                    {lengthText(l)}
+                    {l.control && ` · ${l.control}`}
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
+              {chosenIds.includes(l.id) && (
+                <div className="flex flex-col gap-1 border-t border-accent-line bg-surface px-3 py-2.5" data-testid="lesson-items">
+                  {l.kind === "normal" && lessonLines(l.items).some(isCheckable) && (
+                    <p className="text-[13px] font-semibold">Fjern fluebenet ved det, der ikke blev gennemført:</p>
+                  )}
+                  {lessonLines(l.items).map((line) =>
+                    isCheckable(line) && l.kind === "normal" ? (
+                      <label key={line} className="flex items-start gap-2.5 px-1.5 py-0.5 text-[14px]">
+                        <input type="hidden" name="item" value={line} />
+                        <input type="checkbox" name="itemDone" value={line} defaultChecked className={`${check} mt-0.5`} />
+                        {line}
+                      </label>
+                    ) : (
+                      <p key={line} className="px-1.5 py-0.5 text-[14px] text-muted">
+                        {line}
+                      </p>
+                    ),
+                  )}
+                  {l.kind === "dark" && (
+                    <label className="mt-1 flex items-start gap-2.5 rounded-lg border border-accent-line bg-accent-bg px-2 py-1.5 text-[14px] font-semibold">
+                      <input type="checkbox" name="darkConfirm" checked={dark} onChange={(e) => setDark(e.target.checked)} className={`${check} mt-0.5`} />
+                      <span>
+                        Ja, kørt i mørke
+                        <span className="block text-[12px] font-normal text-muted">Din underskrift sættes på mørkekørslen.</span>
+                      </span>
+                    </label>
+                  )}
+                  {l.kind === "kta" && (
+                    <label className="mt-1 flex items-start gap-2.5 rounded-lg border border-accent-line bg-accent-bg px-2 py-1.5 text-[14px] font-semibold">
+                      <input type="checkbox" name="ktaConfirm" checked={kta} onChange={(e) => setKta(e.target.checked)} className={`${check} mt-0.5`} />
+                      Ja, kørt på køreteknisk anlæg
+                    </label>
+                  )}
+                  {l.note && <p className="px-1.5 text-[12px] text-muted">{l.note}</p>}
+                </div>
+              )}
+            </div>
           ),
         )}
       </fieldset>
 
-      {chosen.map((l) => (
-        <fieldset key={l.id} className="flex flex-col gap-1 rounded-[20px] border border-line bg-surface p-4" data-testid="lesson-items">
-          <legend className="px-1 text-[13px] font-semibold">{l.title} – fjern fluebenet ved det, der ikke blev gennemført:</legend>
-          {lessonLines(l.items).map((line) =>
-            isCheckable(line) && l.kind === "normal" ? (
-              <label key={line} className="flex items-start gap-2.5 px-1.5 py-0.5 text-[14px]">
-                <input type="hidden" name="item" value={line} />
-                <input type="checkbox" name="itemDone" value={line} defaultChecked className={`${check} mt-0.5`} />
-                {line}
-              </label>
-            ) : (
-              <p key={line} className="px-1.5 py-0.5 text-[14px] text-muted">
-                {line}
-              </p>
-            ),
-          )}
-          {l.kind === "dark" && (
-            <label className="mt-1 flex items-start gap-2.5 rounded-lg border border-accent-line bg-accent-bg px-2 py-1.5 text-[14px] font-semibold">
-              <input type="checkbox" name="darkConfirm" checked={dark} onChange={(e) => setDark(e.target.checked)} className={`${check} mt-0.5`} />
-              <span>
-                Ja, kørt i mørke
-                <span className="block text-[12px] font-normal text-muted">Din underskrift sættes på mørkekørslen.</span>
-              </span>
-            </label>
-          )}
-          {l.kind === "kta" && (
-            <label className="mt-1 flex items-start gap-2.5 rounded-lg border border-accent-line bg-accent-bg px-2 py-1.5 text-[14px] font-semibold">
-              <input type="checkbox" name="ktaConfirm" checked={kta} onChange={(e) => setKta(e.target.checked)} className={`${check} mt-0.5`} />
-              Ja, kørt på køreteknisk anlæg
-            </label>
-          )}
-          {l.note && <p className="px-1.5 text-[12px] text-muted">{l.note}</p>}
-        </fieldset>
-      ))}
 
       {completing.length > 0 && (
         <section className="flex flex-col gap-3 rounded-[20px] border border-ok/30 bg-ok-bg p-4" data-testid="lesson-completes">

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { formatDate } from "@/lib/dates";
-import { lengthText, lessonProgress, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
+import { lengthText, lessonLabel, lessonProgress, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
 
 // Elevens lektionsplan (trin E10): lektion 1–9 og KTA, kørt (dato og lærer) eller mangler. Bruges på elevens side
 // hos kontoret og i elevens app.
@@ -10,7 +10,7 @@ export function LessonPlanList({ lessons, signoffs, showTeacher = true }: { less
     <ol className="flex flex-col gap-1.5" data-testid="lesson-plan">
       {p.lessons.map((l) => (
         <li key={l.id} className={`rounded-xl border px-3 py-2 text-[15px] ${l.done ? "border-ok/30 bg-ok-bg" : "border-line"}`}>
-          <b>{l.title}</b> <span className="text-[13px] text-muted">· {lengthText(l)}</span>
+          <b>{lessonLabel(l)}</b> <span className="text-[13px] text-muted">· {lengthText(l)}</span>
           {l.done ? (
             <span className="block text-[13px] text-ok">
               ✓ {formatDate(l.done.lesson_date)}
