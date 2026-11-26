@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { FACT_TONE } from "@/components/facts-strip";
-import { factText, facts, KIND_LABEL } from "@/lib/appointments";
+import { euTestKinds, factText, facts, KIND_LABEL } from "@/lib/appointments";
 import { formatDate } from "@/lib/dates";
 import { moduleProgress, progressText } from "@/lib/module-progress";
 import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./data";
@@ -9,9 +10,8 @@ import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./da
 // grå = ikke startet. Til højre faktaboksen: KTA, Mørke, Teoriprøve, Køreprøve (grå/gul/grøn).
 const SHORT = { kta: "KTA", dark: "Mørke", theory_test: "Teori", driving_test: "Køre" } as const;
 export function ProgressBoard({ course, students, euHours }: { course: CourseInfo; students: StudentInfo[]; euHours: Map<string, EuTotals> }) {
-  // Lektionsplanen viser allerede KTA og mørke (lektion 6); så vises de ikke igen til højre.
-  const factKinds = (course.lessons.length ? ["theory_test", "driving_test"] : Object.keys(SHORT)) as (keyof typeof SHORT)[];
-  const anyEu = students.some((s) => s.euCourseId);
+  const factKinds = Object.keys(SHORT) as (keyof typeof SHORT)[];
+  const span = (course.lessons.length || course.modules.length) + 6; // alle kolonner efter elevens navn
   return (
     <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-[18px] py-3">
@@ -39,7 +39,6 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                 {SHORT[k]}
               </th>
             ))}
-            {anyEu && <th className="px-2 py-2 text-center font-semibold">EU</th>}
             <th className="w-[18px]" />
           </tr>
         </thead>
@@ -47,8 +46,10 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
           {students.map((s) => {
             const p = progress(s, course);
             const modules = moduleProgress(course.modules, s.moduleCounts, s.moduleCompletions, course.theoryAtScan);
+            const eu = s.euCourseId ? euHours.get(s.euCourseId) : undefined;
             return (
-              <tr key={s.id} className="border-t border-line" data-testid="board-student">
+              <Fragment key={s.id}>
+              <tr className="border-t border-line" data-testid="board-student">
                 <td className="sticky left-0 bg-surface px-[18px] py-2 whitespace-nowrap">
                   <Link href={`/kontor/elever/${s.id}`} className="font-bold hover:text-accent-ink hover:underline">
                     {s.name}
@@ -104,13 +105,18 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                     </span>
                   </td>
                 ))}
-                {anyEu && (
-                  <td className="px-2 py-2 text-center text-[12px] whitespace-nowrap" data-testid="board-eu">
-                    {s.euCourseId ? euText(s, euHours.get(s.euCourseId)) : "–"}
-                  </td>
-                )}
                 <td />
               </tr>
+              {eu && (
+                // EU på sin egen linje under kørekortet (Michael 26. nov. 2026).
+                <tr data-testid="board-eu" data-student={s.name}>
+                  <td className="sticky left-0 bg-surface px-[18px] pb-2 text-[12px] font-semibold text-muted">EU</td>
+                  <td colSpan={span} className="px-1 pb-2">
+                    <EuLine s={s} totals={eu} modules={modules} />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             );
           })}
         </tbody>
@@ -122,34 +128,34 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
 // "23/11" til tavlen.
 const shortDate = (iso: string) => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
 
-// "16/138 lektioner" og "4/10 køretimer": bekræftede EU-emners faste lektioner og EU-køretimer (á 45 min.) af forløbets i alt.
-function euText(s: StudentInfo, totals: EuTotals | undefined) {
-  if (!totals) return "–";
+// EU-linjen: forløbets navn, emnernes lektioner, køretimerne som blokke (ØKO, Anden by, EU tur, Veksellad …) og
+// prøverne (Lastsikring, Multitest). Grøn = kørt/bestået, gul = booket.
+function EuLine({ s, totals, modules }: { s: StudentInfo; totals: EuTotals; modules: ReturnType<typeof moduleProgress> }) {
   const total = [...totals.hours.values()].reduce((n, h) => n + h, 0);
   const done = s.euSignoffs.filter((x) => x.kind === "topic" && x.eu_topic_id).reduce((n, x) => n + (totals.hours.get(x.eu_topic_id!) ?? 0), 0);
-  // EU-køretimerne som blokke (ØKO, Anden by, EU tur, Veksellad …): grøn = kørt.
+  const tests = facts(modules, s.appointments, euTestKinds(totals.kind)).filter((f) => f.kind === "lastsikring" || f.kind === "multitest");
+  const block = "rounded-md border px-1.5 py-0.5 text-[12px] font-semibold whitespace-nowrap";
   return (
-    <>
-      {done}/{total} lektioner
-      {totals.driveList.length > 0 && (
-        <span className="mx-auto mt-1 flex max-w-[150px] flex-wrap justify-center gap-1">
-          {totals.driveList.map((d) => {
-            const ok = s.euSignoffs.some((x) => x.kind === "drive" && x.eu_topic_id === d.id);
-            return (
-              <span
-                key={d.id}
-                data-testid="board-eu-drive"
-                data-tone={ok ? "done" : "none"}
-                title={`${d.title}: ${ok ? "kørt" : "mangler"}`}
-                className={`rounded-md border px-1 py-0.5 text-[11px] font-semibold ${FACT_TONE[ok ? "done" : "none"]}`}
-              >
-                {driveShort(d.title)}
-              </span>
-            );
-          })}
+    <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
+      <span className="font-semibold">{totals.name}</span>
+      <span className="text-muted" data-testid="board-eu-lessons">
+        {done}/{total} lektioner
+      </span>
+      {totals.driveList.map((d) => {
+        const ok = s.euSignoffs.some((x) => x.kind === "drive" && x.eu_topic_id === d.id);
+        return (
+          <span key={d.id} data-testid="board-eu-drive" data-tone={ok ? "done" : "none"} title={`${d.title}: ${ok ? "kørt" : "mangler"}`} className={`${block} ${FACT_TONE[ok ? "done" : "none"]}`}>
+            {driveShort(d.title)}
+          </span>
+        );
+      })}
+      {tests.map((f) => (
+        <span key={f.kind} data-testid={`board-fact-${f.kind}`} data-tone={f.tone} title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`} className={`${block} ${FACT_TONE[f.tone]}`}>
+          {KIND_LABEL[f.kind]}
+          {f.tone === "booked" && f.current ? ` ${shortDate(f.current.on_date)}` : ""}
         </span>
-      )}
-    </>
+      ))}
+    </div>
   );
 }
 

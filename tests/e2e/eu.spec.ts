@@ -45,7 +45,9 @@ test("EU-prøverne, holdtavlen og elevens app viser EU", async ({ browser }) => 
   await expect(office.getByTestId("fact-lastsikring")).toHaveAttribute("data-tone", "none");
   await expect(office.getByTestId("fact-multitest")).toBeVisible();
   await office.goto(`/kontor/elever/hold/${student!.team_id}`);
-  const euCell = office.getByTestId("board-student").filter({ hasText: "Emil Elev" }).getByTestId("board-eu");
+  const euCell = office.locator('[data-testid="board-eu"][data-student="Emil Elev"]'); // EU på linjen under eleven
+  await expect(euCell).toContainText("EU Gods");
+  await expect(euCell.getByTestId("board-fact-lastsikring")).toHaveAttribute("data-tone", "none");
   await expect(euCell).toContainText("0/138 lektioner");
   await expect(euCell.getByTestId("board-eu-drive")).toHaveText(["ØKO", "Anden by", "EU tur", "Veksellad"]);
 

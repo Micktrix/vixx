@@ -141,13 +141,16 @@ export function progress(student: StudentInfo, course: CourseInfo | undefined) {
 }
 
 // Til holdtavlen pr. EU-forløb: emnernes faste timer (emne → timer) og køretimerne i alt (á 45 min.).
-export type EuTotals = { hours: Map<string, number>; drives: number; driveList: { id: string; title: string; sort: number }[] };
+export type EuTotals = { name: string; kind: string; hours: Map<string, number>; drives: number; driveList: { id: string; title: string; sort: number }[] };
 export async function loadEuHours(schoolId: string) {
   const supabase = await createClient();
-  const { data } = await supabase.from("eu_topics").select("id, course_id, kind, sort, code, hours, lessons").eq("school_id", schoolId);
+  const { data } = await supabase.from("eu_topics").select("id, course_id, kind, sort, code, hours, lessons, courses(name, kind)").eq("school_id", schoolId);
   const out = new Map<string, EuTotals>();
   for (const t of data ?? []) {
-    if (!out.has(t.course_id)) out.set(t.course_id, { hours: new Map(), drives: 0, driveList: [] });
+    if (!out.has(t.course_id)) {
+      const c = t.courses as unknown as { name: string; kind: string } | null;
+      out.set(t.course_id, { name: c?.name ?? "EU", kind: c?.kind ?? "", hours: new Map(), drives: 0, driveList: [] });
+    }
     const c = out.get(t.course_id)!;
     if (t.kind === "topic") c.hours.set(t.id, Number(t.hours ?? 0));
     else {
