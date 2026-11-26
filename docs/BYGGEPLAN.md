@@ -405,6 +405,28 @@ styrelsens skabelon, BEK 322/2020; ingen udfyldbare felter).
   sjælden; skolen printer en blank plan (Michael 26. nov. 2026). Intensiv eller grundlæggende afkrydses på planen ud
   fra EU-delen.
 
+### Trin E10 – Skolens lektionsplan ved scanning (aftalt med Michael 26. nov. 2026, ikke bygget)
+Skolens lektionsskema for C, D og C/E (samme skema til alle tre; B uændret). Læreren tænker kun i lektioner; Vixx
+fordeler på modulerne og sætter underskrifterne det rigtige sted.
+- **Lektionerne** (omdøbt 1, 2, 3 … fra papirets 2, 4, 6 …) med længde, punkter og kontrolstof:
+  1 (papir 2, 2×45, øvelsesplads 2.1–2.5, bremser og styretøj) · 2 (4, 2×45, 7.1–7.5, 7.13–7.15 + rep. fra B, lygter
+  og bærende dele) · 3 (6, 2×45, 7.2, 7.3, 7.6–7.9 + rep., motor og karosseri) · 4 (9, 2×45, 7.3, 7.9, 7.15, 7.16, 7.20,
+  7.21, vægttavler) · 5 (11, 2×45, 7.17 + rep. 7.11–7.18, rep. af kontrolstof) · 6 (12, 1×45, 7.19 kørsel i mørke) ·
+  7 (13, 1×45, rep. 7.1–7.18) · 8 (17, 1×45, evaluerende praktisk prøve, rep. 7.2–7.18) · 9 (18, 1×45, sidste kørsel
+  før prøven, rep. af kontrolstof; 8 og 9 kan køres samlet) · KTA (4×45, afsnit 9, må køres når som helst i modul 3).
+- **Fordeling:** modul 1 = lektion 1 + 2 + den første × 45 af lektion 3; modul 2 = den anden × 45 af lektion 3 +
+  lektion 4 + 5; modul 3 = lektion 6, 7, 8, 9 og KTA. Minimum passer: 5 / 5 / 8.
+- **Mørke flyttes til modul 3** på C og D (skolens valg 26. nov. 2026; i Vixx' plan 1.1 står 7.19 i modul 2, men
+  PDF'en har intet mørkefelt). C/E har intet mørkekrav i planen.
+- **Afslutning:** når en lektion bringer modulet op på minimum (alle modulets lektioner kørt), afslutter den, der kører
+  den, modulet med sin underskrift. Kun ved den lektion vises "Denne lektion afslutter modul X" med erklæring og
+  "Teorilektioner i modulet" (minimum, kan rettes op). Køres lektionerne i en anden rækkefølge, tæller Vixx lektionen
+  og afslutter modulet, når den sidste manglende lektion køres.
+- **Scanning:** læreren vælger lektionen (Vixx foreslår den næste), ser punkterne med flueben (fjern ved "ikke
+  gennemført") og bekræfter. 7.19 og KTA bekræftes som nu ("Ja, kørt i mørke" / "Ja, kørt på køreteknisk anlæg").
+- **Print:** modulplanen som nu (afsluttende lærers underskrift pr. modul, undervisende kørelærere øverst) + ny
+  **lektionsplan** med dato og den kørende lærers underskrift pr. lektion; eleven skriver under med kuglepen.
+
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
   oprettes med login. Frivilligt afsnit "Hensyn" (ordblind, farveblind, nedsat hørelse, koncentrationsbesvær,
