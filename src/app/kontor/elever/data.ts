@@ -1,5 +1,5 @@
 import "server-only";
-import { type ModuleCompletion, type ModuleCount, type PlanModule } from "@/lib/module-progress";
+import { moduleProgress, type ModuleCompletion, type ModuleCount, type PlanModule } from "@/lib/module-progress";
 import { todayDk } from "@/lib/dates";
 import type { Appointment } from "@/lib/appointments";
 import { createClient } from "@/lib/supabase/server";
@@ -113,16 +113,24 @@ export async function loadStudents(schoolId: string) {
   return { teams: teamList, students: studentList, courses: courseList };
 }
 
-// Andel gennemført (0–1) af elevens forløb: moduler, der er afsluttet (annullerede tæller ikke).
 // Start af modul 1: elevens egen dato, ellers holdets startdato, ellers oprettelsesdatoen.
 export function courseStart(student: StudentInfo, team: TeamInfo | undefined): string {
   return student.courseStartOn ?? team?.startsOn ?? todayDk(new Date(student.createdAt));
 }
 
+// Andelen (0–1) tæller også kørte lektioner (Michael 21. nov. 2026): et afsluttet modul tæller helt, et modul i gang
+// med kørsel (og teori, når den scannes) i forhold til minimum, dog højst 95 %, indtil det er afsluttet.
 export function progress(student: StudentInfo, course: CourseInfo | undefined) {
   const total = course?.modules.length ?? 0;
   const done = course ? student.moduleCompletions.filter((c) => !c.annulled_at && course.modules.some((m) => m.id === c.course_module_id)).length : 0;
-  return { done, total, share: total ? done / total : 0 };
+  if (!course || !total) return { done, total, share: 0 };
+  const parts = moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions, course.theoryAtScan).map((m) => {
+    if (m.completed) return 1;
+    const need = m.min_driving + (course.theoryAtScan ? m.min_theory : 0);
+    const have = Math.min(m.driving, m.min_driving) + (course.theoryAtScan ? Math.min(m.theory, m.min_theory) : 0);
+    return need ? Math.min(have / need, 0.95) : 0;
+  });
+  return { done, total, share: parts.reduce((n, x) => n + x, 0) / total };
 }
 
 // EU-emnernes faste timer pr. forløb (til holdtavlen): forløb → emne → timer.

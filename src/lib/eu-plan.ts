@@ -1,5 +1,5 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euProgress, type EuProgress, type EuSignoff, type EuTopic } from "@/lib/eu";
 import { drawStrokes } from "@/lib/modulplan/fill";
@@ -50,6 +50,9 @@ export const EU_INFO: Record<string, Info> = {
 
 type EuPlan = {
   kind: string;
+  courseName: string;
+  studentId: string;
+  schoolId: string;
   student: { name: string; phone: string };
   school: { name: string; address: string; phone: string };
   teachers: { name: string; strokes: string | null }[];
@@ -63,10 +66,11 @@ export async function loadEuPlan(studentId: string): Promise<EuPlan | null> {
   const supabase = await createClient();
   const { data: s } = await supabase
     .from("students")
-    .select("id, school_id, team_id, eu_course_id, profiles(full_name, phone), eu:courses!students_eu_course_fk(kind)")
+    .select("id, school_id, team_id, eu_course_id, profiles(full_name, phone), eu:courses!students_eu_course_fk(kind, name)")
     .eq("id", studentId)
     .maybeSingle();
-  const kind = (s?.eu as unknown as { kind: string } | null)?.kind;
+  const euCourse = s?.eu as unknown as { kind: string; name: string } | null;
+  const kind = euCourse?.kind;
   if (!s?.eu_course_id || !kind || !EU_INFO[kind]) return null;
   const [{ data: topics }, { data: signoffs }, { data: school }, { data: chosenRows }, { data: tests }] = await Promise.all([
     supabase.from("eu_topics").select(EU_TOPIC_FIELDS).eq("course_id", s.eu_course_id),
@@ -99,6 +103,9 @@ export async function loadEuPlan(studentId: string): Promise<EuPlan | null> {
   const profile = s.profiles as unknown as { full_name: string; phone: string } | null;
   return {
     kind,
+    courseName: euCourse?.name ?? "EU",
+    studentId: s.id,
+    schoolId: s.school_id,
     student: { name: profile?.full_name ?? "", phone: profile?.phone ? formatPhone(profile.phone) : "" },
     school: { name: school?.name ?? "", address: school?.address ?? "", phone: school?.contact_phone ? formatPhone(school.contact_phone) : "" },
     teachers,
@@ -298,4 +305,25 @@ export async function renderEuPlan(plan: EuPlan): Promise<Uint8Array> {
   write(info.driveNote, { size: 9.5 });
 
   return doc.save();
+}
+
+// Hver ny udgave af den printede EU-plan gemmes og slettes aldrig (som modulplanen): samme arkiv
+// (`module_plan_versions`, lageret `module-plans`) med EU-forløbets navn som skabelon.
+export async function archiveEuPlan(plan: EuPlan, pdf: Uint8Array, userId: string) {
+  const content = { kind: plan.kind, student: plan.student, school: plan.school, teachers: plan.teachers, progress: plan.progress, passed: plan.passed };
+  const hash = createHash("sha256").update(JSON.stringify(content)).digest("hex");
+  const admin = createAdminClient();
+  const { data: existing } = await admin.from("module_plan_versions").select("id").eq("student_id", plan.studentId).eq("content_hash", hash).maybeSingle();
+  if (existing) return;
+  const path = `${plan.schoolId}/${plan.studentId}/eu-${new Date().toISOString().replace(/[:.]/g, "-")}-${hash.slice(0, 8)}.pdf`;
+  const { error } = await admin.storage.from("module-plans").upload(path, pdf, { contentType: "application/pdf" });
+  if (error) return;
+  await admin.from("module_plan_versions").insert({
+    school_id: plan.schoolId,
+    student_id: plan.studentId,
+    template: plan.courseName.slice(0, 40),
+    content_hash: hash,
+    storage_path: path,
+    created_by: userId,
+  });
 }
