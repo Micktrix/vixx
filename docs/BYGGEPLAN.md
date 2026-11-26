@@ -380,9 +380,9 @@ Kilde: skolens fire blanketter i `C:\Users\admin\OneDrive\Skrivebord\EU\` (skole
 styrelsens skabelon, BEK 322/2020; ingen udfyldbare felter).
 - **Fire EU-dele, alle i brug:** Gods (grundlæggende/intensiv), Bus, "Personbefordring for lastbilchauffører" (3 uger,
   37 t heraf 3 køretimer) og den tilsvarende 3-ugers gods-del. Hvilken afhænger af elevens kørekort.
-- **Ligger under Forløb** som det faste forløb "EU" (findes allerede, slået fra), med de fire EU-dele indeni. Låst som
-  de andre forløb: admin trykker "Lås op" for at lægge en ny PDF op, når blanketten ændres, og rette EU-delenes emner
-  og timer (logges). Blanketten er ikke udfyldbar, så emnerne ligger i Vixx, og PDF'en gemmes som version/reference
+- **Fire selvstændige forløb under Forløb** (Michael 26. nov. 2026): EU Gods, EU Bus, EU Gods 3 uger og EU Bus 3 uger
+  (erstatter det nuværende ene "EU"-forløb). Låst som de andre forløb: admin trykker "Lås op" for at lægge en ny PDF op,
+  når blanketten ændres, og rette forløbets emner og timer (logges). Blanketten er ikke udfyldbar, så emnerne ligger i Vixx, og PDF'en gemmes som version/reference
   (senere evt. automatisk aflæsning med AI, som planlagt for Taxa).
 - **Vælges på eleven** af kontoret (ingen, eller én EU-del). Aldrig på holdet: elever på samme hold kan have forskellige
   eller ingen EU-dele. Erstatter det nuværende EU-flueben (`students.eu`).
