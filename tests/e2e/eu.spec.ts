@@ -48,8 +48,9 @@ test("EU-prøverne, holdtavlen og elevens app viser EU", async ({ browser }) => 
   const euCell = office.locator('[data-testid="board-eu"][data-student="Emil Elev"]'); // EU på linjen under eleven
   await expect(euCell).toContainText("EU Gods");
   await expect(euCell.getByTestId("board-fact-lastsikring")).toHaveAttribute("data-tone", "none");
-  await expect(euCell).toContainText("0/138 lektioner");
-  await expect(euCell.getByTestId("board-eu-drive")).toHaveText(["ØKO", "Anden by", "EU tur", "Veksellad"]);
+  await expect(euCell.getByTestId("board-eu-lessons")).toHaveText("0/138 lekt.");
+  await expect(euCell.getByTestId("board-eu-drive")).toHaveCount(4);
+  await expect(euCell).toContainText("Veksellad");
 
   const app = await browser.newPage();
   await loginOk(app, "20000031", PASSWORD);

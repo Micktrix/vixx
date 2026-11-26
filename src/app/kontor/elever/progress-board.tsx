@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { FACT_TONE } from "@/components/facts-strip";
 import { euTestKinds, factText, facts, KIND_LABEL } from "@/lib/appointments";
 import { formatDate } from "@/lib/dates";
@@ -110,8 +110,8 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
               {eu && (
                 // EU på sin egen linje under kørekortet (Michael 26. nov. 2026).
                 <tr data-testid="board-eu" data-student={s.name}>
-                  <td className="sticky left-0 bg-surface px-[18px] pb-2 text-[12px] font-semibold text-muted">EU</td>
-                  <td colSpan={span} className="px-1 pb-2">
+                  <td className="sticky left-0 bg-surface px-[18px] pb-3 align-bottom text-[12px] font-semibold text-muted">EU</td>
+                  <td colSpan={span} className="px-1 pb-3">
                     <EuLine s={s} totals={eu} modules={modules} />
                   </td>
                 </tr>
@@ -130,30 +130,44 @@ const shortDate = (iso: string) => `${Number(iso.slice(8, 10))}/${Number(iso.sli
 
 // EU-linjen: forløbets navn, emnernes lektioner, køretimerne som blokke (ØKO, Anden by, EU tur, Veksellad …) og
 // prøverne (Lastsikring, Multitest). Grøn = kørt/bestået, gul = booket.
+// Som kørekortlinjen: overskrift øverst og faktaboks under.
+function Cell({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <span className="flex flex-col items-center gap-1">
+      <span className="text-[12px] font-semibold text-muted">{label}</span>
+      {children}
+    </span>
+  );
+}
+
 function EuLine({ s, totals, modules }: { s: StudentInfo; totals: EuTotals; modules: ReturnType<typeof moduleProgress> }) {
   const total = [...totals.hours.values()].reduce((n, h) => n + h, 0);
   const done = s.euSignoffs.filter((x) => x.kind === "topic" && x.eu_topic_id).reduce((n, x) => n + (totals.hours.get(x.eu_topic_id!) ?? 0), 0);
   const tests = facts(modules, s.appointments, euTestKinds(totals.kind)).filter((f) => f.kind === "lastsikring" || f.kind === "multitest");
-  const block = "rounded-md border px-1.5 py-0.5 text-[12px] font-semibold whitespace-nowrap";
+  const box = "inline-block min-w-[28px] rounded-md border px-1.5 py-0.5 text-center text-[12px] font-semibold whitespace-nowrap";
   return (
-    <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
-      <span className="font-semibold">{totals.name}</span>
-      <span className="text-muted" data-testid="board-eu-lessons">
-        {done}/{total} lektioner
-      </span>
+    <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+      <Cell label={totals.name}>
+        <span className={`${box} ${FACT_TONE[done >= total && total > 0 ? "done" : "none"]}`} data-testid="board-eu-lessons">
+          {done}/{total} lekt.
+        </span>
+      </Cell>
       {totals.driveList.map((d) => {
         const ok = s.euSignoffs.some((x) => x.kind === "drive" && x.eu_topic_id === d.id);
         return (
-          <span key={d.id} data-testid="board-eu-drive" data-tone={ok ? "done" : "none"} title={`${d.title}: ${ok ? "kørt" : "mangler"}`} className={`${block} ${FACT_TONE[ok ? "done" : "none"]}`}>
-            {driveShort(d.title)}
-          </span>
+          <Cell key={d.id} label={driveShort(d.title)}>
+            <span data-testid="board-eu-drive" data-label={driveShort(d.title)} data-tone={ok ? "done" : "none"} title={`${d.title}: ${ok ? "kørt" : "mangler"}`} className={`${box} ${FACT_TONE[ok ? "done" : "none"]}`}>
+              {ok ? "✓" : "–"}
+            </span>
+          </Cell>
         );
       })}
       {tests.map((f) => (
-        <span key={f.kind} data-testid={`board-fact-${f.kind}`} data-tone={f.tone} title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`} className={`${block} ${FACT_TONE[f.tone]}`}>
-          {KIND_LABEL[f.kind]}
-          {f.tone === "booked" && f.current ? ` ${shortDate(f.current.on_date)}` : ""}
-        </span>
+        <Cell key={f.kind} label={KIND_LABEL[f.kind]}>
+          <span data-testid={`board-fact-${f.kind}`} data-tone={f.tone} title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`} className={`${box} ${FACT_TONE[f.tone]}`}>
+            {f.tone === "done" ? "✓" : f.tone === "booked" && f.current ? shortDate(f.current.on_date) : "–"}
+          </span>
+        </Cell>
       ))}
     </div>
   );
