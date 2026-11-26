@@ -16,7 +16,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
   // KTA står i faktaboksen (grøn, når KTA-lektionen er kørt eller KTA er markeret), ikke i lektionsrækken.
   const lessons = course.lessons.filter((l) => l.kind !== "kta");
   return (
-    <section className="w-fit max-w-full overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
+    <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-line px-[18px] py-3">
         <h2 className="text-lg font-bold">{course.name}</h2>
         <span className="text-[13px] text-muted">
@@ -37,8 +37,8 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                       {s.name}
                     </Link>
                   </td>
-                  <td className="px-1 py-3">
-                    <div className="flex flex-wrap items-end gap-x-2.5 gap-y-2">
+                  <td className="py-3 pr-[18px] pl-1">
+                    <div className="flex flex-wrap items-end justify-between gap-x-2.5 gap-y-2">
                       {lessons.length
                         ? lessons.map((l) => {
                             const done = s.lessonSignoffs.find((x) => x.school_lesson_id === l.id);
@@ -102,7 +102,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                   // EU på sin egen linje under kørekortet.
                   <tr data-testid="board-eu" data-student={s.name}>
                     <td className="sticky left-0 bg-surface px-[18px] pb-3 align-bottom text-[12px] font-semibold text-muted">EU</td>
-                    <td className="px-1 pb-3">
+                    <td className="pb-3 pr-[18px] pl-1">
                       <EuLine s={s} totals={eu} modules={modules} />
                     </td>
                   </tr>
@@ -137,7 +137,7 @@ function EuLine({ s, totals, modules }: { s: StudentInfo; totals: EuTotals; modu
   const tests = facts(modules, s.appointments, euTestKinds(totals.kind)).filter((f) => f.kind === "lastsikring" || f.kind === "multitest");
   const box = "inline-block min-w-[28px] rounded-md border px-1.5 py-0.5 text-center text-[12px] font-semibold whitespace-nowrap";
   return (
-    <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
       <Cell label={totals.name}>
         <span className={`${box} ${FACT_TONE[done >= total && total > 0 ? "done" : "none"]}`} data-testid="board-eu-lessons">
           {done}/{total} lekt.
