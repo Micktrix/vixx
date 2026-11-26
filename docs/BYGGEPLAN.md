@@ -393,8 +393,9 @@ styrelsens skabelon, BEK 322/2020; ingen udfyldbare felter).
   prøvedatoer. Lærere, kontor og admin kan printe; eleven kan ikke.
 - **Prøver:** praktisk prøve i lastsikring (gods) og Multitest kommer i faktaboksen og på planen.
 - **Fremskridt:** EU tæller med i elevens fremskridt alle steder (elevens side, holdtavle, scanning, elevens app).
-- Åbent: kan en elev have EU uden et kørekortforløb i Vixx (kun EU)? Intensiv eller grundlæggende afkrydses på planen
-  ud fra EU-delen.
+- EU er altid oven i et kørekortforløb i Vixx. En elev, der kun skal have EU (har kørekortet i forvejen), er meget
+  sjælden; skolen printer en blank plan (Michael 26. nov. 2026). Intensiv eller grundlæggende afkrydses på planen ud
+  fra EU-delen.
 
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
