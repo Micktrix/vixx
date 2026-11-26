@@ -9,8 +9,8 @@ test.describe.configure({ mode: "serial" });
 
 // Ombygningen 21. nov. 2026: modulerne én gang, antal, køreemner med flueben, mørke (7.19) og afslutning i samme tryk.
 
-// Trin E10: C følger skolens lektionsplan. Læreren vælger lektionen (Vixx foreslår den næste), og lektion 3
-// afslutter modul 1 (og tæller 1 i modul 2). Mørke- og KTA-lektionerne skal bekræftes. Intet går til lønnen.
+// Trin E10: C følger skolens lektionsplan. Læreren vælger selv lektionen, og lektion 3
+// afslutter modul 1 (og tæller 1 i modul 2). Ingen lektion er valgt på forhånd. Mørke og KTA skal bekræftes.
 test("C: læreren kører lektionerne, og lektion 3 afslutter modul 1", async ({ page }) => {
   const admin = localAdmin();
   const { data: student } = await admin.from("students").select("qr_token").eq("id", EMIL).single();
@@ -20,14 +20,15 @@ test("C: læreren kører lektionerne, og lektion 3 afslutter modul 1", async ({ 
     await loginOk(page, INSTRUCTOR, PASSWORD);
     await page.goto(`/laerer/scan/${student!.qr_token}`);
     const form = page.getByTestId("lesson-scan");
-    await expect(form.getByRole("checkbox", { name: /Lektion 1/ })).toBeChecked(); // næste lektion foreslås
+    await expect(form.getByRole("button", { name: "Vælg lektionen" })).toBeDisabled(); // ingen lektion er valgt på forhånd
+    await form.getByRole("checkbox", { name: /Lektion 1/ }).check();
     await form.getByRole("checkbox", { name: /Lektion 2/ }).check();
     await expect(page.getByTestId("lesson-completes")).toHaveCount(0);
     await form.getByRole("button", { name: "Bekræft lektion 1 og 2" }).click();
     await expect(page.getByTestId("signoff-done")).toHaveText("✓ 2 lektioner er bekræftet.");
 
     // Lektion 3 afslutter modul 1: erklæringen og teorien vises, og knappen kræver erklæringen.
-    await expect(form.getByRole("checkbox", { name: /Lektion 3/ })).toBeChecked();
+    await form.getByRole("checkbox", { name: /Lektion 3/ }).check();
     await form.getByRole("checkbox", { name: "7.9 Overhaling" }).uncheck();
     const completes = page.getByTestId("lesson-completes");
     await expect(completes).toContainText("Lektion 3 afslutter modul 1.");
@@ -38,7 +39,6 @@ test("C: læreren kører lektionerne, og lektion 3 afslutter modul 1", async ({ 
     await expect(page.getByTestId("signoff-done")).toHaveText("✓ Lektionen er bekræftet, og modul 1 er afsluttet.");
 
     // Mørkelektionen (lektion 6) kræver "Ja, kørt i mørke".
-    await form.getByRole("checkbox", { name: /Lektion 4/ }).uncheck();
     await form.getByRole("checkbox", { name: /Lektion 6/ }).check();
     await expect(form.getByRole("button", { name: "Bekræft lektion 6" })).toBeDisabled();
     await form.getByRole("checkbox", { name: /Ja, kørt i mørke/ }).check();

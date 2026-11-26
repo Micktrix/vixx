@@ -13,7 +13,7 @@ const primary =
 
 type Lesson = SchoolLesson & { done: LessonSignoff | null };
 
-// Scanning med skolens lektionsplan (trin E10): læreren vælger lektionen (Vixx foreslår den næste), fjerner
+// Scanning med skolens lektionsplan (trin E10): læreren vælger selv lektionen, fjerner
 // fluebenet ved punkter, der ikke blev gennemført, og bekræfter. Afslutter lektionen et modul, vises erklæringen og
 // teorien for netop det modul; læreren behøver ikke tænke i moduler.
 export function LessonScanForm({
@@ -31,8 +31,8 @@ export function LessonScanForm({
 }) {
   const { state, onSubmit, pending } = useFormAction(recordLessonScan);
   const open = lessons.filter((l) => !l.done);
-  const next = open.find((l) => l.kind !== "kta") ?? open[0];
-  const [chosenIds, setChosenIds] = useState<string[]>(next ? [next.id] : []);
+  // Ingen lektion er valgt på forhånd: læreren trykker selv på den lektion, der er kørt (Michael 26. nov. 2026).
+  const [chosenIds, setChosenIds] = useState<string[]>([]);
   const [dark, setDark] = useState(false);
   const [kta, setKta] = useState(false);
   const [declared, setDeclared] = useState(false);
@@ -69,7 +69,6 @@ export function LessonScanForm({
                 <input type="checkbox" name="lesson" value={l.id} checked={chosenIds.includes(l.id)} onChange={(e) => toggle(l.id, e.target.checked)} className={check} />
                 <span>
                   <b>{lessonLabel(l)}</b>
-                  {l.id === next?.id && <span className="text-[13px] font-semibold text-accent-ink"> · næste</span>}
                   <span className="block text-[13px] text-muted">
                     {lengthText(l)}
                     {l.control && ` · ${l.control}`}
