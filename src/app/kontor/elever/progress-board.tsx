@@ -14,18 +14,24 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
     <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-[18px] py-3">
         <h2 className="text-lg font-bold">{course.name}</h2>
-        <span className="text-[13px] text-muted">Modul nr. øverst · grøn = afsluttet · orange = i gang · gul = booket</span>
+        <span className="text-[13px] text-muted">{course.lessons.length ? "Lektion nr. øverst · grøn = kørt" : "Modul nr. øverst · grøn = afsluttet · orange = i gang"} · gul = booket</span>
       </div>
       <table className="w-full text-left text-[14px]">
         <thead className="text-[12px] text-muted">
           <tr>
             <th className="sticky left-0 bg-surface px-[18px] py-2 font-semibold">Elev</th>
-            {course.modules.map((m) => (
-              <th key={m.id} className="px-1 py-2 text-center font-semibold" title={`Modul ${m.number} – ${m.name}`}>
-                {m.number}
-              </th>
-            ))}
-            <th className="px-[18px] py-2 text-right font-semibold">Afsluttet</th>
+            {course.lessons.length
+              ? course.lessons.map((l) => (
+                  <th key={l.id} className="px-1 py-2 text-center font-semibold" title={l.title}>
+                    {l.kind === "kta" ? "KTA" : l.number}
+                  </th>
+                ))
+              : course.modules.map((m) => (
+                  <th key={m.id} className="px-1 py-2 text-center font-semibold" title={`Modul ${m.number} – ${m.name}`}>
+                    {m.number}
+                  </th>
+                ))}
+            <th className="px-[18px] py-2 text-right font-semibold">{course.lessons.length ? "Kørt" : "Afsluttet"}</th>
             {Object.entries(SHORT).map(([k, label]) => (
               <th key={k} className="px-1 py-2 text-center font-semibold">
                 {label}
@@ -46,7 +52,20 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                     {s.name}
                   </Link>
                 </td>
-                {modules.map((m) => {
+                {course.lessons.length
+                  ? course.lessons.map((l) => {
+                      const done = s.lessonSignoffs.find((x) => x.school_lesson_id === l.id);
+                      return (
+                        <td key={l.id} className="px-1 py-2 text-center">
+                          <span
+                            data-state={done ? "done" : "missing"}
+                            className={`inline-block size-5 rounded-md ${done ? "bg-ok" : "border border-line2 bg-bg"}`}
+                            title={`${l.title}: ${done ? `kørt ${done.lesson_date} · ${done.instructor_name}` : "mangler"}`}
+                          />
+                        </td>
+                      );
+                    })
+                  : modules.map((m) => {
                   const state = m.completed ? "done" : m.startedOn ? "started" : "missing";
                   return (
                     <td key={m.id} className="px-1 py-2 text-center">
@@ -59,8 +78,17 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                   );
                 })}
                 <td className="px-[18px] py-2 text-right whitespace-nowrap">
-                  <b>{p.done}</b>
-                  <span className="text-muted">/{p.total}</span>
+                  {course.lessons.length ? (
+                    <>
+                      <b>{s.lessonSignoffs.filter((x) => course.lessons.some((l) => l.id === x.school_lesson_id)).length}</b>
+                      <span className="text-muted">/{course.lessons.length}</span>
+                    </>
+                  ) : (
+                    <>
+                      <b>{p.done}</b>
+                      <span className="text-muted">/{p.total}</span>
+                    </>
+                  )}
                 </td>
                 {facts(modules, s.appointments).map((f) => (
                   <td key={f.kind} className="px-1 py-2 text-center">

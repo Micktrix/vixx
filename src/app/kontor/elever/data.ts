@@ -2,6 +2,7 @@ import "server-only";
 import { moduleProgress, type ModuleCompletion, type ModuleCount, type PlanModule } from "@/lib/module-progress";
 import { todayDk } from "@/lib/dates";
 import type { Appointment } from "@/lib/appointments";
+import { lessonProgress, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
 import { createClient } from "@/lib/supabase/server";
 
 // Hold, elever og forløb (modulplaner) til kontorets elevsider. Et modul er gennemført, når læreren har
@@ -16,6 +17,7 @@ export type CourseInfo = {
   theoryAtScan: boolean; // "Teori registreres ved scanning"
   minDays: number | null;
   modules: PlanModule[];
+  lessons: SchoolLesson[]; // skolens lektionsplan (C, D, C/E); tom = modulerne vises (trin E10)
 };
 export type StudentInfo = {
   id: string;
@@ -38,6 +40,7 @@ export type StudentInfo = {
   moduleCompletions: ModuleCompletion[]; // afsluttede moduler
   appointments: Appointment[]; // aftaler: KTA, mørke, teoriprøve, køreprøve (faktaboksen)
   euSignoffs: { kind: string; eu_topic_id: string | null }[]; // EU-bekræftelser (trin E9)
+  lessonSignoffs: LessonSignoff[]; // kørte lektioner i lektionsplanen (trin E10)
 };
 // EU-forløbene vælges som "EU-forløb" på eleven, aldrig som kørekortforløb.
 export const isEuKind = (kind: string | null | undefined) => !!kind && kind.startsWith("EU");
@@ -54,13 +57,13 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu_course_id, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), student_appointments(id, kind, on_date, at_time, address, status, created_at), eu_signoffs(kind, eu_topic_id), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu_course_id, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), student_appointments(id, kind, on_date, at_time, address, status, created_at), eu_signoffs(kind, eu_topic_id), lesson_signoffs(school_lesson_id, lesson_date, instructor_name), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
     supabase
       .from("courses")
-      .select("id, name, category_code, kind, active, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics)")
+      .select("id, name, category_code, kind, active, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics), school_lessons(id, number, title, kind, units, items, control, note)")
       .eq("school_id", schoolId)
       .not("kind", "is", null) // kun de faste forløb
       .order("name"),
@@ -75,6 +78,7 @@ export async function loadStudents(schoolId: string) {
     theoryAtScan: c.theory_at_scan,
     minDays: c.min_days,
     modules: (c.course_modules ?? []) as PlanModule[],
+    lessons: ((c.school_lessons ?? []) as SchoolLesson[]).sort((a, b) => a.number - b.number),
   }));
   const studentList: StudentInfo[] = (students ?? [])
     .map((s) => {
@@ -100,6 +104,7 @@ export async function loadStudents(schoolId: string) {
         moduleCompletions: (s.module_completions ?? []) as ModuleCompletion[],
         appointments: (s.student_appointments ?? []) as Appointment[],
         euSignoffs: (s.eu_signoffs ?? []) as StudentInfo["euSignoffs"],
+        lessonSignoffs: (s.lesson_signoffs ?? []) as LessonSignoff[],
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "da"));
@@ -124,6 +129,8 @@ export function progress(student: StudentInfo, course: CourseInfo | undefined) {
   const total = course?.modules.length ?? 0;
   const done = course ? student.moduleCompletions.filter((c) => !c.annulled_at && course.modules.some((m) => m.id === c.course_module_id)).length : 0;
   if (!course || !total) return { done, total, share: 0 };
+  // Lektionsplanen (C, D, C/E): andelen er kørte lektioner (45-minutters-enheder) af planens i alt.
+  if (course.lessons.length) return { done, total, share: lessonProgress(course.lessons, student.lessonSignoffs).share };
   const parts = moduleProgress(course.modules, student.moduleCounts, student.moduleCompletions, course.theoryAtScan).map((m) => {
     if (m.completed) return 1;
     const need = m.min_driving + (course.theoryAtScan ? m.min_theory : 0);

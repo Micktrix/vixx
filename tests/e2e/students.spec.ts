@@ -26,20 +26,20 @@ test("kontoret opretter et hold og en elev, og eleven ser sit forløb i sin egen
   await page.getByRole("button", { name: "Opret elev" }).click();
   await expect(page.getByTestId("temp-password")).toHaveText(phone);
 
-  // Holdets forløbstavle har eleven med tre moduler, intet afsluttet endnu.
+  // Holdets forløbstavle har eleven med lektionsplanen, intet kørt endnu.
   await page.goto("/kontor/elever");
   await page.getByTestId("team-row").filter({ hasText: teamName }).getByRole("link", { name: teamName }).click();
   const row = page.getByTestId("board-student").filter({ hasText: studentName });
-  await expect(row).toContainText("0/3");
+  await expect(row).toContainText("0/10"); // C følger lektionsplanen (10 lektioner)
 
   // Eleven logger ind med telefonnummeret, vælger egen kode og lander i elevens app.
   const student = await browser.newPage();
   await loginOk(student, phone, phone);
   await chooseOwnPassword(student, "elevens-kode");
   await expect(student).toHaveURL("/elev");
-  await expect(student.getByRole("heading", { name: "C", exact: true })).toBeVisible();
-  await expect(student.getByTestId("student-modules-completed")).toHaveText("0");
-  await expect(student.getByTestId("student-modules")).toContainText("Modul 1");
+  await expect(student.getByTestId("student-lessons").getByRole("heading")).toContainText(teamName);
+  await expect(student.getByTestId("student-lessons")).toContainText("Lektion 1");
+  await expect(student.getByTestId("student-lessons")).toContainText("Mangler");
   await expect(student.getByTestId("facts-strip")).toBeVisible();
 
   // Eleven kan ikke komme ind i kontoret eller lærer-appen.

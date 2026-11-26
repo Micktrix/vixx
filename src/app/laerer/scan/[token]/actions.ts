@@ -129,3 +129,36 @@ export async function recordEuScan(_prev: ActionState, formData: FormData): Prom
   const parts = [topics.length ? `${topics.length} ${topics.length === 1 ? "emne" : "emner"}` : "", drive ? "1 køretime" : ""].filter(Boolean);
   redirect(`/laerer/scan/${text("token")}?${new URLSearchParams({ eu: parts.join(" og ") })}`);
 }
+
+// Scanning med skolens lektionsplan (trin E10): de valgte lektioner og evt. afslutning af de moduler, de fuldfører.
+// Databasen fordeler lektionerne på modulerne og tjekker minimum, mørke, KTA, rækkefølge og underskrift.
+export async function recordLessonScan(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["instructor"]);
+  const text = (k: string) => String(formData.get(k) ?? "").trim();
+  const lessons = formData.getAll("lesson").map(String);
+  if (!lessons.length) return { error: "Vælg lektionen." };
+  const done = new Set(formData.getAll("itemDone").map(String));
+  const skipped = formData.getAll("item").map(String).filter((i) => !done.has(i));
+  const complete = formData.getAll("complete").map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  if (complete.length && formData.get("declaration") !== "on") return { error: "Sæt flueben ved erklæringen." };
+  const theory = complete.map((n) => Number(text(`theory_${n}`) || "0"));
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_lesson_scan", {
+    p_student: text("studentId"),
+    p_lessons: lessons,
+    p_skipped: skipped.join("\n") || null,
+    p_dark: formData.get("darkConfirm") === "on",
+    p_kta: formData.get("ktaConfirm") === "on",
+    p_complete: complete,
+    p_theory: theory,
+  });
+  if (error?.code === "23505") return { error: "Lektionen er allerede registreret." };
+  const failed = dbError(error, "Lektionen kunne ikke gemmes. Prøv igen.");
+  if (failed) return failed;
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/kontor", "layout");
+  revalidatePath("/elev", "layout");
+  const q = new URLSearchParams({ lektion: String(lessons.length) });
+  if (complete.length) q.set("afsluttet", complete.join(","));
+  redirect(`/laerer/scan/${text("token")}?${q}`);
+}

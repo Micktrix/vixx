@@ -405,7 +405,7 @@ styrelsens skabelon, BEK 322/2020; ingen udfyldbare felter).
   sjælden; skolen printer en blank plan (Michael 26. nov. 2026). Intensiv eller grundlæggende afkrydses på planen ud
   fra EU-delen.
 
-### Trin E10 – Skolens lektionsplan ved scanning (aftalt med Michael 26. nov. 2026, ikke bygget)
+### Trin E10 – Skolens lektionsplan ved scanning (aftalt med Michael 26. nov. 2026; bygget 26. nov., migration `20261126140000_school_lessons`)
 Skolens lektionsskema for C, D og C/E (samme skema til alle tre; B uændret). Læreren tænker kun i lektioner; Vixx
 fordeler på modulerne og sætter underskrifterne det rigtige sted.
 - **Lektionerne** (omdøbt 1, 2, 3 … fra papirets 2, 4, 6 …) med længde, punkter og kontrolstof:

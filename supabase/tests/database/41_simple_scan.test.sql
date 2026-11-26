@@ -16,6 +16,8 @@ select
     where c.kind = 'C' and c.school_id = '00000000-0000-4000-a000-000000000001' and m.number = 2) as c2,
   (select id from public.courses where kind = 'EU_GODS' and school_id = '00000000-0000-4000-a000-000000000001') as eu;
 grant select on ids to authenticated;
+-- Mørke ligger i modul 3 på C efter trin E10; reglen testes her på modul 2 (som i styrelsens plan 1.1).
+update public.course_modules set min_dark = 1 where id = (select c2 from ids);
 
 set local role authenticated;
 -- Lars (lærer).

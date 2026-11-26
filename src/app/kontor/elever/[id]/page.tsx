@@ -23,6 +23,8 @@ import {
 import { courseStart, FINISH_LABEL, loadStudents, progress } from "../data";
 import { ModuleDetails } from "@/components/module-details";
 import { EuBox } from "../eu-box";
+import { LessonPlanList, ModulesWrap } from "@/components/lesson-plan-list";
+import { lessonProgress } from "@/lib/lesson-plan";
 import { FactsBox } from "../facts-box";
 import { euTestKinds, facts, type Appointment } from "@/lib/appointments";
 import { ProgressBar } from "../progress-bar";
@@ -91,7 +93,14 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
       </header>
 
       {course && course.modules.length > 0 && (
-        <Box title="Modulplan" hint={`${p.done} af ${p.total} moduler afsluttet`}>
+        <Box
+          title={course.lessons.length ? "Lektionsplan" : "Modulplan"}
+          hint={
+            course.lessons.length
+              ? `${lessonProgress(course.lessons, student.lessonSignoffs).doneCount} af ${course.lessons.length} lektioner kørt · ${p.done} af ${p.total} moduler afsluttet`
+              : `${p.done} af ${p.total} moduler afsluttet`
+          }
+        >
           <a
             href={`/api/modulplan/${student.id}`}
             target="_blank"
@@ -101,11 +110,24 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
           >
             Print modulplan (PDF)
           </a>
+          {course.lessons.length > 0 && (
+            <a
+              href={`/api/lektionsplan/${student.id}`}
+              target="_blank"
+              rel="noopener"
+              className="self-start rounded-[12px] border border-line px-4 py-2 text-sm font-bold hover:border-accent"
+              data-testid="print-lesson-plan"
+            >
+              Print lektionsplan (PDF)
+            </a>
+          )}
           <p className="text-sm text-muted">
             Start af modul 1: {formatDate(courseStart(student, team))}
           </p>
           <PlanVersion studentId={student.id} courseId={student.courseId} current={student.planTemplateId} isAdmin={isAdmin} />
           <ProgressBar share={p.share} />
+          {course.lessons.length > 0 && <LessonPlanList lessons={course.lessons} signoffs={student.lessonSignoffs} />}
+          <ModulesWrap collapsed={course.lessons.length > 0}>
           <ol className="flex flex-col gap-1.5" data-testid="student-modules">
             {modules.map((m) => (
               <li key={m.id} className={`rounded-xl border px-3 py-2 text-[15px] ${m.completed ? "border-ok/30 bg-ok-bg" : "border-line"}`}>
@@ -155,6 +177,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
               </li>
             ))}
           </ol>
+          </ModulesWrap>
           <FactsBox studentId={student.id} facts={facts(modules, (appointments ?? []) as Appointment[], euTestKinds(courses.find((c) => c.id === student.euCourseId)?.kind))} canFinish={student.active && !student.finished} />
           {student.repetitions.length > 0 && (
             <ul className="text-sm" data-testid="student-repetitions">

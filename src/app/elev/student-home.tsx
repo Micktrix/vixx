@@ -4,6 +4,8 @@ import { moduleProgress, type ModuleCompletion, type ModuleCount, type PlanModul
 import { createClient } from "@/lib/supabase/server";
 import { Screen } from "../laerer/screen";
 import { StudentModules } from "./student-modules";
+import { LessonPlanList } from "@/components/lesson-plan-list";
+import type { LessonSignoff, SchoolLesson } from "@/lib/lesson-plan";
 import { FactsStrip } from "@/components/facts-strip";
 import { euTestKinds, type Appointment } from "@/lib/appointments";
 import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euProgress, hoursText, type EuSignoff, type EuTopic } from "@/lib/eu";
@@ -29,13 +31,13 @@ export async function StudentHome({
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, eu_course_id, teams(name), student_appointments(id, kind, on_date, at_time, address, status, created_at), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, skipped_items), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses!students_school_id_course_id_fkey(name, theory_at_scan, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
+      "id, eu_course_id, teams(name), student_appointments(id, kind, on_date, at_time, address, status, created_at), module_signoffs(course_module_id, kind, lesson_count, dark, lesson_date, skipped_items), lesson_signoffs(school_lesson_id, lesson_date, instructor_name, skipped), module_completions(id, course_module_id, module_number, completed_on, instructor_id, instructor_name, transferred, self_study, comment, extra_theory, extra_driving, annulled_at, annul_reason), courses!students_school_id_course_id_fkey(name, theory_at_scan, course_modules(id, number, name, min_theory, min_driving, min_dark, topics), school_lessons(id, number, title, kind, units, items, control, note))",
     )
     .eq("id", studentId)
     .maybeSingle();
   if (!student) return null;
 
-  const course = student.courses as unknown as { name: string; theory_at_scan: boolean; course_modules: (PlanModule & { topics: string | null })[] } | null;
+  const course = student.courses as unknown as { name: string; theory_at_scan: boolean; course_modules: (PlanModule & { topics: string | null })[]; school_lessons: SchoolLesson[] } | null;
   const team = student.teams as unknown as { name: string } | null;
   const eu = student.eu_course_id ? await loadStudentEu(supabase, student.id, student.eu_course_id) : null;
   const modules = course
@@ -61,6 +63,15 @@ export async function StudentHome({
           extra={euTestKinds(eu?.kind)}
         />
         {eu && <StudentEu eu={eu} />}
+        {course.school_lessons?.length ? (
+          <section className="flex flex-col gap-2" data-testid="student-lessons">
+            <h2 className="text-xl font-bold">
+              {course.name}
+              {team?.name && <span className="block text-[15px] font-normal text-muted">{team.name}</span>}
+            </h2>
+            <LessonPlanList lessons={course.school_lessons} signoffs={(student.lesson_signoffs ?? []) as LessonSignoff[]} />
+          </section>
+        ) : (
         <StudentModules
           courseName={course.name}
           teamName={team?.name ?? null}
@@ -68,6 +79,7 @@ export async function StudentHome({
           theoryAtScan={course.theory_at_scan}
           topics={new Map(course.course_modules.map((m) => [m.id, m.topics]))}
         />
+        )}
         </>
       ) : (
         <p className="rounded-[16px] bg-soft px-4 py-3 text-[15px]">Dit forløb er ikke sat op endnu. Spørg på kontoret.</p>

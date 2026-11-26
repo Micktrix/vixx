@@ -8,7 +8,10 @@ const EMIL = "00000000-0000-4000-ad00-000000000031"; // elev på C-holdet (teori
 test.describe.configure({ mode: "serial" });
 
 // Ombygningen 21. nov. 2026: modulerne én gang, antal, køreemner med flueben, mørke (7.19) og afslutning i samme tryk.
-test("læreren bekræfter kørsel og afslutter modul 1 og 2 i samme scanning; intet går til lønnen", async ({ page }) => {
+
+// Trin E10: C følger skolens lektionsplan. Læreren vælger lektionen (Vixx foreslår den næste), og lektion 3
+// afslutter modul 1 (og tæller 1 i modul 2). Mørke- og KTA-lektionerne skal bekræftes. Intet går til lønnen.
+test("C: læreren kører lektionerne, og lektion 3 afslutter modul 1", async ({ page }) => {
   const admin = localAdmin();
   const { data: student } = await admin.from("students").select("qr_token").eq("id", EMIL).single();
   const { data: lars } = await admin.from("instructors").select("id").eq("user_id", "00000000-0000-4000-a100-000000000011").single();
@@ -16,45 +19,43 @@ test("læreren bekræfter kørsel og afslutter modul 1 og 2 i samme scanning; in
   try {
     await loginOk(page, INSTRUCTOR, PASSWORD);
     await page.goto(`/laerer/scan/${student!.qr_token}`);
-    await expect(page.getByRole("heading", { name: "Emil Elev" })).toBeVisible();
-    // C: teori scannes ikke, så der er kun kørsel. Kun køreemner (afsnit 2, 7, 9) med flueben fra start.
-    await expect(page.getByRole("radio", { name: "Teori", exact: true })).toHaveCount(0);
-    await expect(page.getByTestId("scan-topics")).not.toContainText("Afsnit 3");
-    await page.getByLabel(/Antal lektioner/).selectOption("1");
-    await expect(page.getByRole("button", { name: "Bekræft 1 kørselslektion" })).toBeVisible();
-    await page.getByLabel(/Antal lektioner/).selectOption("2");
-    await page.getByRole("checkbox", { name: "7.7 Møde" }).uncheck();
-    await page.getByRole("button", { name: "Bekræft 2 kørselslektioner" }).click();
-    await expect(page.getByTestId("signoff-done")).toHaveText("✓ 2 kørselslektioner er bekræftet i modul 1.");
-    await expect(page.getByTestId("scan-topics").locator('[data-state="missing"]')).toContainText("7.7 Møde");
+    const form = page.getByTestId("lesson-scan");
+    await expect(form.getByRole("checkbox", { name: /Lektion 1/ })).toBeChecked(); // næste lektion foreslås
+    await form.getByRole("checkbox", { name: /Lektion 2/ }).check();
+    await expect(page.getByTestId("lesson-completes")).toHaveCount(0);
+    await form.getByRole("button", { name: "Bekræft lektion 1 og 2" }).click();
+    await expect(page.getByTestId("signoff-done")).toHaveText("✓ 2 lektioner er bekræftet.");
 
-    // 3 mere når minimum (5): knappen skifter, og afslutningen er i samme tryk med teori udfyldt med minimum.
-    await page.getByLabel(/Antal lektioner/).selectOption("3");
-    const complete = page.getByTestId("complete-module");
-    await expect(complete).toContainText("Det her er sidste lektion i modul 1");
-    await expect(complete.getByLabel("Teorilektioner i modulet")).toHaveValue("8");
-    await complete.getByRole("checkbox", { name: /Jeg erklærer/ }).check();
-    await complete.getByRole("button", { name: "Bekræft og afslut modul 1" }).click();
-    await expect(page.getByTestId("signoff-done")).toHaveText("✓ 3 kørselslektioner er bekræftet, og modul 1 er afsluttet.");
+    // Lektion 3 afslutter modul 1: erklæringen og teorien vises, og knappen kræver erklæringen.
+    await expect(form.getByRole("checkbox", { name: /Lektion 3/ })).toBeChecked();
+    await form.getByRole("checkbox", { name: "7.9 Overhaling" }).uncheck();
+    const completes = page.getByTestId("lesson-completes");
+    await expect(completes).toContainText("Lektion 3 afslutter modul 1.");
+    await expect(completes.getByLabel("Teorilektioner i modul 1")).toHaveValue("8");
+    await expect(form.getByRole("button", { name: "Bekræft lektion 3" })).toBeDisabled();
+    await completes.getByRole("checkbox", { name: /Jeg erklærer/ }).check();
+    await form.getByRole("button", { name: "Bekræft lektion 3" }).click();
+    await expect(page.getByTestId("signoff-done")).toHaveText("✓ Lektionen er bekræftet, og modul 1 er afsluttet.");
 
-    // Modul 2 kræver mørke: 7.19 har ikke flueben fra start, og modulet kan først afsluttes, når det er bekræftet.
-    await page.getByLabel(/Antal lektioner/).selectOption("5");
-    await expect(page.getByRole("button", { name: "Bekræft 5 kørselslektioner" })).toBeVisible();
-    const dark = page.getByRole("checkbox", { name: /7\.19/ });
-    await expect(dark).not.toBeChecked();
-    await dark.check();
-    await expect(page.getByTestId("complete-module")).toHaveCount(0);
-    await page.getByRole("checkbox", { name: /Ja, kørt i mørke/ }).check();
-    await page.getByTestId("complete-module").getByRole("checkbox", { name: /Jeg erklærer/ }).check();
-    await page.getByRole("button", { name: "Bekræft og afslut modul 2" }).click();
-    await expect(page.getByTestId("signoff-done")).toContainText("modul 2 er afsluttet");
+    // Mørkelektionen (lektion 6) kræver "Ja, kørt i mørke".
+    await form.getByRole("checkbox", { name: /Lektion 4/ }).uncheck();
+    await form.getByRole("checkbox", { name: /Lektion 6/ }).check();
+    await expect(form.getByRole("button", { name: "Bekræft lektion 6" })).toBeDisabled();
+    await form.getByRole("checkbox", { name: /Ja, kørt i mørke/ }).check();
+    await form.getByRole("button", { name: "Bekræft lektion 6" }).click();
+    await expect(page.getByTestId("signoff-done")).toHaveText("✓ Lektionen er bekræftet.");
+    await expect(page.getByTestId("fact-dark")).toHaveAttribute("data-tone", "done");
 
-    const { data: darkRow } = await admin.from("module_signoffs").select("dark_strokes").eq("student_id", EMIL).eq("dark", true).single();
-    expect(darkRow?.dark_strokes).toBeTruthy(); // Lars' underskrift på mørkekørslen
+    const { data: done } = await admin.from("module_completions").select("module_number, instructor_name").eq("student_id", EMIL);
+    expect(done).toEqual([{ module_number: 1, instructor_name: "Lars Jensen" }]);
     const { count: regsAfter } = await admin.from("registrations").select("id", { count: "exact", head: true }).eq("instructor_id", lars!.id);
     expect(regsAfter).toBe(regsBefore);
+    const pdf = await page.request.get(`/api/lektionsplan/${EMIL}`);
+    expect(pdf.status()).toBe(200);
+    expect(pdf.headers()["content-type"]).toBe("application/pdf");
   } finally {
     await admin.from("module_completions").delete().eq("student_id", EMIL);
+    await admin.from("lesson_signoffs").delete().eq("student_id", EMIL);
     await admin.from("module_signoffs").delete().eq("student_id", EMIL);
   }
 });
@@ -128,7 +129,7 @@ test("læreren afslutter et modul fra elevens side uden ny scanning", async ({ b
     expect(done).toEqual({ instructor_name: "Anne Admin", declaration: true, theory_lessons: 8 });
     await page.reload();
     await expect(page.getByRole("heading", { name: "Afslut modul 2" })).toBeVisible();
-    await expect(page.getByTestId("complete-status")).toContainText("Mangler mørke");
+    await expect(page.getByTestId("complete-status")).toContainText("Kørsel 0 af 5"); // mørke ligger i modul 3 (trin E10)
   } finally {
     await admin.from("module_completions").delete().eq("student_id", EMIL);
     await admin.from("module_signoffs").delete().eq("student_id", EMIL);
@@ -138,118 +139,3 @@ test("læreren afslutter et modul fra elevens side uden ny scanning", async ({ b
 
 // Michael 21. nov. 2026: 4 af 5 kørt i modul 1, og læreren vælger 2 lektioner og afslutter: 1 lektion afslutter
 // modul 1, og 1 tælles i modul 2 (med modul 2's køreemner).
-test("lektioner ud over minimum tælles i næste modul, når modulet afsluttes", async ({ page }) => {
-  const admin = localAdmin();
-  const { data: student } = await admin.from("students").select("qr_token, course_id").eq("id", EMIL).single();
-  const { data: mods } = await admin.from("course_modules").select("id, number").eq("course_id", student!.course_id).in("number", [1, 2]).order("number");
-  const [m1, m2] = mods!;
-  try {
-    await admin.from("module_signoffs").insert({
-      school_id: "00000000-0000-4000-a000-000000000001", student_id: EMIL, course_module_id: m1.id, kind: "driving", lesson_count: 4,
-      instructor_id: "00000000-0000-4000-a200-000000000011", instructor_name: "Lars Jensen", signed_by: "00000000-0000-4000-a100-000000000011",
-    });
-    await loginOk(page, INSTRUCTOR, PASSWORD);
-    await page.goto(`/laerer/scan/${student!.qr_token}`);
-    await page.getByLabel(/Antal lektioner/).selectOption("2");
-    const split = page.getByTestId("scan-split");
-    await expect(split).toContainText("1 kørselslektion afslutter modul 1, og 1 kørselslektion tælles i modul 2.");
-    await split.getByRole("checkbox").first().uncheck(); // første køreemne i modul 2 blev ikke kørt
-    await page.getByTestId("complete-module").getByRole("checkbox", { name: /Jeg erklærer/ }).check();
-    await page.getByRole("button", { name: "Bekræft og afslut modul 1" }).click();
-    await expect(page.getByTestId("signoff-done")).toHaveText(
-      "✓ 1 kørselslektion er bekræftet, og modul 1 er afsluttet. 1 kørselslektion er talt i modul 2.",
-    );
-    const { data: rows } = await admin.from("module_signoffs").select("course_module_id, lesson_count, skipped_items").eq("student_id", EMIL);
-    expect(rows!.filter((r) => r.course_module_id === m1.id).reduce((n, r) => n + r.lesson_count, 0)).toBe(5);
-    const inM2 = rows!.filter((r) => r.course_module_id === m2.id);
-    expect(inM2.map((r) => r.lesson_count)).toEqual([1]);
-    expect(inM2[0].skipped_items).toBeTruthy();
-    const { count } = await admin.from("module_completions").select("id", { count: "exact", head: true }).eq("student_id", EMIL).eq("course_module_id", m1.id);
-    expect(count).toBe(1);
-  } finally {
-    await admin.from("module_completions").delete().eq("student_id", EMIL);
-    await admin.from("module_signoffs").delete().eq("student_id", EMIL);
-  }
-});
-
-// Michael 21. nov. 2026: modul 2 har nået kørslen (5 af 5), men mangler mørke. Læreren vælger 2 lektioner og
-// bekræfter 7.19: lektionen med mørke bliver i modul 2 (som afsluttes), og den anden tælles i modul 3.
-test("mørke bekræftet ved overskud: mørkelektionen bliver i modulet, resten går videre", async ({ page }) => {
-  const admin = localAdmin();
-  const SCHOOL = "00000000-0000-4000-a000-000000000001";
-  const LARS = { instructor_id: "00000000-0000-4000-a200-000000000011", instructor_name: "Lars Jensen", signed_by: "00000000-0000-4000-a100-000000000011" };
-  const { data: student } = await admin.from("students").select("qr_token, course_id").eq("id", EMIL).single();
-  const { data: mods } = await admin.from("course_modules").select("id, number").eq("course_id", student!.course_id).order("number");
-  const [m1, m2, m3] = mods!;
-  try {
-    await admin.from("module_signoffs").insert([
-      { school_id: SCHOOL, student_id: EMIL, course_module_id: m1.id, kind: "driving", lesson_count: 5, ...LARS },
-      { school_id: SCHOOL, student_id: EMIL, course_module_id: m2.id, kind: "driving", lesson_count: 5, ...LARS },
-    ]);
-    const { error } = await admin.from("module_completions").insert({
-      school_id: SCHOOL, student_id: EMIL, course_module_id: m1.id, module_number: 0, instructor_id: LARS.instructor_id,
-      instructor_name: "Lars Jensen", declaration: true, theory_lessons: 8, completed_by: LARS.signed_by,
-    });
-    expect(error).toBeNull();
-
-    await loginOk(page, INSTRUCTOR, PASSWORD);
-    await page.goto(`/laerer/scan/${student!.qr_token}`);
-    await page.getByLabel(/Antal lektioner/).selectOption("2");
-    await page.getByRole("checkbox", { name: /7\.19/ }).check();
-    await page.getByRole("checkbox", { name: /Ja, kørt i mørke/ }).check();
-    await expect(page.getByTestId("scan-split")).toContainText("1 kørselslektion afslutter modul 2, og 1 kørselslektion tælles i modul 3.");
-    await page.getByTestId("complete-module").getByRole("checkbox", { name: /Jeg erklærer/ }).check();
-    await page.getByRole("button", { name: "Bekræft og afslut modul 2" }).click();
-    await expect(page.getByTestId("signoff-done")).toHaveText(
-      "✓ 1 kørselslektion er bekræftet, og modul 2 er afsluttet. 1 kørselslektion er talt i modul 3.",
-    );
-    const { data: rows } = await admin.from("module_signoffs").select("course_module_id, lesson_count, dark").eq("student_id", EMIL);
-    expect(rows!.some((r) => r.course_module_id === m2.id && r.dark && r.lesson_count === 1)).toBe(true);
-    expect(rows!.filter((r) => r.course_module_id === m3.id).map((r) => r.lesson_count)).toEqual([1]);
-  } finally {
-    await admin.from("module_completions").delete().eq("student_id", EMIL);
-    await admin.from("module_signoffs").delete().eq("student_id", EMIL);
-  }
-});
-
-// KTA (Michael 21. nov. 2026): afsnit 9 i sidste modul har ikke flueben fra start og skal bekræftes som mørke.
-// Uden KTA kan sidste modul ikke afsluttes; med "Ja, kørt på køreteknisk anlæg" kan det.
-test("KTA skal bekræftes, før sidste modul kan afsluttes", async ({ page }) => {
-  const admin = localAdmin();
-  const SCHOOL = "00000000-0000-4000-a000-000000000001";
-  const LARS = { instructor_id: "00000000-0000-4000-a200-000000000011", instructor_name: "Lars Jensen", signed_by: "00000000-0000-4000-a100-000000000011" };
-  const KTA = "Afsnit 9 – Manøvrer på køreteknisk anlæg*";
-  const { data: student } = await admin.from("students").select("qr_token, course_id").eq("id", EMIL).single();
-  const { data: mods } = await admin.from("course_modules").select("id, number").eq("course_id", student!.course_id).order("number");
-  const [m1, m2, m3] = mods!;
-  try {
-    await admin.from("module_signoffs").insert([
-      { school_id: SCHOOL, student_id: EMIL, course_module_id: m1.id, kind: "driving", lesson_count: 5, dark: false, skipped_items: null, ...LARS },
-      { school_id: SCHOOL, student_id: EMIL, course_module_id: m2.id, kind: "driving", lesson_count: 5, dark: true, skipped_items: null, ...LARS },
-      { school_id: SCHOOL, student_id: EMIL, course_module_id: m3.id, kind: "driving", lesson_count: 7, dark: false, skipped_items: KTA, ...LARS },
-    ]).then(({ error }) => expect(error).toBeNull());
-    for (const m of [m1, m2]) {
-      const { error } = await admin.from("module_completions").insert({
-        school_id: SCHOOL, student_id: EMIL, course_module_id: m.id, module_number: 0, instructor_id: LARS.instructor_id,
-        instructor_name: "Lars Jensen", declaration: true, theory_lessons: 8, completed_by: LARS.signed_by,
-      });
-      expect(error).toBeNull();
-    }
-    await loginOk(page, INSTRUCTOR, PASSWORD);
-    await page.goto(`/laerer/scan/${student!.qr_token}`);
-    await page.getByLabel(/Antal lektioner/).selectOption("1");
-    const kta = page.getByRole("checkbox", { name: /Afsnit 9/ });
-    await expect(kta).not.toBeChecked();
-    await expect(page.getByTestId("complete-module")).toHaveCount(0); // 8 af 8, men KTA mangler
-    await kta.check();
-    await expect(page.getByTestId("complete-module")).toHaveCount(0);
-    await page.getByRole("checkbox", { name: "Ja, kørt på køreteknisk anlæg" }).check();
-    await page.getByTestId("complete-module").getByRole("checkbox", { name: /Jeg erklærer/ }).check();
-    await page.getByRole("button", { name: "Bekræft og afslut modul 3" }).click();
-    await expect(page.getByTestId("signoff-done")).toHaveText("✓ 1 kørselslektion er bekræftet, og modul 3 er afsluttet.");
-    await expect(page.getByTestId("fact-kta")).toHaveAttribute("data-tone", "done");
-  } finally {
-    await admin.from("module_completions").delete().eq("student_id", EMIL);
-    await admin.from("module_signoffs").delete().eq("student_id", EMIL);
-  }
-});

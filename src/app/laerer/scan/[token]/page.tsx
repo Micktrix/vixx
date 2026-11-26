@@ -16,6 +16,8 @@ import { createClient } from "@/lib/supabase/server";
 import { FactsStrip } from "@/components/facts-strip";
 import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euProgress, type EuSignoff, type EuTopic } from "@/lib/eu";
 import { EuScanForm } from "./eu-scan-form";
+import { LessonScanForm } from "./lesson-scan-form";
+import { lessonProgress, type LessonSignoff, type SchoolLesson } from "@/lib/lesson-plan";
 import { ScrollToTop } from "./scroll-to-top";
 import { ModuleDetails } from "@/components/module-details";
 import { euTestKinds, type Appointment } from "@/lib/appointments";
@@ -34,7 +36,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   const { data: student } = await supabase
     .from("students")
     .select(
-      "id, service_id, active, is_demo, eu_course_id, student_appointments(id, kind, on_date, at_time, address, status, created_at), manual_gear, created_at, course_start_on, profiles(full_name), teams(name, starts_on), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, skipped_items, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason), courses!students_school_id_course_id_fkey(name, category_code, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics))",
+      "id, service_id, active, is_demo, eu_course_id, student_appointments(id, kind, on_date, at_time, address, status, created_at), manual_gear, created_at, course_start_on, profiles(full_name), teams(name, starts_on), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, skipped_items, instructor_name), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason), lesson_signoffs(id, school_lesson_id, lesson_date, instructor_name, skipped), courses!students_school_id_course_id_fkey(name, category_code, theory_at_scan, min_days, course_modules(id, number, name, min_theory, min_driving, min_dark, topics), school_lessons(id, number, title, kind, units, items, control, note))",
     )
     .eq("school_id", teacher.membership.schoolId)
     .eq("qr_token", token)
@@ -65,11 +67,14 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
     theory_at_scan: boolean;
     min_days: number | null;
     course_modules: PlanModule[];
+    school_lessons: SchoolLesson[];
   } | null;
   // Besked efter gem, fx "✓ 2 kørselslektioner er bekræftet i modul 2."
   const n = Number(sp.n);
   const signed =
-    typeof sp.eu === "string"
+    typeof sp.lektion === "string"
+      ? `✓ ${sp.lektion === "1" ? "Lektionen er" : `${sp.lektion} lektioner er`} bekræftet${typeof sp.afsluttet === "string" ? `, og modul ${sp.afsluttet.replace(",", " og ")} er afsluttet` : ""}.`
+      : typeof sp.eu === "string"
       ? `✓ EU er bekræftet (${sp.eu}).`
       : typeof sp.kvitteret === "string"
       ? "✓ Repetitionslektionerne er registreret."
@@ -92,6 +97,10 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
   }
 
   const signoffs = (student.module_signoffs ?? []) as ModuleCount[];
+  // Skolens lektionsplan (C, D og C/E): læreren vælger lektionen i stedet for modulet (trin E10).
+  const lessonPlan = course.school_lessons?.length
+    ? lessonProgress(course.school_lessons, (student.lesson_signoffs ?? []) as LessonSignoff[])
+    : null;
   const ktaPassed = ((student.student_appointments ?? []) as Appointment[]).some((x) => x.kind === "kta" && x.status === "passed");
   const progress = moduleProgress(
     course.course_modules,
@@ -131,8 +140,22 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
       >
         Se og print modulplanen (PDF) ›
       </a>
+      {lessonPlan && (
+        <a href={`/api/lektionsplan/${student.id}`} target="_blank" rel="noopener" className="self-start text-sm font-bold text-accent-ink">
+          Se og print lektionsplanen (PDF) ›
+        </a>
+      )}
       <FactsStrip modules={progress} appointments={(student.student_appointments ?? []) as Appointment[]} extra={euTestKinds(eu?.kind)} />
-      {suggested ? (
+      {lessonPlan ? (
+        <LessonScanForm
+          key={signed ?? ""}
+          token={token}
+          studentId={student.id}
+          lessons={lessonPlan.lessons}
+          modules={progress}
+          theoryAtScan={course.theory_at_scan}
+        />
+      ) : suggested ? (
         <ScanForm
           key={signed ?? ""}
           token={token}
@@ -179,7 +202,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
         </>
       )}
       {eu && <EuScanForm token={token} studentId={student.id} courseName={eu.name} progress={eu.progress} />}
-      <section className="flex flex-col gap-1.5" data-testid="scan-course">
+      {!lessonPlan && <section className="flex flex-col gap-1.5" data-testid="scan-course">
         <h2 className="text-[17px] font-bold">Elevens forløb</h2>
         {progress.map((m) => (
           <details key={m.id} className={`rounded-[14px] border px-3 py-2 ${m.completed ? "border-ok/30 bg-ok-bg" : "border-line bg-surface"}`}>
@@ -192,7 +215,7 @@ export default async function SignoffPage({ params, searchParams }: PageProps<"/
             <ModuleDetails module={m} counts={signoffs} theoryAtScan={course.theory_at_scan} />
           </details>
         ))}
-      </section>
+      </section>}
     </Screen>
   );
 }
