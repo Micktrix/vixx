@@ -6,126 +6,102 @@ import { formatDate } from "@/lib/dates";
 import { moduleProgress, progressText } from "@/lib/module-progress";
 import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./data";
 
-// Forløbstavle: én række pr. elev og én kolonne pr. modul. Grøn = afsluttet, orange = i gang (lektioner talt),
-// grå = ikke startet. Til højre faktaboksen: KTA, Mørke, Teoriprøve, Køreprøve (grå/gul/grøn).
+// Forløbstavle: én række pr. elev med elevens egne overskrifter over boksene (Michael 26. nov. 2026): lektionerne
+// 1–9 (lektionsplanen) eller modulerne (B), "Kørt"/"Afsluttet", og faktaboksen KTA, Mørke, Teori, Køre (grå/gul/grøn).
+// Har eleven EU, står EU på en linje under. Grøn = kørt/afsluttet/bestået, orange = modul i gang, gul = booket.
 const SHORT = { kta: "KTA", dark: "Mørke", theory_test: "Teori", driving_test: "Køre" } as const;
+const square = "inline-block size-5 rounded-md";
 export function ProgressBoard({ course, students, euHours }: { course: CourseInfo; students: StudentInfo[]; euHours: Map<string, EuTotals> }) {
-  // Lektionsplanen har en KTA-kolonne; så vises KTA ikke igen til højre (Mørke, Teori og Køre gør).
-  const factKinds = (course.lessons.length ? ["dark", "theory_test", "driving_test"] : Object.keys(SHORT)) as (keyof typeof SHORT)[];
-  const span = (course.lessons.length || course.modules.length) + 6; // alle kolonner efter elevens navn
+  // KTA står i faktaboksen (grøn, når KTA-lektionen er kørt eller KTA er markeret), ikke i lektionsrækken.
+  const lessons = course.lessons.filter((l) => l.kind !== "kta");
   return (
     <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-[18px] py-3">
         <h2 className="text-lg font-bold">{course.name}</h2>
-        <span className="text-[13px] text-muted">{course.lessons.length ? "Lektion nr. øverst · grøn = kørt" : "Modul nr. øverst · grøn = afsluttet · orange = i gang"} · gul = booket</span>
+        <span className="text-[13px] text-muted">
+          {course.lessons.length ? "Grøn = kørt" : "Grøn = afsluttet · orange = i gang"} · gul = booket
+        </span>
       </div>
       <table className="w-full text-left text-[14px]">
-        <thead className="text-[12px] text-muted">
-          <tr>
-            <th className="sticky left-0 bg-surface px-[18px] py-2 font-semibold">Elev</th>
-            {course.lessons.length
-              ? course.lessons.map((l) => (
-                  <th key={l.id} className="px-1 py-2 text-center font-semibold" title={l.title}>
-                    {l.kind === "kta" ? "KTA" : l.number}
-                  </th>
-                ))
-              : course.modules.map((m) => (
-                  <th key={m.id} className="px-1 py-2 text-center font-semibold" title={`Modul ${m.number} – ${m.name}`}>
-                    {m.number}
-                  </th>
-                ))}
-            <th className="px-[18px] py-2 text-right font-semibold">{course.lessons.length ? "Kørt" : "Afsluttet"}</th>
-            {factKinds.map((k) => (
-              <th key={k} className="px-1 py-2 text-center font-semibold">
-                {SHORT[k]}
-              </th>
-            ))}
-            <th className="w-[18px]" />
-          </tr>
-        </thead>
         <tbody>
           {students.map((s) => {
             const p = progress(s, course);
             const modules = moduleProgress(course.modules, s.moduleCounts, s.moduleCompletions, course.theoryAtScan);
             const eu = s.euCourseId ? euHours.get(s.euCourseId) : undefined;
-            const ktaFact = facts(modules, s.appointments).find((f) => f.kind === "kta");
             return (
               <Fragment key={s.id}>
-              <tr className="border-t border-line" data-testid="board-student">
-                <td className="sticky left-0 bg-surface px-[18px] py-2 whitespace-nowrap">
-                  <Link href={`/kontor/elever/${s.id}`} className="font-bold hover:text-accent-ink hover:underline">
-                    {s.name}
-                  </Link>
-                </td>
-                {course.lessons.length
-                  ? course.lessons.map((l) => {
-                      const done = s.lessonSignoffs.find((x) => x.school_lesson_id === l.id);
-                      // KTA-kolonnen er også grøn, når KTA er markeret gennemført i faktaboksen.
-                      const ktaManual = l.kind === "kta" && !done && ktaFact?.tone === "done";
-                      if (ktaManual)
-                        return (
-                          <td key={l.id} className="px-1 py-2 text-center">
-                            <span data-state="done" className="inline-block size-5 rounded-md bg-ok" title={`${l.title}: gennemført (markeret i faktaboksen)`} />
-                          </td>
-                        );
-                      return (
-                        <td key={l.id} className="px-1 py-2 text-center">
-                          <span
-                            data-state={done ? "done" : "missing"}
-                            className={`inline-block size-5 rounded-md ${done ? "bg-ok" : "border border-line2 bg-bg"}`}
-                            title={`${l.title}: ${done ? `kørt ${done.lesson_date} · ${done.instructor_name}` : "mangler"}`}
-                          />
-                        </td>
-                      );
-                    })
-                  : modules.map((m) => {
-                  const state = m.completed ? "done" : m.startedOn ? "started" : "missing";
-                  return (
-                    <td key={m.id} className="px-1 py-2 text-center">
-                      <span
-                        data-state={state}
-                        className={`inline-block size-5 rounded-md ${state === "done" ? "bg-ok" : state === "started" ? "bg-accent" : "border border-line2 bg-bg"}`}
-                        title={`Modul ${m.number}: ${m.completed ? "afsluttet" : progressText(m, course.theoryAtScan)}`}
-                      />
-                    </td>
-                  );
-                })}
-                <td className="px-[18px] py-2 text-right whitespace-nowrap">
-                  {course.lessons.length ? (
-                    <>
-                      <b>{s.lessonSignoffs.filter((x) => course.lessons.some((l) => l.id === x.school_lesson_id)).length}</b>
-                      <span className="text-muted">/{course.lessons.length}</span>
-                    </>
-                  ) : (
-                    <>
-                      <b>{p.done}</b>
-                      <span className="text-muted">/{p.total}</span>
-                    </>
-                  )}
-                </td>
-                {facts(modules, s.appointments).filter((f) => (factKinds as string[]).includes(f.kind)).map((f) => (
-                  <td key={f.kind} className="px-1 py-2 text-center">
-                    <span
-                      data-testid={`board-fact-${f.kind}`}
-                      data-tone={f.tone}
-                      className={`inline-block rounded-md border px-1.5 py-0.5 text-[12px] font-semibold whitespace-nowrap ${FACT_TONE[f.tone]}`}
-                      title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`}
-                    >
-                      {f.tone === "done" ? "✓" : f.tone === "booked" && f.current ? shortDate(f.current.on_date) : "–"}
-                    </span>
+                <tr className="border-t border-line" data-testid="board-student">
+                  <td className="sticky left-0 w-[1%] bg-surface px-[18px] py-3 align-bottom whitespace-nowrap">
+                    <Link href={`/kontor/elever/${s.id}`} className="font-bold hover:text-accent-ink hover:underline">
+                      {s.name}
+                    </Link>
                   </td>
-                ))}
-                <td />
-              </tr>
-              {eu && (
-                // EU på sin egen linje under kørekortet (Michael 26. nov. 2026).
-                <tr data-testid="board-eu" data-student={s.name}>
-                  <td className="sticky left-0 bg-surface px-[18px] pb-3 align-bottom text-[12px] font-semibold text-muted">EU</td>
-                  <td colSpan={span} className="px-1 pb-3">
-                    <EuLine s={s} totals={eu} modules={modules} />
+                  <td className="px-1 py-3">
+                    <div className="flex flex-wrap items-end gap-x-2.5 gap-y-2">
+                      {lessons.length
+                        ? lessons.map((l) => {
+                            const done = s.lessonSignoffs.find((x) => x.school_lesson_id === l.id);
+                            return (
+                              <Cell key={l.id} label={String(l.number)}>
+                                <span
+                                  data-state={done ? "done" : "missing"}
+                                  className={`${square} ${done ? "bg-ok" : "border border-line2 bg-bg"}`}
+                                  title={`${l.title}: ${done ? `kørt ${done.lesson_date} · ${done.instructor_name}` : "mangler"}`}
+                                />
+                              </Cell>
+                            );
+                          })
+                        : modules.map((m) => {
+                            const state = m.completed ? "done" : m.startedOn ? "started" : "missing";
+                            return (
+                              <Cell key={m.id} label={`M${m.number}`}>
+                                <span
+                                  data-state={state}
+                                  className={`${square} ${state === "done" ? "bg-ok" : state === "started" ? "bg-accent" : "border border-line2 bg-bg"}`}
+                                  title={`Modul ${m.number}: ${m.completed ? "afsluttet" : progressText(m, course.theoryAtScan)}`}
+                                />
+                              </Cell>
+                            );
+                          })}
+                      <Cell label={lessons.length ? "Kørt" : "Afsluttet"}>
+                        <span className="text-[14px]" data-testid="board-done">
+                          {lessons.length ? (
+                            <>
+                              <b>{s.lessonSignoffs.filter((x) => lessons.some((l) => l.id === x.school_lesson_id)).length}</b>
+                              <span className="text-muted">/{lessons.length}</span>
+                            </>
+                          ) : (
+                            <>
+                              <b>{p.done}</b>
+                              <span className="text-muted">/{p.total}</span>
+                            </>
+                          )}
+                        </span>
+                      </Cell>
+                      {facts(modules, s.appointments).map((f) => (
+                        <Cell key={f.kind} label={SHORT[f.kind as keyof typeof SHORT] ?? KIND_LABEL[f.kind]}>
+                          <span
+                            data-testid={`board-fact-${f.kind}`}
+                            data-tone={f.tone}
+                            className={`inline-block min-w-[28px] rounded-md border px-1.5 py-0.5 text-center text-[12px] font-semibold whitespace-nowrap ${FACT_TONE[f.tone]}`}
+                            title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`}
+                          >
+                            {f.tone === "done" ? "✓" : f.tone === "booked" && f.current ? shortDate(f.current.on_date) : "–"}
+                          </span>
+                        </Cell>
+                      ))}
+                    </div>
                   </td>
                 </tr>
-              )}
+                {eu && (
+                  // EU på sin egen linje under kørekortet.
+                  <tr data-testid="board-eu" data-student={s.name}>
+                    <td className="sticky left-0 bg-surface px-[18px] pb-3 align-bottom text-[12px] font-semibold text-muted">EU</td>
+                    <td className="px-1 pb-3">
+                      <EuLine s={s} totals={eu} modules={modules} />
+                    </td>
+                  </tr>
+                )}
               </Fragment>
             );
           })}

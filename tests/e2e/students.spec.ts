@@ -30,7 +30,7 @@ test("kontoret opretter et hold og en elev, og eleven ser sit forløb i sin egen
   await page.goto("/kontor/elever");
   await page.getByTestId("team-row").filter({ hasText: teamName }).getByRole("link", { name: teamName }).click();
   const row = page.getByTestId("board-student").filter({ hasText: studentName });
-  await expect(row).toContainText("0/10"); // C følger lektionsplanen (10 lektioner)
+  await expect(row.getByTestId("board-done")).toHaveText("0/9"); // C følger lektionsplanen (lektion 1–9; KTA i faktaboksen)
 
   // Eleven logger ind med telefonnummeret, vælger egen kode og lander i elevens app.
   const student = await browser.newPage();

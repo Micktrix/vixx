@@ -91,7 +91,7 @@ test("holdtavlen viser elevens prøver og aftaler", async ({ page }) => {
     const row = page.getByTestId("board-student").filter({ hasText: "Emil Elev" });
     await expect(row.getByTestId("board-fact-theory_test")).toHaveAttribute("data-tone", "booked");
     await expect(row.getByTestId("board-fact-theory_test")).toHaveText(`${Number(later.slice(8, 10))}/${Number(later.slice(5, 7))}`);
-    await expect(row.getByTestId("board-fact-kta")).toHaveCount(0); // KTA står som lektionskolonne
+    await expect(row.getByTestId("board-fact-kta")).toHaveAttribute("data-tone", "none");
     await expect(row.getByTestId("board-fact-dark")).toHaveAttribute("data-tone", "none");
   } finally {
     await admin.from("student_appointments").delete().eq("student_id", EMIL);
