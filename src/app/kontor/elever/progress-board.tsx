@@ -10,7 +10,8 @@ import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./da
 // grå = ikke startet. Til højre faktaboksen: KTA, Mørke, Teoriprøve, Køreprøve (grå/gul/grøn).
 const SHORT = { kta: "KTA", dark: "Mørke", theory_test: "Teori", driving_test: "Køre" } as const;
 export function ProgressBoard({ course, students, euHours }: { course: CourseInfo; students: StudentInfo[]; euHours: Map<string, EuTotals> }) {
-  const factKinds = Object.keys(SHORT) as (keyof typeof SHORT)[];
+  // Lektionsplanen har en KTA-kolonne; så vises KTA ikke igen til højre (Mørke, Teori og Køre gør).
+  const factKinds = (course.lessons.length ? ["dark", "theory_test", "driving_test"] : Object.keys(SHORT)) as (keyof typeof SHORT)[];
   const span = (course.lessons.length || course.modules.length) + 6; // alle kolonner efter elevens navn
   return (
     <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
@@ -47,6 +48,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
             const p = progress(s, course);
             const modules = moduleProgress(course.modules, s.moduleCounts, s.moduleCompletions, course.theoryAtScan);
             const eu = s.euCourseId ? euHours.get(s.euCourseId) : undefined;
+            const ktaFact = facts(modules, s.appointments).find((f) => f.kind === "kta");
             return (
               <Fragment key={s.id}>
               <tr className="border-t border-line" data-testid="board-student">
@@ -58,6 +60,14 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                 {course.lessons.length
                   ? course.lessons.map((l) => {
                       const done = s.lessonSignoffs.find((x) => x.school_lesson_id === l.id);
+                      // KTA-kolonnen er også grøn, når KTA er markeret gennemført i faktaboksen.
+                      const ktaManual = l.kind === "kta" && !done && ktaFact?.tone === "done";
+                      if (ktaManual)
+                        return (
+                          <td key={l.id} className="px-1 py-2 text-center">
+                            <span data-state="done" className="inline-block size-5 rounded-md bg-ok" title={`${l.title}: gennemført (markeret i faktaboksen)`} />
+                          </td>
+                        );
                       return (
                         <td key={l.id} className="px-1 py-2 text-center">
                           <span
