@@ -62,7 +62,6 @@ export async function StudentHome({
           appointments={(student.student_appointments ?? []) as Appointment[]}
           extra={euTestKinds(eu?.kind)}
         />
-        {eu && <StudentEu eu={eu} />}
         {course.school_lessons?.length ? (
           <section className="flex flex-col gap-2" data-testid="student-lessons">
             <h2 className="text-xl font-bold">
@@ -80,6 +79,8 @@ export async function StudentHome({
           topics={new Map(course.course_modules.map((m) => [m.id, m.topics]))}
         />
         )}
+        {/* EU under kørekortet: eleven tager altid kategorien før EU (Michael 26. nov. 2026). */}
+        {eu && <StudentEu eu={eu} />}
         </>
       ) : (
         <p className="rounded-[16px] bg-soft px-4 py-3 text-[15px]">Dit forløb er ikke sat op endnu. Spørg på kontoret.</p>
