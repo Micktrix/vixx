@@ -39,7 +39,7 @@ export type StudentInfo = {
   moduleCounts: ModuleCount[]; // lektioner talt i modulerne
   moduleCompletions: ModuleCompletion[]; // afsluttede moduler
   appointments: Appointment[]; // aftaler: KTA, mørke, teoriprøve, køreprøve (faktaboksen)
-  euSignoffs: { kind: string; eu_topic_id: string | null }[]; // EU-bekræftelser (trin E9)
+  euSignoffs: { kind: string; eu_topic_id: string | null; lessons: number | null }[]; // EU-bekræftelser (trin E9)
   lessonSignoffs: LessonSignoff[]; // kørte lektioner i lektionsplanen (trin E10)
 };
 // EU-forløbene vælges som "EU-forløb" på eleven, aldrig som kørekortforløb.
@@ -57,7 +57,7 @@ export async function loadStudents(schoolId: string) {
     supabase
       .from("students")
       .select(
-        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu_course_id, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), student_appointments(id, kind, on_date, at_time, address, status, created_at), eu_signoffs(kind, eu_topic_id), lesson_signoffs(school_lesson_id, lesson_date, instructor_name), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
+        "id, user_id, team_id, course_id, service_id, address, manual_gear, eu_course_id, course_start_on, created_at, plan_template_id, active, finished_on, finish_reason, finish_note, profiles(full_name, phone), student_appointments(id, kind, on_date, at_time, address, status, created_at), eu_signoffs(kind, eu_topic_id, lessons), lesson_signoffs(school_lesson_id, lesson_date, instructor_name), module_signoffs(course_module_id, kind, lesson_count, dark, manual_gear, lesson_date, instructor_name, skipped_items), repetition_lessons(id, lesson_date, lesson_count, instructor_name), module_completions(id, course_module_id, module_number, completed_on, started_on, instructor_id, instructor_name, transferred, self_study, comment, theory_lessons, extra_theory, extra_driving, annulled_at, annul_reason)",
       )
       .eq("school_id", schoolId)
       .eq("is_demo", false), // admins demo-elev vises ikke i kontorets lister
@@ -140,14 +140,21 @@ export function progress(student: StudentInfo, course: CourseInfo | undefined) {
   return { done, total, share: parts.reduce((n, x) => n + x, 0) / total };
 }
 
-// EU-emnernes faste timer pr. forløb (til holdtavlen): forløb → emne → timer.
+// Til holdtavlen pr. EU-forløb: emnernes faste timer (emne → timer) og køretimerne i alt (á 45 min.).
+export type EuTotals = { hours: Map<string, number>; drives: number; driveList: { id: string; title: string; sort: number }[] };
 export async function loadEuHours(schoolId: string) {
   const supabase = await createClient();
-  const { data } = await supabase.from("eu_topics").select("id, course_id, hours").eq("school_id", schoolId).eq("kind", "topic");
-  const out = new Map<string, Map<string, number>>();
+  const { data } = await supabase.from("eu_topics").select("id, course_id, kind, sort, code, hours, lessons").eq("school_id", schoolId);
+  const out = new Map<string, EuTotals>();
   for (const t of data ?? []) {
-    if (!out.has(t.course_id)) out.set(t.course_id, new Map());
-    out.get(t.course_id)!.set(t.id, Number(t.hours ?? 0));
+    if (!out.has(t.course_id)) out.set(t.course_id, { hours: new Map(), drives: 0, driveList: [] });
+    const c = out.get(t.course_id)!;
+    if (t.kind === "topic") c.hours.set(t.id, Number(t.hours ?? 0));
+    else {
+      c.drives += Number(t.lessons ?? 0);
+      c.driveList.push({ id: t.id, title: t.code, sort: t.sort });
+      c.driveList.sort((a, b) => a.sort - b.sort);
+    }
   }
   return out;
 }

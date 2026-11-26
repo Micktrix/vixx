@@ -37,7 +37,7 @@ export async function saveEuTopic(_prev: ActionState, formData: FormData): Promi
   if (!code || code.length > 80) return { error: kind === "drive" ? "Skriv køretimens emne." : "Skriv emnets nummer, fx 1.2." };
   if (!Number.isInteger(sort) || sort < 1 || sort > 200) return { error: "Skriv rækkefølgen som et tal." };
   const hours = hoursRaw === "" ? null : Number(hoursRaw);
-  if (hours !== null && (!Number.isFinite(hours) || hours < 0 || hours > 500)) return { error: "Timerne skal være et tal." };
+  if (hours !== null && (!Number.isFinite(hours) || hours < 0 || hours > 500)) return { error: "Antal lektioner skal være et tal." };
   if (kind === "drive" && (!Number.isInteger(lessons) || lessons < 1 || lessons > 20)) return { error: "Vælg antal × 45 min." };
   const row =
     kind === "topic"

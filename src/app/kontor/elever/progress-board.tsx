@@ -3,12 +3,14 @@ import { FACT_TONE } from "@/components/facts-strip";
 import { factText, facts, KIND_LABEL } from "@/lib/appointments";
 import { formatDate } from "@/lib/dates";
 import { moduleProgress, progressText } from "@/lib/module-progress";
-import { progress, type CourseInfo, type StudentInfo } from "./data";
+import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./data";
 
 // Forløbstavle: én række pr. elev og én kolonne pr. modul. Grøn = afsluttet, orange = i gang (lektioner talt),
 // grå = ikke startet. Til højre faktaboksen: KTA, Mørke, Teoriprøve, Køreprøve (grå/gul/grøn).
 const SHORT = { kta: "KTA", dark: "Mørke", theory_test: "Teori", driving_test: "Køre" } as const;
-export function ProgressBoard({ course, students, euHours }: { course: CourseInfo; students: StudentInfo[]; euHours: Map<string, Map<string, number>> }) {
+export function ProgressBoard({ course, students, euHours }: { course: CourseInfo; students: StudentInfo[]; euHours: Map<string, EuTotals> }) {
+  // Lektionsplanen viser allerede KTA og mørke (lektion 6); så vises de ikke igen til højre.
+  const factKinds = (course.lessons.length ? ["theory_test", "driving_test"] : Object.keys(SHORT)) as (keyof typeof SHORT)[];
   const anyEu = students.some((s) => s.euCourseId);
   return (
     <section className="overflow-x-auto rounded-[20px] border border-line bg-surface" data-testid="progress-board">
@@ -32,9 +34,9 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                   </th>
                 ))}
             <th className="px-[18px] py-2 text-right font-semibold">{course.lessons.length ? "Kørt" : "Afsluttet"}</th>
-            {Object.entries(SHORT).map(([k, label]) => (
+            {factKinds.map((k) => (
               <th key={k} className="px-1 py-2 text-center font-semibold">
-                {label}
+                {SHORT[k]}
               </th>
             ))}
             {anyEu && <th className="px-2 py-2 text-center font-semibold">EU</th>}
@@ -90,7 +92,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                     </>
                   )}
                 </td>
-                {facts(modules, s.appointments).map((f) => (
+                {facts(modules, s.appointments).filter((f) => (factKinds as string[]).includes(f.kind)).map((f) => (
                   <td key={f.kind} className="px-1 py-2 text-center">
                     <span
                       data-testid={`board-fact-${f.kind}`}
@@ -120,10 +122,36 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
 // "23/11" til tavlen.
 const shortDate = (iso: string) => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
 
-// "16/138 t": bekræftede EU-emners faste timer af forløbets i alt.
-function euText(s: StudentInfo, hours: Map<string, number> | undefined) {
-  if (!hours) return "–";
-  const total = [...hours.values()].reduce((n, h) => n + h, 0);
-  const done = s.euSignoffs.filter((x) => x.kind === "topic" && x.eu_topic_id).reduce((n, x) => n + (hours.get(x.eu_topic_id!) ?? 0), 0);
-  return `${done}/${total} t`;
+// "16/138 lektioner" og "4/10 køretimer": bekræftede EU-emners faste lektioner og EU-køretimer (á 45 min.) af forløbets i alt.
+function euText(s: StudentInfo, totals: EuTotals | undefined) {
+  if (!totals) return "–";
+  const total = [...totals.hours.values()].reduce((n, h) => n + h, 0);
+  const done = s.euSignoffs.filter((x) => x.kind === "topic" && x.eu_topic_id).reduce((n, x) => n + (totals.hours.get(x.eu_topic_id!) ?? 0), 0);
+  // EU-køretimerne som blokke (ØKO, Anden by, EU tur, Veksellad …): grøn = kørt.
+  return (
+    <>
+      {done}/{total} lektioner
+      {totals.driveList.length > 0 && (
+        <span className="mx-auto mt-1 flex max-w-[150px] flex-wrap justify-center gap-1">
+          {totals.driveList.map((d) => {
+            const ok = s.euSignoffs.some((x) => x.kind === "drive" && x.eu_topic_id === d.id);
+            return (
+              <span
+                key={d.id}
+                data-testid="board-eu-drive"
+                data-tone={ok ? "done" : "none"}
+                title={`${d.title}: ${ok ? "kørt" : "mangler"}`}
+                className={`rounded-md border px-1 py-0.5 text-[11px] font-semibold ${FACT_TONE[ok ? "done" : "none"]}`}
+              >
+                {driveShort(d.title)}
+              </span>
+            );
+          })}
+        </span>
+      )}
+    </>
+  );
 }
+
+// Kort navn til tavlen: "Energirigtig kørsel (ØKO)" → "ØKO", "3 akslet" → "3-akslet".
+const driveShort = (title: string) => (/energirigtig|øko/i.test(title) ? "ØKO" : title.replace("3 akslet", "3-akslet"));

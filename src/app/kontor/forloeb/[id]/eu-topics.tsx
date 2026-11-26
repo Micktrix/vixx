@@ -1,6 +1,7 @@
 import { ActionForm, TextField } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { formatDate } from "@/lib/dates";
+import { hoursText } from "@/lib/eu";
 import { createClient } from "@/lib/supabase/server";
 import { deleteEuTopic, saveEuTopic } from "../eu-actions";
 import { EuPdfUpload } from "./eu-pdf-upload";
@@ -30,7 +31,7 @@ export async function EuTopicList({ courseId, editing }: { courseId: string; edi
               <li key={t.id}>
                 <details className="rounded-lg border border-line px-3 py-2">
                   <summary className="cursor-pointer">
-                    <b>{t.code}</b> {t.goal} <span className="text-muted">· {t.hours != null ? `${Number(t.hours)} t` : "–"}</span>
+                    <b>{t.code}</b> {t.goal} <span className="text-muted">· {hoursText(t.hours != null ? Number(t.hours) : null)}</span>
                   </summary>
                   <TopicForm courseId={courseId} row={t} />
                   <ActionForm action={deleteEuTopic} submitLabel="Slet emnet" pendingLabel="…" primary={false} confirmText={`Slet emne ${t.code}?`} className="mt-2">
@@ -43,7 +44,7 @@ export async function EuTopicList({ courseId, editing }: { courseId: string; edi
               <li key={t.id} className="flex gap-3">
                 <b className="w-12 shrink-0">{t.code}</b>
                 <span className="flex-1">{t.goal}</span>
-                <span className="shrink-0 text-muted">{t.hours != null ? `${Number(t.hours)} t` : "–"}</span>
+                <span className="shrink-0 text-muted">{hoursText(t.hours != null ? Number(t.hours) : null)}</span>
               </li>
             ),
           )}
@@ -54,7 +55,7 @@ export async function EuTopicList({ courseId, editing }: { courseId: string; edi
             <TopicForm courseId={courseId} sort={next(topics)} />
           </details>
         )}
-        <p className="text-sm text-muted">I alt {total} t (faktisk anvendt tid fra blanketten; tom = skrives i hånden).</p>
+        <p className="text-sm text-muted">I alt {total} lektioner (faktisk anvendt tid fra blanketten; tom = skrives i hånden).</p>
 
         <h2 className="text-lg font-bold">Køretimer</h2>
         <ul className="flex flex-col gap-1 text-[15px]">
@@ -117,7 +118,7 @@ function TopicForm({ courseId, row, sort }: { courseId: string; row?: Row; sort?
       <div className="flex flex-wrap items-end gap-3">
         <TextField label="Emne" name="code" required maxLength={80} defaultValue={row?.code ?? ""} placeholder="1.2" className="w-[100px]" />
         <TextField label="Rækkefølge" name="sort" type="number" min={1} max={200} required defaultValue={row?.sort ?? sort} className="w-[110px]" />
-        <TextField label="Timer" name="hours" defaultValue={row?.hours != null ? String(row.hours) : ""} placeholder="tom = i hånden" className="w-[140px]" />
+        <TextField label="Lektioner" name="hours" defaultValue={row?.hours != null ? String(row.hours) : ""} placeholder="tom = i hånden" className="w-[140px]" />
       </div>
       <TextField label="Mål" name="goal" maxLength={500} defaultValue={row?.goal ?? ""} />
       <label className="flex flex-col gap-1.5 text-sm font-bold">

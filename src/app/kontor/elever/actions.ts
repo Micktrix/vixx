@@ -407,3 +407,35 @@ export async function markFactDone(_prev: ActionState, formData: FormData): Prom
   });
   return appointmentDone(error, "Markeret som gennemført.");
 }
+
+// EU fra computeren (trin E9c): læreren krydser gennemførte EU-emner og evt. én køretime af på elevens side med valgt
+// dato (i dag eller tidligere). Navn og gemt underskrift sættes på som ved scanning.
+export async function signEu(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireRole(["instructor"]);
+  const topics = formData.getAll("topic").map(String);
+  const drive = text(formData, "drive");
+  const title = text(formData, "driveTitle");
+  const lessons = Number(text(formData, "driveLessons") || "0");
+  const date = parseDateInput(text(formData, "date"));
+  if (!date) return { error: "Vælg datoen." };
+  if (date > todayDk()) return { error: "Datoen kan ikke ligge frem i tiden." };
+  if (drive === "other" && (!title || title.length > 80)) return { error: "Skriv køretimens emne." };
+  if (drive === "other" && (!Number.isInteger(lessons) || lessons < 1 || lessons > 8)) return { error: "Vælg antal køretimer." };
+  if (!topics.length && !drive) return { error: "Vælg mindst ét emne eller en køretime." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_eu_signoffs", {
+    p_students: [text(formData, "studentId")],
+    p_topics: topics,
+    p_drive: drive && drive !== "other" ? drive : null,
+    p_drive_title: drive === "other" ? title : null,
+    p_drive_lessons: drive === "other" ? lessons : null,
+    p_date: date,
+  });
+  if (error?.code === "23514") return { error: error.message };
+  if (error?.code === "42501") return { error: "Du har ikke adgang til at bekræfte EU for denne elev." };
+  if (error) return { error: "EU kunne ikke gemmes. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/elev", "layout");
+  return { message: "EU er bekræftet." };
+}

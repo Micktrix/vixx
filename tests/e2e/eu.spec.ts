@@ -45,7 +45,9 @@ test("EU-prøverne, holdtavlen og elevens app viser EU", async ({ browser }) => 
   await expect(office.getByTestId("fact-lastsikring")).toHaveAttribute("data-tone", "none");
   await expect(office.getByTestId("fact-multitest")).toBeVisible();
   await office.goto(`/kontor/elever/hold/${student!.team_id}`);
-  await expect(office.getByTestId("board-student").filter({ hasText: "Emil Elev" }).getByTestId("board-eu")).toHaveText("0/138 t");
+  const euCell = office.getByTestId("board-student").filter({ hasText: "Emil Elev" }).getByTestId("board-eu");
+  await expect(euCell).toContainText("0/138 lektioner");
+  await expect(euCell.getByTestId("board-eu-drive")).toHaveText(["ØKO", "Anden by", "EU tur", "Veksellad"]);
 
   const app = await browser.newPage();
   await loginOk(app, "20000031", PASSWORD);
@@ -61,18 +63,42 @@ test("admin retter et EU-emne, når forløbet er låst op", async ({ page }) => 
     page.on("dialog", (d) => d.accept());
     await loginOk(page, ADMIN, PASSWORD);
     await page.goto(`/kontor/forloeb/${course!.id}`);
-    await expect(page.getByTestId("eu-topics")).toContainText("I alt 138 t");
+    await expect(page.getByTestId("eu-topics")).toContainText("I alt 138 lektioner");
     await page.getByRole("button", { name: "Lås op" }).click();
     const topic = page.getByTestId("eu-topics").locator("details").filter({ hasText: "1.1" }).first();
     await topic.locator("summary").click();
-    await topic.getByLabel("Timer").fill("5");
+    await topic.getByLabel("Lektioner").fill("5");
     await topic.getByRole("button", { name: "Gem" }).click();
-    await expect(page.getByTestId("eu-topics")).toContainText("I alt 139 t");
+    await expect(page.getByTestId("eu-topics")).toContainText("I alt 139 lektioner");
     await expect(page.getByTestId("eu-files")).toContainText("Læg ny blanket op (PDF)");
     await page.getByRole("button", { name: "Lås igen" }).click();
     await expect(page.getByRole("button", { name: "Lås op" })).toBeVisible();
   } finally {
     await admin.from("eu_topics").update({ hours: 4 }).eq("course_id", course!.id).eq("code", "1.1");
     await admin.from("courses").update({ locked: true }).eq("id", course!.id);
+  }
+});
+
+// Trin E9c: læreren krydser EU af på elevens side (uden scanning) med en tidligere dato.
+test("læreren krydser EU af fra elevens side med valgt dato", async ({ page }) => {
+  const admin = localAdmin();
+  const yesterday = new Date(Date.now() - 864e5).toLocaleDateString("sv-SE", { timeZone: "Europe/Copenhagen" });
+  try {
+    await loginOk(page, INSTRUCTOR, PASSWORD);
+    await page.goto(`/kontor/elever/${EMIL}`);
+    const sign = page.getByTestId("eu-sign");
+    await sign.locator("summary").click();
+    await sign.getByLabel("Dato").fill(yesterday);
+    await sign.getByRole("checkbox", { name: /1\.2 at kende sikkerhedsanordningernes/ }).check();
+    await sign.getByLabel("Køretime").selectOption({ label: "EU tur (4 × 45 min.)" });
+    await sign.getByRole("button", { name: "Bekræft EU (2)" }).click();
+    await expect(sign.getByText("EU er bekræftet.")).toBeVisible();
+    const { data } = await admin.from("eu_signoffs").select("signed_on, instructor_name").eq("student_id", EMIL);
+    expect(data).toEqual([
+      { signed_on: yesterday, instructor_name: "Lars Jensen" },
+      { signed_on: yesterday, instructor_name: "Lars Jensen" },
+    ]);
+  } finally {
+    await admin.from("eu_signoffs").delete().eq("student_id", EMIL);
   }
 });

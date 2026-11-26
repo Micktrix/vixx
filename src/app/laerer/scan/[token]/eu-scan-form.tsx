@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
-import { hoursText, type EuProgress } from "@/lib/eu";
+import { euOfText, hoursText, type EuProgress } from "@/lib/eu";
 import { recordEuScan } from "./actions";
 
 const check = "size-[20px] shrink-0 accent-accent";
@@ -25,7 +25,7 @@ export function EuScanForm({ token, studentId, courseName, progress }: { token: 
       <div>
         <b className="text-[17px]">{courseName}</b>
         <span className="block text-[13px] text-muted">
-          {hoursText(progress.hoursDone)} af {hoursText(progress.hoursTotal)} · {progress.driveLessons} køretimer á 45 min.
+          {euOfText(progress.hoursDone, progress.hoursTotal)} · {progress.driveLessons} køretimer á 45 min.
         </span>
       </div>
 

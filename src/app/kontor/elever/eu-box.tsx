@@ -1,10 +1,11 @@
 import { Box } from "@/components/box";
-import { formatDate } from "@/lib/dates";
-import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euProgress, hoursText, type EuSignoff, type EuTopic } from "@/lib/eu";
+import { formatDate, todayDk } from "@/lib/dates";
+import { EuSignForm } from "./eu-sign-form";
+import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euOfText, euProgress, hoursText, type EuSignoff, type EuTopic } from "@/lib/eu";
 import { createClient } from "@/lib/supabase/server";
 
 // EU-forløbet på elevens side (trin E9a): hvad er bekræftet (dato og lærer), hvad mangler, og print af EU-planen.
-export async function EuBox({ studentId, courseId }: { studentId: string; courseId: string }) {
+export async function EuBox({ studentId, courseId, canSign }: { studentId: string; courseId: string; canSign: boolean }) {
   const supabase = await createClient();
   const [{ data: course }, { data: topics }, { data: signoffs }] = await Promise.all([
     supabase.from("courses").select("name").eq("id", courseId).single(),
@@ -14,7 +15,7 @@ export async function EuBox({ studentId, courseId }: { studentId: string; course
   const p = euProgress((topics ?? []) as EuTopic[], (signoffs ?? []) as EuSignoff[]);
   const done = p.topics.filter((t) => t.done).length;
   return (
-    <Box title={course?.name ?? "EU"} hint={`${done} af ${p.topics.length} emner · ${hoursText(p.hoursDone)} af ${hoursText(p.hoursTotal)} · ${p.driveLessons} køretimer`}>
+    <Box title={course?.name ?? "EU"} hint={`${done} af ${p.topics.length} emner · ${euOfText(p.hoursDone, p.hoursTotal)} · ${p.driveLessons} køretimer`}>
       <a
         href={`/api/eu-plan/${studentId}`}
         target="_blank"
@@ -45,7 +46,15 @@ export async function EuBox({ studentId, courseId }: { studentId: string; course
         ))}
         {!p.drives.length && <li className="text-muted">Ingen køretimer endnu.</li>}
       </ul>
-      <p className="text-[13px] text-muted">Lærerne bekræfter ved scanning. Eleven skriver under med kuglepen på den printede plan; CPR skrives i hånden.</p>
+      {canSign && (
+        <EuSignForm
+          studentId={studentId}
+          today={todayDk()}
+          topics={p.topics.filter((t) => !t.done).map((t) => ({ id: t.id, code: t.code, goal: t.goal, hours: hoursText(t.hours) }))}
+          drives={p.drives.filter((d) => !d.done && d.topicId).map((d) => ({ topicId: d.topicId!, title: d.title, lessons: d.lessons }))}
+        />
+      )}
+      <p className="text-[13px] text-muted">Lærerne bekræfter ved scanning eller her. Eleven skriver under med kuglepen på den printede plan; CPR skrives i hånden.</p>
     </Box>
   );
 }

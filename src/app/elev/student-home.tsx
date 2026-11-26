@@ -8,7 +8,7 @@ import { LessonPlanList } from "@/components/lesson-plan-list";
 import type { LessonSignoff, SchoolLesson } from "@/lib/lesson-plan";
 import { FactsStrip } from "@/components/facts-strip";
 import { euTestKinds, type Appointment } from "@/lib/appointments";
-import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euProgress, hoursText, type EuSignoff, type EuTopic } from "@/lib/eu";
+import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euOfText, euProgress, type EuSignoff, type EuTopic } from "@/lib/eu";
 import { formatDate } from "@/lib/dates";
 
 // Elevens forside: QR-koden, som læreren scanner, og modulplanen med lektioner talt op mod minimum, opstart og
@@ -104,7 +104,7 @@ function StudentEu({ eu }: { eu: NonNullable<Awaited<ReturnType<typeof loadStude
     <section className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-4" data-testid="student-eu">
       <h2 className="text-xl font-bold">{eu.name}</h2>
       <p className="text-[14px] text-muted">
-        {hoursText(p.hoursDone)} af {hoursText(p.hoursTotal)} · {p.driveLessons} køretimer á 45 min.
+        {euOfText(p.hoursDone, p.hoursTotal)} · {p.driveLessons} køretimer á 45 min.
       </p>
       <ul className="flex flex-col gap-0.5 text-[14px]">
         {p.topics.map((t) => (

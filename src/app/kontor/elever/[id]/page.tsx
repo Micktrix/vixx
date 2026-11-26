@@ -206,7 +206,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         </Box>
       )}
 
-      {student.euCourseId && <EuBox studentId={student.id} courseId={student.euCourseId} />}
+      {student.euCourseId && <EuBox studentId={student.id} courseId={student.euCourseId} canSign={membership.teaches} />}
 
       {currentModule && student.active && (
         <CompleteModuleBox

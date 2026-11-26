@@ -58,5 +58,8 @@ export function euProgress(rows: EuTopic[], signoffs: EuSignoff[]): EuProgress {
   };
 }
 
-// "12 t" / "–" (tom = skrives i hånden på planen).
-export const hoursText = (h: number | null) => (h == null ? "–" : `${String(h).replace(".", ",")} t`);
+// EU-emnernes "faktisk anvendt tid" er antal lektioner (Michael 26. nov. 2026): "4 lektioner" / "–" (tom = i hånden).
+const num = (n: number) => String(n).replace(".", ",");
+export const hoursText = (h: number | null) => (h == null ? "–" : `${num(h)} ${h === 1 ? "lektion" : "lektioner"}`);
+// "16 af 138 lektioner".
+export const euOfText = (done: number, total: number) => `${num(done)} af ${num(total)} lektioner`;
