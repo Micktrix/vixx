@@ -426,6 +426,12 @@ fordeler på modulerne og sætter underskrifterne det rigtige sted.
   gennemført") og bekræfter. 7.19 og KTA bekræftes som nu ("Ja, kørt i mørke" / "Ja, kørt på køreteknisk anlæg").
 - **Print:** modulplanen som nu (afsluttende lærers underskrift pr. modul, undervisende kørelærere øverst) + ny
   **lektionsplan** med dato og den kørende lærers underskrift pr. lektion; eleven skriver under med kuglepen.
+- **Fremskridt = lektionsplanen** (Michael 26. nov. 2026): under forløbet ser lærer, kontor og elev kun, hvor langt
+  eleven er i lektionsplanen (lektion 1–9 og KTA: kørt / mangler, med dato og lærer), ikke modulerne. Det gælder
+  scanning, elevens side, holdtavlen, fremskridtsbjælken og elevens app. Modulerne regnes stadig ud bag ved til
+  afslutning og underskrift, og modulplanen printes som før.
+- **KTA og Mørke i faktaboksen** bliver grønne af sig selv, når KTA-lektionen og mørkelektionen (lektion 6) er
+  bekræftet; ingen manuel markering nødvendig.
 
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
