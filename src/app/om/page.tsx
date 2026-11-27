@@ -74,7 +74,7 @@ export default function LandingPage() {
           <Role
             icon={icons.calendar}
             title="Læreren"
-            text='Se dagens skema på telefonen, tryk "Udført", når lektionen er kørt, søg ferie og meld, hvornår du kan arbejde.'
+            text='Se dagens skema på telefonen, tryk "Til løn", når lektionen er kørt, søg ferie og meld, hvornår du kan arbejde.'
           />
           <Role
             icon={icons.scan}
@@ -237,7 +237,7 @@ function PhoneMock() {
             <span className={`text-sm font-semibold ${l.tone}`}>{l.status}</span>
           </div>
         ))}
-        <span className="mt-1 flex h-11 items-center justify-center rounded-[14px] bg-accent text-[15px] font-bold text-ink">Udført</span>
+        <span className="mt-1 flex h-11 items-center justify-center rounded-[14px] bg-accent text-[15px] font-bold text-ink">Til løn</span>
       </div>
     </div>
   );

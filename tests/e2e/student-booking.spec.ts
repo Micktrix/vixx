@@ -135,7 +135,7 @@ test("læreren planlægger en lektion med to elever (fx KTA), og den kommer i be
   const student = await browser.newPage();
   try {
     await loginOk(teacher, INSTRUCTOR, PASSWORD);
-    await teacher.goto(`/laerer/planlaeg?dato=${date}`);
+    await teacher.goto(`/laerer/planlaeg?anden=1&dato=${date}`);
     await teacher.getByLabel("Ydelse").selectOption({ label: "Amu C" });
     const picker = teacher.getByTestId("student-picker");
     await expect(picker.getByRole("button", { name: "+ Emil Elev" })).toBeVisible(); // Lars' faste elev står klar

@@ -12,10 +12,12 @@ import { addAppointment, boardDay, planFromBoard } from "./actions";
 // lønnen: læreren registrerer stadig selv sine timer.
 
 type Teacher = { id: string; name: string };
-const Planner = createContext<{ teachers: Teacher[]; plan: LessonPlan; today: string } | null>(null);
+type Ctx = { teachers: Teacher[]; plan: LessonPlan; today: string; instructorId?: string; date?: string };
+const Planner = createContext<Ctx | null>(null);
 
-export function PlannerProvider({ teachers, plan, today, children }: { teachers: Teacher[]; plan: LessonPlan; today: string; children: ReactNode }) {
-  return <Planner.Provider value={{ teachers, plan, today }}>{children}</Planner.Provider>;
+// `instructorId`/`date`: valgt på forhånd (lærerens app planlægger for læreren selv på den valgte dag).
+export function PlannerProvider({ children, ...ctx }: Ctx & { children: ReactNode }) {
+  return <Planner.Provider value={ctx}>{children}</Planner.Provider>;
 }
 
 export type PlanTarget =
@@ -27,13 +29,25 @@ const primary = "h-11 rounded-xl border border-accent bg-accent px-4 text-[15px]
 const plain = "h-11 rounded-xl border border-line bg-surface px-4 text-[15px] font-semibold";
 
 // Feltet på tavlen som knap. Uden planlæg-boks (fx en anden side) vises feltet som før.
-export function PlanCell({ studentId, studentName, target, children }: { studentId: string; studentName: string; target: PlanTarget; children: ReactNode }) {
+export function PlanCell({
+  studentId,
+  studentName,
+  target,
+  children,
+  className = "cursor-pointer rounded-md hover:ring-2 hover:ring-accent",
+}: {
+  studentId: string;
+  studentName: string;
+  target: PlanTarget;
+  children: ReactNode;
+  className?: string;
+}) {
   const ctx = useContext(Planner);
   const [open, setOpen] = useState(false);
   if (!ctx) return <>{children}</>;
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="cursor-pointer rounded-md hover:ring-2 hover:ring-accent" title={`Planlæg ${target.label}`} data-testid="plan-cell" data-plan={target.label}>
+      <button type="button" onClick={() => setOpen(true)} className={className} title={`Planlæg ${target.label}`} data-testid="plan-cell" data-plan={target.label}>
         {children}
       </button>
       {open && (
@@ -69,12 +83,12 @@ function LessonForm({
 }: {
   studentId: string;
   target: Extract<PlanTarget, { type: "lesson" | "eu" }>;
-  ctx: { teachers: Teacher[]; plan: LessonPlan; today: string };
+  ctx: Ctx;
   onClose: () => void;
 }) {
   const { state, onSubmit, pending } = useFormAction(planFromBoard);
-  const [instructorId, setInstructorId] = useState("");
-  const [date, setDate] = useState(ctx.today);
+  const [instructorId, setInstructorId] = useState(ctx.instructorId ?? "");
+  const [date, setDate] = useState(ctx.date ?? ctx.today);
   const [start, setStart] = useState("");
   const [fetched, setFetched] = useState<{ key: string; day: { busy: Span[]; join: string[]; holiday: boolean } | null } | null>(null);
   const ref = target.type === "lesson" ? { schoolLessonId: target.schoolLessonId } : { euTopicId: target.euTopicId };

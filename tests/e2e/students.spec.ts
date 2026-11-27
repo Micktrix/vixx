@@ -117,10 +117,9 @@ test("kontoret afslutter en elevs forløb: eleven kan ikke logge ind, er væk fr
     const teacher = await browser.newPage();
     await loginOk(teacher, "20000011", PASSWORD);
     await teacher.goto("/laerer/planlaeg");
-    const picker = teacher.getByTestId("student-picker");
-    await picker.getByLabel("Søg elev").fill("elev");
-    await expect(picker.getByRole("button", { name: "+ Emil Elev" })).toBeVisible();
-    await expect(picker.getByRole("button", { name: "+ Freja Elev" })).toHaveCount(0);
+    const picker = teacher.getByTestId("plan-student");
+    await expect(picker.locator("option", { hasText: "Emil Elev" })).toHaveCount(1);
+    await expect(picker.locator("option", { hasText: "Freja Elev" })).toHaveCount(0);
 
     // Søgningen finder stadig eleven med mærket.
     await page.goto("/kontor/elever?q=freja");

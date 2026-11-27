@@ -34,7 +34,7 @@ export function TeacherLessonForm({
   plan: LessonPlan; // skolens lektionsplan; kun dens starttider kan vælges
   busy: Span[];
   hiddenFields: Record<string, string>;
-  students: StudentOption[]; // skolens elever til valg af elev
+  students?: StudentOption[]; // skolens elever til valg af elev (ikke ved "Til løn"/"Tilføj lektioner")
   initial: {
     serviceId?: string;
     count?: number;
@@ -152,7 +152,12 @@ export function TeacherLessonForm({
         </label>
       )}
 
-      <StudentPicker students={students} initialIds={initial.studentIds} initialName={initial.studentName} />
+      {students && (
+        <>
+          <input type="hidden" name="hasStudents" value="1" />
+          <StudentPicker students={students} initialIds={initial.studentIds} initialName={initial.studentName} />
+        </>
+      )}
       <label className="flex flex-col gap-1.5 text-sm font-bold">
         Note (valgfri)
         <textarea

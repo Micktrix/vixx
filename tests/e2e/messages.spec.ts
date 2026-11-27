@@ -69,7 +69,7 @@ test("påmindelser: kontoret minder en lærer om manglende registrering", async 
 
   // Læreren ser selv påmindelserne i kalenderen.
   await teacher.goto("/laerer");
-  await expect(teacher.getByText("Du mangler at registrere 1 dag")).toBeVisible();
+  await expect(teacher.getByTestId("to-pay")).toContainText("1 kørt lektion mangler at komme på løn");
   await expect(teacher.getByTestId("rejected-note")).toContainText("1 afvist lektion venter");
 
   // Kontoret sender en påmindelse.

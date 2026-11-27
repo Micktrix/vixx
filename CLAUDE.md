@@ -64,6 +64,7 @@ Reference for skærme og flow: `docs/prototype.html` (åbn i browser). Prototype
 - *Registrering* (`registrations`): læreren melder en kørt lektion (fx via "Udført"). Kan kun laves for i dag eller tidligere.
 - Kun **godkendte** registreringer tæller i lønnen.
 - Registrering uden planlagt lektion markeres "uplanlagt". Afvigelse mellem planlagt og registreret antal markeres.
+- **"Til løn" og "Planlæg" er adskilt** (27. nov. 2026, til afprøvning på test): en kørt planlagt lektion sendes med knappen "Til løn" på lektionen (læreren vælger selv ydelsen; tid, antal og note "Lektion 6 (mørke) · Thomas" er udfyldt). "Tilføj lektioner" er kun til løn for det, der ikke var planlagt. Registreringer har ingen elevvalg, kun en note; eleverne står på den planlagte lektion. "Planlæg" i lærerens app: vælg eleven og planlæg det, eleven mangler i lektionsplanen/EU (samme boks som holdtavlen); "Anden lektion" (med ydelse) ligger bag et link. Forsiden viser "X kørte lektioner mangler at komme på løn".
 
 **Godkendelse**
 - Status: `pending` (afventer), `approved` (godkendt), `rejected` (afvist med kommentar).

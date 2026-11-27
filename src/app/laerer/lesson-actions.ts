@@ -27,8 +27,10 @@ function readLesson(formData: FormData) {
       start_time: start,
       lesson_count: count,
       service_id: text("serviceId"),
-      student_ids: formData.getAll("studentIds").map(String).filter(Boolean),
-      student_name: text("studentName") || null,
+      // Lønnen skal kun bruge ydelse og antal; eleverne hører til planlægningen (Michael 27. nov. 2026).
+      ...(formData.has("hasStudents")
+        ? { student_ids: formData.getAll("studentIds").map(String).filter(Boolean), student_name: text("studentName") || null }
+        : {}),
       note: text("note") || null,
     },
   } as const;
@@ -74,6 +76,7 @@ export async function saveRegistration(_prev: ActionState, formData: FormData): 
         school_id: membership.schoolId,
         instructor_id: instructorId,
         created_by: user.id,
+        scheduled_lesson_id: String(formData.get("scheduledLessonId") ?? "") || null, // "Til løn" på en planlagt lektion
       });
   const failed = dbError(error, "Lektionen kunne ikke gemmes. Prøv igen.");
   if (failed) return failed;

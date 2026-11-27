@@ -4,7 +4,7 @@ import { Pill } from "@/components/pill";
 import { formatLongDate } from "@/lib/dates";
 import { formatDuration, formatSpan } from "@/lib/schedule";
 import { REASON_LABEL } from "../kontor/schedule-data";
-import { deleteCanWork, deleteOwnLesson, markDone } from "./actions";
+import { deleteCanWork, deleteOwnLesson, deletePlannedLesson } from "./actions";
 import { isLocked, STATUS_LABEL, type Teacher, type TeacherPeriod } from "./teacher-data";
 
 const statusTone = { pending: "neutral", approved: "ok", rejected: "bad" } as const;
@@ -138,7 +138,7 @@ export function DayPanel({
         >
           <span className="flex min-w-0 flex-col text-[15px]">
             <span className="text-[12px] font-semibold text-muted">
-              {l.origin === "instructor" ? "Planlagt af dig" : "Planlagt af kontoret"}
+              {l.planned ? "Planlagt" : l.origin === "instructor" ? "Planlagt af dig" : "Planlagt af kontoret"}
             </span>
             <span>
               <b>{formatSpan(l)}</b> · {l.serviceName} · {l.count} lek.
@@ -147,12 +147,20 @@ export function DayPanel({
             {l.studentName && <span className="text-[13px] text-muted">{l.studentName.includes(",") ? "Elever" : "Elev"}: {l.studentName}</span>}
             {l.note && !l.planned && <span className="text-[13px] text-muted">Note: {l.note}</span>}
           </span>
-          {!locked && !future && !l.planned && (
-            <ActionForm action={markDone} submitLabel="Udført" pendingLabel="…" className="flex flex-col items-end gap-1">
-              <input type="hidden" name="lessonId" value={l.id} />
+          {!locked && !future && (
+            <Link
+              href={`/laerer/registrer?lektion=${l.id}`}
+              className="inline-flex h-10 shrink-0 items-center rounded-[10px] border border-accent bg-accent px-3 text-sm font-bold text-ink"
+            >
+              Til løn
+            </Link>
+          )}
+          {!locked && future && l.planned && (
+            <ActionForm action={deletePlannedLesson} submitLabel="Fjern" pendingLabel="…" primary={false} confirmText="Fjern lektionen?" className="flex flex-col items-end gap-1">
+              <input type="hidden" name="id" value={l.id} />
             </ActionForm>
           )}
-          {!locked && future && l.origin === "instructor" && (
+          {!locked && future && l.origin === "instructor" && !l.planned && (
             <span className="flex shrink-0 items-start gap-2">
               <Link
                 href={`/laerer/planlaeg?id=${l.id}`}
@@ -181,17 +189,21 @@ export function DayPanel({
 
       {!locked && holiday?.status !== "approved" && (
         <>
-          <Link
-            href={future ? `/laerer/planlaeg?dato=${date}` : `/laerer/registrer?dato=${date}`}
-            className={`${bigButton} border border-accent bg-accent text-ink`}
-          >
-            {future ? "+ Planlæg lektion" : "+ Tilføj lektioner"}
-          </Link>
-          {future && (
-            <p className="text-[13px] text-muted">
-              Lektioner frem i tiden lægges i kalenderen, så kontoret kan se, at du er optaget. Tryk &quot;Udført&quot;, når de er kørt.
-            </p>
+          {date >= today && (
+            <Link href={`/laerer/planlaeg?dato=${date}`} className={`${bigButton} border border-accent bg-accent text-ink`}>
+              + Planlæg
+            </Link>
           )}
+          {!future && (
+            <Link href={`/laerer/registrer?dato=${date}`} className={`${bigButton} border border-line2 bg-surface`}>
+              + Tilføj lektioner
+            </Link>
+          )}
+          <p className="text-[13px] text-muted">
+            {future
+              ? "Planlagte lektioner ligger i kalenderen og tæller ikke i lønnen. Tryk \"Til løn\", når de er kørt."
+              : "Kørt en planlagt lektion? Tryk \"Til løn\" på den. \"Tilføj lektioner\" er til det, der ikke var planlagt."}
+          </p>
         </>
       )}
     </section>

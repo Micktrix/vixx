@@ -2,6 +2,7 @@ import Link from "next/link";
 import { loadBookings, loadResources } from "@/lib/booking-data";
 import { formatDate, isWeekend, parseDateInput, todayDk, weekdayIndex } from "@/lib/dates";
 import { daysIn, nextPeriod, periodFor, previousPeriod } from "@/lib/pay-period";
+import { formatSpan, toMinutes } from "@/lib/schedule";
 import { DayPanel } from "./day-panel";
 import { Screen } from "./screen";
 import { createClient } from "@/lib/supabase/server";
@@ -46,6 +47,15 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
     dayBookings.filter((b) => b.lessonId).map((b) => [b.lessonId!, resources.find((r) => r.id === b.resourceId)?.name ?? ""]),
   );
   const missing = missingDays(period, days, today);
+  // Kørte planlagte lektioner, der ikke er sendt "Til løn" endnu (slut i dag eller tidligere).
+  const now = toMinutes(new Date().toLocaleTimeString("sv-SE", { timeZone: "Europe/Copenhagen" }).slice(0, 5));
+  const toPay = period.lessons.filter(
+    (l) =>
+      (l.date < today || (l.date === today && l.to <= now)) &&
+      !period.registrations.some((r) => r.scheduledLessonId === l.id) &&
+      !isLocked(period, l.date) &&
+      !period.holidays.some((h) => h.status === "approved" && h.from <= l.date && l.date <= h.to),
+  );
   const rejected = period.registrations.filter((r) => r.status === "rejected" && !isLocked(period, r.date));
 
   const pick = (p: { start: string; end: string }) => (p.start <= today && today <= p.end ? today : p.start);
@@ -73,7 +83,28 @@ export default async function InstructorCalendarPage({ searchParams }: PageProps
         </Link>
       )}
 
-      {missing.length > 0 && (
+      {toPay.length > 0 && (
+        <section className="flex flex-col gap-2 rounded-[16px] border border-accent-line bg-accent-bg px-4 py-3" data-testid="to-pay">
+          <b>
+            {toPay.length === 1 ? "1 kørt lektion mangler" : `${toPay.length} kørte lektioner mangler`} at komme på løn
+          </b>
+          {toPay.map((l) => (
+            <Link
+              key={l.id}
+              href={`/laerer/registrer?lektion=${l.id}`}
+              className="flex items-center justify-between gap-2 rounded-xl border border-accent-line bg-surface px-3 py-2 text-[14px]"
+            >
+              <span>
+                {formatDate(l.date)} · {formatSpan(l)} · {l.serviceName}
+                {l.studentName && <span className="block text-[12px] text-muted">{l.studentName}</span>}
+              </span>
+              <span className="shrink-0 font-bold text-accent-ink">Til løn ›</span>
+            </Link>
+          ))}
+        </section>
+      )}
+
+      {missing.length > 0 && !toPay.length && (
         <section className="flex flex-col gap-2 rounded-[16px] border border-bad/30 bg-bad-bg px-4 py-3">
           <b className="text-bad">Du mangler at registrere {missing.length === 1 ? "1 dag" : `${missing.length} dage`}</b>
           <span className="flex flex-wrap gap-1.5">

@@ -271,7 +271,8 @@ test("en lærer planlægger sin egen køretime med bil, og bilen flytter med", a
   const date = freeDay();
 
   await teacher.goto(`/laerer?dag=${date}`);
-  await teacher.getByRole("link", { name: "+ Planlæg lektion" }).click();
+  await teacher.getByRole("link", { name: "+ Planlæg" }).click();
+  await teacher.getByRole("link", { name: "Anden lektion (uden lektionsplan)" }).click();
   await teacher.getByLabel("Ydelse").selectOption({ label: "B privat" });
   await teacher.getByLabel("Starttidspunkt").selectOption("08:45");
   await teacher.getByLabel("Bil eller lokale (valgfri)").selectOption({ label: "Personbil 1" });

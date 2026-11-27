@@ -28,11 +28,15 @@ test("en lærer klarer dagen fra telefonen: udført, uplanlagt, egen planlægnin
     origin: "office",
   });
 
-  // Planlagt af kontoret → "Udført".
+  // Planlagt af kontoret → "Til løn": tid, antal, ydelse og note er udfyldt; ingen elevvalg.
   await page.goto("/laerer");
   const panel = page.getByTestId("day-panel");
   await expect(panel.getByTestId("planned")).toContainText("Planlagt af kontoret");
-  await panel.getByRole("button", { name: "Udført" }).click();
+  await panel.getByRole("link", { name: "Til løn" }).click();
+  await expect(page.getByLabel("Note (valgfri)")).toHaveValue("Elev E2E");
+  await expect(page.getByTestId("student-picker")).toHaveCount(0);
+  await page.getByRole("button", { name: "Send til løn" }).click();
+  await page.waitForURL(/\/laerer\?dag=/);
   await expect(panel.getByTestId("registration")).toContainText("Afventer");
   await expect(panel.getByTestId("planned")).toHaveCount(0);
 
@@ -49,7 +53,8 @@ test("en lærer klarer dagen fra telefonen: udført, uplanlagt, egen planlægnin
 
   // Egen lektion i morgen.
   await page.goto(`/laerer?dag=${daysFromToday(1)}`);
-  await page.getByRole("link", { name: "+ Planlæg lektion" }).click();
+  await page.getByRole("link", { name: "+ Planlæg" }).click();
+  await page.getByRole("link", { name: "Anden lektion (uden lektionsplan)" }).click();
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
   await page.getByLabel("Starttidspunkt").selectOption("08:45");
   await page.getByRole("button", { name: "Planlæg", exact: true }).click();
