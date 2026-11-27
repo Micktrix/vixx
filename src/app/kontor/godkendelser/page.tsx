@@ -13,6 +13,7 @@ import { loadSchedule } from "../schedule-data";
 import { sendReminder } from "../beskeder/actions";
 import { approveMatching, approveRegistration, approveSelected, rejectRegistration } from "./actions";
 import { loadApprovals, type ApprovalRow, type Status } from "./data";
+import { SelectMany } from "./select-all";
 
 const TABS: { status: Status; label: string }[] = [
   { status: "pending", label: "Mangler godkendelse" },
@@ -227,11 +228,13 @@ function TeacherGroup({ rows, isLocked, deciderName }: { rows: ApprovalRow[]; is
   const others = rows.filter((r) => r.flag !== "matcher");
   const matchingOpen = matching.filter((r) => !isLocked(r.date)).length;
   const bulk = `bulk-${id}`;
-  const table = (list: ApprovalRow[]) => (
+  const table = (list: ApprovalRow[], scope: string) => (
     <table className="w-full min-w-[720px] text-left text-[14px]">
       <thead className="text-[12px] text-muted">
         <tr>
-          <th className="w-8 py-2 pl-[18px]" />
+          <th className="w-8 py-2 pl-[18px]">
+            {list.some((r) => !isLocked(r.date)) && <SelectMany form={bulk} scope={scope} label="Vælg alle" />}
+          </th>
           <th className="px-3 py-2 font-semibold">Dato</th>
           <th className="px-3 py-2 font-semibold">Lektion</th>
           <th className="px-3 py-2 text-right font-semibold">Plan.</th>
@@ -252,12 +255,23 @@ function TeacherGroup({ rows, isLocked, deciderName }: { rows: ApprovalRow[]; is
                     name="ids"
                     value={r.id}
                     form={bulk}
+                    data-scope={scope}
+                    data-day={r.date}
                     aria-label={`Vælg ${formatShortDay(r.date)} ${formatSpan(r)}`}
                     className="mt-0.5 size-[18px] accent-accent"
                   />
                 )}
               </td>
-              <td className="px-3 py-3 whitespace-nowrap">{newDay ? formatShortDay(r.date) : ""}</td>
+              <td className="px-3 py-3 whitespace-nowrap">
+                {newDay && (
+                  <label className="flex items-center gap-2">
+                    {!isLocked(r.date) && list.filter((x) => x.date === r.date).length > 1 && (
+                      <SelectMany form={bulk} scope={scope} day={r.date} label={`Vælg hele ${formatShortDay(r.date)}`} />
+                    )}
+                    {formatShortDay(r.date)}
+                  </label>
+                )}
+              </td>
               <LessonCells r={r} />
               <td className="px-3 py-3">
                 <Decision row={r} deciderName={r.decidedBy ? deciderName.get(r.decidedBy) : undefined} />
@@ -303,7 +317,7 @@ function TeacherGroup({ rows, isLocked, deciderName }: { rows: ApprovalRow[]; is
       {others.length > 0 ? (
         <div className="overflow-x-auto border-t border-line" data-testid="approval-attention">
           <p className="px-[18px] pt-2.5 text-[13px] font-semibold text-accent-ink">Kræver et kig ({others.length})</p>
-          {table(others)}
+          {table(others, "attention")}
         </div>
       ) : (
         <p className="border-t border-line px-[18px] py-2.5 text-[13px] text-muted">Ingen afvigelser. Alt matcher skemaet.</p>
@@ -311,7 +325,7 @@ function TeacherGroup({ rows, isLocked, deciderName }: { rows: ApprovalRow[]; is
       {matching.length > 0 && (
         <details className="border-t border-line" data-testid="approval-matching">
           <summary className="cursor-pointer px-[18px] py-2.5 text-sm font-semibold text-muted">Vis de {matching.length}, der matcher skemaet</summary>
-          <div className="overflow-x-auto">{table(matching)}</div>
+          <div className="overflow-x-auto">{table(matching, "matching")}</div>
         </details>
       )}
     </section>

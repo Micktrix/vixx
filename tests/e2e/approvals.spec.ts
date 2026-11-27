@@ -140,13 +140,15 @@ test("godkendelser samlet pr. lærer: matchende er foldet sammen, og valgte kan 
   await expect(group.getByTestId("approval-attention").getByTestId("approval-row")).toHaveCount(2);
   await expect(group.getByTestId("approval-matching").getByTestId("approval-row")).toBeHidden(); // foldet sammen
 
-  // Flueben ved den ene uplanlagte og "Godkend valgte".
-  await group.getByTestId("approval-attention").getByTestId("approval-row").filter({ hasText: "12:00" }).getByRole("checkbox").check();
+  // Et flueben ved dagen vælger hele dagen; "Godkend valgte" godkender dem.
+  const attention = group.getByTestId("approval-attention");
+  await attention.getByRole("checkbox", { name: /^Vælg hele/ }).check();
+  await expect(attention.getByTestId("approval-row").getByRole("checkbox", { name: /^Vælg (?!hele)/ })).toHaveCount(2);
+  for (const c of await attention.getByTestId("approval-row").getByRole("checkbox", { name: /^Vælg (?!hele)/ }).all()) await expect(c).toBeChecked();
   await group.getByRole("button", { name: "Godkend valgte" }).click();
-  await expect(page.getByTestId("approval-row")).toHaveCount(2);
+  await expect(page.getByTestId("approval-row")).toHaveCount(1);
 
   // "Godkend de 1, der matcher" for læreren.
   await page.getByTestId("approval-teacher").getByRole("button", { name: "Godkend de 1, der matcher" }).click();
-  await expect(page.getByTestId("approval-row")).toHaveCount(1);
-  await expect(page.getByTestId("approval-row")).toContainText("14:30");
+  await expect(page.getByTestId("approval-row")).toHaveCount(0);
 });
