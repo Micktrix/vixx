@@ -447,6 +447,36 @@ fordeler på modulerne og sætter underskrifterne det rigtige sted.
 - Forsiden: "X kørte lektioner mangler at komme på løn" med "Til løn" pr. lektion (indeværende lønperiode).
 - Planlagte lektioner fra lektionsplanen kan fjernes fra lærerens dag ("Fjern").
 
+### Trin E12 – Teoritræning for elever (idé fra Michael 27. nov. 2026, IKKE bygget, ikke prioriteret)
+Eleven logger ind og øver teoriprøven i Vixx. Bygger videre på quiz og vidensbank (E-quiz/materialer), som i dag
+ikke er åbne for elever.
+
+**Problemet med de øveprøver, der findes i dag:** et billede hører fast sammen med de samme 4 ja/nej-spørgsmål i en
+fast prøve (fx 10 prøver). Eleverne lærer svarene udenad ("billedet med den røde bil = ja, nej, nej, ja") i stedet for
+at forstå reglerne.
+
+**Vixx' idé: en vidensbank i stedet for faste prøver.**
+- Spørgsmålene ligger pr. **emne** (fx Parkering, Vigepligt, Motorvej, Lys, Tavler, Stop og holdt).
+- Hvert **billede** (situation) har en **pulje af påstande**, der kan besvares ja/nej ud fra billedet, gerne mange
+  (fx 8–15). Både sande og falske, så svaret ikke kan gættes ud fra formuleringen.
+- Når billedet kommer frem i en prøve, **trækker Vixx tilfældigt 4 påstande** fra puljen (eller færre, som den rigtige
+  prøve) og blander rækkefølgen. Samme billede giver altså forskellige spørgsmål fra gang til gang.
+- En påstand kan også bruges på flere billeder, når den passer (fx en regel om parkering).
+- Prøven sammensættes tilfældigt af billeder fra alle emner (eller ét emne ved emnetræning), med samme opbygning,
+  tid og fejlgrænse som den rigtige prøve.
+- Efter prøven: gennemgang af fejlene med forklaring pr. påstand (hvorfor ja/nej) og henvisning til emnet i vidensbanken.
+- **Emnetræning:** eleven kan øve ét emne (fx kun Parkering), indtil det sidder.
+- **Læreren** ser elevens resultater pr. emne ("svag i Vigepligt") og en samlet "klar til teoriprøven?"-indikator ved
+  faktaboksens teoriprøve. Ingen sammenligning mellem elever på storskærmen.
+
+**Indhold og rettigheder (afklares før byg):** Færdselsstyrelsens rigtige prøvespørgsmål er ikke offentlige.
+Skolen/Vixx skal selv lave billeder og påstande eller købe licens. Fotos og tegninger fra lærebøger må ikke bare
+lægges ind. Eget materiale kan senere deles mellem skolerne på platformen (aftale om rettigheder).
+
+**Opbygning (forslag):** `theory_topics`, `theory_images` (billede + emne), `theory_statements` (tekst, sand/falsk,
+forklaring, emne), kobling billede↔påstand, `theory_attempts`/`theory_answers` pr. elev. Admin/lærere vedligeholder
+banken; eleven svarer kun via funktioner (som quizzen). Billederne i Storage som materialerne.
+
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
   oprettes med login. Frivilligt afsnit "Hensyn" (ordblind, farveblind, nedsat hørelse, koncentrationsbesvær,
