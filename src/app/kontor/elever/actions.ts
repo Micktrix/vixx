@@ -539,3 +539,30 @@ export async function boardDay(
     holiday: day.holiday === "approved",
   };
 }
+
+// Aflys en planlagt lektion fra holdtavlen for eleven (fx læreren er syg). Er eleven den eneste på lektionen, fjernes
+// lektionen fra kalenderen; ellers tages kun eleven af (KTA med flere elever).
+export async function cancelBoardPlan(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin", "office"]);
+  const lessonId = text(formData, "lessonId");
+  const studentId = text(formData, "studentId");
+  const supabase = await createClient();
+  const { data: lesson } = await supabase
+    .from("scheduled_lessons")
+    .select("id, student_ids, school_lesson_id, eu_topic_id")
+    .eq("id", lessonId)
+    .eq("school_id", membership.schoolId)
+    .maybeSingle();
+  if (!lesson || (!lesson.school_lesson_id && !lesson.eu_topic_id)) return { error: "Lektionen findes ikke længere." };
+  const rest = ((lesson.student_ids as string[]) ?? []).filter((s) => s !== studentId);
+  const { error } = rest.length
+    ? await supabase.from("scheduled_lessons").update({ student_ids: rest }).eq("id", lesson.id)
+    : await supabase.from("scheduled_lessons").delete().eq("id", lesson.id);
+  if (error?.code === "23514") return { error: error.message };
+  if (error) return { error: "Lektionen kunne ikke aflyses. Prøv igen." };
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/kontor", "layout");
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/elev", "layout");
+  return { message: rest.length ? "Eleven er taget af lektionen." : "Lektionen er aflyst og fjernet fra kalenderen." };
+}

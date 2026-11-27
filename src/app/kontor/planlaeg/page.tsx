@@ -23,7 +23,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
   const { data: lesson } = lessonId
     ? await supabase
         .from("scheduled_lessons")
-        .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, student_ids, student_name, note, origin")
+        .select("id, instructor_id, lesson_date, start_time, lesson_count, lesson_minutes, service_id, student_ids, student_name, note, origin, school_lesson_id, eu_topic_id")
         .eq("id", lessonId)
         .eq("school_id", membership.schoolId)
         .maybeSingle()
@@ -87,6 +87,7 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
             studentName: lesson?.student_name ?? undefined,
             note: lesson?.note ?? undefined,
             resourceId: lessonBooking?.resourceId,
+            planned: !!lesson && !lesson.service_id && !!(lesson.school_lesson_id || lesson.eu_topic_id),
           }}
         />
       </section>

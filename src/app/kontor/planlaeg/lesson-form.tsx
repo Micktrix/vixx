@@ -25,6 +25,7 @@ type Initial = {
   studentName?: string;
   note?: string;
   resourceId?: string;
+  planned?: boolean; // fra holdtavlen/lektionsplanen: ingen ydelse (adskilt fra lønnen)
 };
 
 export function LessonForm({
@@ -168,6 +169,11 @@ export function LessonForm({
         </Notice>
       )}
 
+      {initial.planned ? (
+        <p className="rounded-xl bg-soft px-3.5 py-2.5 text-sm" data-testid="planned-no-service">
+          Fra lektionsplanen. Ingen ydelse: lektionen tæller ikke i lønnen, og læreren sender den selv &quot;Til løn&quot;.
+        </p>
+      ) : (
       <label className="flex flex-col gap-1.5 text-sm font-bold">
         Ydelse
         <select
@@ -183,6 +189,7 @@ export function LessonForm({
           <ServiceOptions services={services} />
         </select>
       </label>
+      )}
 
       {resources.length > 0 && (
         <label className="flex flex-col gap-1.5 text-sm font-bold">

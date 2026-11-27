@@ -107,7 +107,7 @@ async function PlanForStudent({ teacher, date, studentId }: { teacher: Awaited<R
   const row = "flex w-full items-center justify-between gap-3 rounded-xl border border-line px-3.5 py-2.5 text-left text-[15px] hover:border-accent";
   const status = (ref: string) => {
     const on = planned.get(`${studentId}:${ref}`);
-    return on ? <span className="shrink-0 rounded-full bg-warn-bg px-2 py-0.5 text-[12px] font-semibold text-warn">Planlagt {Number(on.slice(8, 10))}/{Number(on.slice(5, 7))}</span> : <span className="shrink-0 text-sm font-semibold text-accent-ink">Planlæg ›</span>;
+    return on ? <span className="shrink-0 rounded-full bg-warn-bg px-2 py-0.5 text-[12px] font-semibold text-warn">Planlagt {Number(on.date.slice(8, 10))}/{Number(on.date.slice(5, 7))} kl. {on.start}</span> : <span className="shrink-0 text-sm font-semibold text-accent-ink">Planlæg ›</span>;
   };
 
   return (
@@ -141,7 +141,7 @@ async function PlanForStudent({ teacher, date, studentId }: { teacher: Awaited<R
             {course && course.lessons.length > 0 && !missing.length && <p className="text-sm text-muted">Alle lektioner i lektionsplanen er kørt.</p>}
             {missing.map((l) => (
               <PlanCell key={l.id} studentId={student.id} studentName={student.name} className={row}
-                target={{ type: "lesson", schoolLessonId: l.id, count: l.units.length || 1, label: l.kind === "kta" ? "KTA" : lessonLabel(l) }}>
+                target={{ type: "lesson", schoolLessonId: l.id, count: l.units.length || 1, label: l.kind === "kta" ? "KTA" : lessonLabel(l) }} planned={planned.get(`${student.id}:${l.id}`)}>
                 <span className="flex flex-col">
                   <b>{l.kind === "kta" ? "KTA (køreteknisk anlæg)" : lessonLabel(l)}</b>
                   <span className="text-[13px] text-muted">{lengthText(l)}</span>
@@ -152,7 +152,7 @@ async function PlanForStudent({ teacher, date, studentId }: { teacher: Awaited<R
             {drives.length > 0 && <h3 className="mt-2 text-[15px] font-bold">{eu!.name}</h3>}
             {drives.map((d) => (
               <PlanCell key={d.id} studentId={student.id} studentName={student.name} className={row}
-                target={{ type: "eu", euTopicId: d.id, count: d.lessons, label: d.title }}>
+                target={{ type: "eu", euTopicId: d.id, count: d.lessons, label: d.title }} planned={planned.get(`${student.id}:${d.id}`)}>
                 <span className="flex flex-col">
                   <b>{d.title}</b>
                   <span className="text-[13px] text-muted">{d.lessons} {d.lessons === 1 ? "lektion" : "lektioner"}</span>

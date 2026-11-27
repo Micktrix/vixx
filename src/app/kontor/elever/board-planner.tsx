@@ -3,9 +3,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
-import { formatDate } from "@/lib/dates";
+import { formatDate, formatLongDate } from "@/lib/dates";
 import { planSlotIsFree, type LessonPlan, type Span } from "@/lib/schedule";
-import { addAppointment, boardDay, planFromBoard } from "./actions";
+import { addAppointment, boardDay, cancelBoardPlan, planFromBoard } from "./actions";
 
 // Planlæg fra holdtavlen (trin E11, Michael 27. nov. 2026): tryk på en manglende lektion, EU-køretime eller prøve,
 // og planlæg den uden at gå ind på eleven. Lektionen kommer i lærerens og elevens kalender, men er adskilt fra
@@ -35,19 +35,23 @@ export function PlanCell({
   target,
   children,
   className = "cursor-pointer rounded-md hover:ring-2 hover:ring-accent",
+  planned,
 }: {
   studentId: string;
   studentName: string;
   target: PlanTarget;
   children: ReactNode;
   className?: string;
+  planned?: { id: string; date: string; start: string; instructor: string }; // allerede planlagt: kan aflyses
 }) {
   const ctx = useContext(Planner);
   const [open, setOpen] = useState(false);
+  // Den planlagte lektion, som den var, da boksen blev åbnet (tavlen opdateres under den, når man planlægger/aflyser).
+  const [shown, setShown] = useState<typeof planned>(undefined);
   if (!ctx) return <>{children}</>;
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className} title={`Planlæg ${target.label}`} data-testid="plan-cell" data-plan={target.label}>
+      <button type="button" onClick={() => (setShown(planned), setOpen(true))} className={className} title={`Planlæg ${target.label}`} data-testid="plan-cell" data-plan={target.label}>
         {children}
       </button>
       {open && (
@@ -63,7 +67,9 @@ export function PlanCell({
               <h2 className="text-lg font-bold">Planlæg {target.label}</h2>
               <p className="text-[13px] text-muted">{studentName}</p>
             </div>
-            {target.type === "appointment" ? (
+            {shown ? (
+              <CancelForm studentId={studentId} planned={shown} onClose={() => setOpen(false)} />
+            ) : target.type === "appointment" ? (
               <AppointmentForm studentId={studentId} kind={target.kind} today={ctx.today} onClose={() => setOpen(false)} />
             ) : (
               <LessonForm studentId={studentId} target={target} ctx={ctx} onClose={() => setOpen(false)} />
@@ -197,6 +203,34 @@ function AppointmentForm({ studentId, kind, today, onClose }: { studentId: strin
         )}
         <button type="button" onClick={onClose} className={plain}>
           {done ? "Luk" : "Annuller"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// Allerede planlagt: hvem og hvornår, og "Aflys" (fx læreren er syg). Bagefter kan der planlægges en ny tid.
+function CancelForm({ studentId, planned, onClose }: { studentId: string; planned: { id: string; date: string; start: string; instructor: string }; onClose: () => void }) {
+  const { state, onSubmit, pending } = useFormAction(cancelBoardPlan, "Aflys den planlagte lektion?");
+  const done = state && !("error" in state);
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-3" data-testid="plan-cancel">
+      <input type="hidden" name="lessonId" value={planned.id} />
+      <input type="hidden" name="studentId" value={studentId} />
+      <p className="rounded-xl border border-warn-line bg-warn-bg px-3.5 py-2.5">
+        <b>Planlagt {formatLongDate(planned.date)} kl. {planned.start}</b>
+        {planned.instructor && <span className="block text-[14px]">Underviser: {planned.instructor}</span>}
+      </p>
+      <p className="text-[13px] text-muted">Skal den flyttes, så aflys den og planlæg en ny tid, eller ret den i kalenderen.</p>
+      <ResultBox state={state} />
+      <div className="flex gap-2">
+        {!done && (
+          <button type="submit" disabled={pending} className="h-11 rounded-xl border border-bad/40 bg-surface px-4 text-[15px] font-bold text-bad disabled:opacity-60">
+            {pending ? "Aflyser …" : "Aflys lektionen"}
+          </button>
+        )}
+        <button type="button" onClick={onClose} className={plain}>
+          Luk
         </button>
       </div>
     </form>

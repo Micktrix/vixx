@@ -162,20 +162,25 @@ export async function loadEuHours(schoolId: string) {
   return out;
 }
 
-// Planlagte lektioner fra holdtavlen (trin E11), fra i dag og frem: "elev:lektion" -> første dato.
+// Planlagte lektioner fra holdtavlen (trin E11), fra i dag og frem: "elev:lektion" -> første planlagte (med lærer og tid).
+export type BoardPlan = { id: string; date: string; start: string; instructor: string };
 export async function loadBoardPlans(schoolId: string, today: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("scheduled_lessons")
-    .select("lesson_date, student_ids, school_lesson_id, eu_topic_id")
+    .select("id, lesson_date, start_time, student_ids, school_lesson_id, eu_topic_id, instructors(school_members(profiles(full_name)))")
     .eq("school_id", schoolId)
     .gte("lesson_date", today)
     .or("school_lesson_id.not.is.null,eu_topic_id.not.is.null")
-    .order("lesson_date");
-  const out = new Map<string, string>();
+    .order("lesson_date")
+    .order("start_time");
+  const out = new Map<string, BoardPlan>();
   for (const l of data ?? []) {
     const ref = l.school_lesson_id ?? l.eu_topic_id;
-    for (const s of (l.student_ids as string[]) ?? []) if (!out.has(`${s}:${ref}`)) out.set(`${s}:${ref}`, l.lesson_date);
+    const instructor =
+      (l.instructors as unknown as { school_members: { profiles: { full_name: string } | null } | null } | null)?.school_members?.profiles?.full_name ?? "";
+    const plan = { id: l.id, date: l.lesson_date, start: String(l.start_time).slice(0, 5), instructor };
+    for (const s of (l.student_ids as string[]) ?? []) if (!out.has(`${s}:${ref}`)) out.set(`${s}:${ref}`, plan);
   }
   return out;
 }

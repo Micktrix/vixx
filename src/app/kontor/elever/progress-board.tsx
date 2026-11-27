@@ -6,7 +6,7 @@ import { formatDate } from "@/lib/dates";
 import { lessonLabel } from "@/lib/lesson-plan";
 import { moduleProgress, progressText } from "@/lib/module-progress";
 import { PlanCell, type PlanTarget } from "./board-planner";
-import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./data";
+import { progress, type BoardPlan, type CourseInfo, type StudentInfo, type EuTotals } from "./data";
 
 // Forløbstavle: én række pr. elev med elevens egne overskrifter over boksene (Michael 26. nov. 2026): lektionerne
 // 1–9 (lektionsplanen) eller modulerne (B), "Kørt"/"Afsluttet", og faktaboksen KTA, Mørke, Teori, Køre (grå/gul/grøn).
@@ -23,7 +23,7 @@ export function ProgressBoard({
   course: CourseInfo;
   students: StudentInfo[];
   euHours: Map<string, EuTotals>;
-  planned?: Map<string, string>; // "elev:lektion" -> dato (planlagt fra tavlen)
+  planned?: Map<string, BoardPlan>; // "elev:lektion" -> planlagt lektion (dato, tid, lærer)
 }) {
   // KTA og Mørke i faktaboksen planlægger lektionsplanens KTA- og mørkelektion.
   const factLesson = { kta: course.lessons.find((l) => l.kind === "kta"), dark: course.lessons.find((l) => l.kind === "dark") } as const;
@@ -61,15 +61,15 @@ export function ProgressBoard({
                               <span
                                 data-state={done ? "done" : on ? "planned" : "missing"}
                                 className={`${box} ${FACT_TONE[done ? "done" : on ? "booked" : "none"]}`}
-                                title={`${l.title}: ${done ? `kørt ${done.lesson_date} · ${done.instructor_name}` : on ? `planlagt ${formatDate(on)}` : "mangler"}`}
+                                title={`${l.title}: ${done ? `kørt ${done.lesson_date} · ${done.instructor_name}` : on ? planText(on) : "mangler"}`}
                               >
-                                {done ? "✓" : on ? shortDate(on) : "–"}
+                                {done ? "✓" : on ? shortDate(on.date) : "–"}
                               </span>
                             );
                             const target: PlanTarget = { type: "lesson", schoolLessonId: l.id, count: l.units.length || 1, label: lessonLabel(l) };
                             return (
                               <Cell key={l.id} label={String(l.number)}>
-                                {done ? cell : <PlanCell studentId={s.id} studentName={s.name} target={target}>{cell}</PlanCell>}
+                                {done ? cell : <PlanCell studentId={s.id} studentName={s.name} target={target} planned={on}>{cell}</PlanCell>}
                               </Cell>
                             );
                           })
@@ -109,13 +109,13 @@ export function ProgressBoard({
                         const ktaDone = !!fl && s.lessonSignoffs.some((x) => x.school_lesson_id === fl.id);
                         const ktaOn = fl ? planned.get(`${s.id}:${fl.id}`) : undefined;
                         const tone = ktaDone ? "done" : f.tone === "none" && ktaOn ? "booked" : f.tone;
-                        const date = f.tone === "booked" && f.current ? f.current.on_date : ktaOn;
+                        const date = f.tone === "booked" && f.current ? f.current.on_date : ktaOn?.date;
                         const cell = (
                           <span
                             data-testid={`board-fact-${f.kind}`}
                             data-tone={tone}
                             className={`${box} ${FACT_TONE[tone]}`}
-                            title={`${KIND_LABEL[f.kind]}: ${ktaOn && f.tone === "none" ? `planlagt ${formatDate(ktaOn)}` : factText(f, formatDate)}`}
+                            title={`${KIND_LABEL[f.kind]}: ${ktaOn && f.tone === "none" ? planText(ktaOn) : factText(f, formatDate)}`}
                           >
                             {tone === "done" ? "✓" : tone === "booked" && date ? shortDate(date) : "–"}
                           </span>
@@ -130,7 +130,7 @@ export function ProgressBoard({
                                 : null;
                         return (
                           <Cell key={f.kind} label={SHORT[f.kind as keyof typeof SHORT] ?? KIND_LABEL[f.kind]}>
-                            {target ? <PlanCell studentId={s.id} studentName={s.name} target={target}>{cell}</PlanCell> : cell}
+                            {target ? <PlanCell studentId={s.id} studentName={s.name} target={target} planned={target.type === "lesson" ? ktaOn : undefined}>{cell}</PlanCell> : cell}
                           </Cell>
                         );
                       })}
@@ -156,6 +156,9 @@ export function ProgressBoard({
   );
 }
 
+// "planlagt 27. nov. kl. 10:45 · Lars Jensen" (ved musen).
+const planText = (p: BoardPlan) => `planlagt ${formatDate(p.date)} kl. ${p.start}${p.instructor ? ` · ${p.instructor}` : ""}`;
+
 // "23/11" til tavlen.
 const shortDate = (iso: string) => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
 
@@ -171,7 +174,7 @@ function Cell({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function EuLine({ s, totals, modules, planned }: { s: StudentInfo; totals: EuTotals; modules: ReturnType<typeof moduleProgress>; planned: Map<string, string> }) {
+function EuLine({ s, totals, modules, planned }: { s: StudentInfo; totals: EuTotals; modules: ReturnType<typeof moduleProgress>; planned: Map<string, BoardPlan> }) {
   const total = [...totals.hours.values()].reduce((n, h) => n + h, 0);
   const done = s.euSignoffs.filter((x) => x.kind === "topic" && x.eu_topic_id).reduce((n, x) => n + (totals.hours.get(x.eu_topic_id!) ?? 0), 0);
   const tests = facts(modules, s.appointments, euTestKinds(totals.kind)).filter((f) => f.kind === "lastsikring" || f.kind === "multitest");
@@ -188,13 +191,13 @@ function EuLine({ s, totals, modules, planned }: { s: StudentInfo; totals: EuTot
         const on = planned.get(`${s.id}:${d.id}`);
         const tone = ok ? "done" : on ? "booked" : "none";
         const cell = (
-          <span data-testid="board-eu-drive" data-label={driveShort(d.title)} data-tone={tone} title={`${d.title}: ${ok ? "kørt" : on ? `planlagt ${formatDate(on)}` : "mangler"}`} className={`${box} ${FACT_TONE[tone]}`}>
-            {ok ? "✓" : on ? shortDate(on) : "–"}
+          <span data-testid="board-eu-drive" data-label={driveShort(d.title)} data-tone={tone} title={`${d.title}: ${ok ? "kørt" : on ? planText(on) : "mangler"}`} className={`${box} ${FACT_TONE[tone]}`}>
+            {ok ? "✓" : on ? shortDate(on.date) : "–"}
           </span>
         );
         return (
           <Cell key={d.id} label={driveShort(d.title)}>
-            {ok ? cell : <PlanCell studentId={s.id} studentName={s.name} target={{ type: "eu", euTopicId: d.id, count: d.lessons, label: d.title }}>{cell}</PlanCell>}
+            {ok ? cell : <PlanCell studentId={s.id} studentName={s.name} target={{ type: "eu", euTopicId: d.id, count: d.lessons, label: d.title }} planned={on}>{cell}</PlanCell>}
           </Cell>
         );
       })}

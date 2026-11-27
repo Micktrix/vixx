@@ -51,14 +51,20 @@ export async function saveLesson(_prev: ActionState, formData: FormData): Promis
   if (!id && date < todayDk()) return { error: "Nye lektioner kan kun planlægges fra i dag og frem." };
   if (!TIME_SLOTS.includes(start)) return { error: "Vælg et starttidspunkt." };
   if (!Number.isInteger(count) || count < 1 || count > 20) return { error: "Antal lektioner skal være mellem 1 og 20." };
-  if (!serviceId) return { error: "Vælg en ydelse." };
+  // Lektioner fra lektionsplanen (holdtavlen) har ingen ydelse og kan flyttes uden (trin E11).
+  let plannedLesson = false;
+  if (!serviceId && id) {
+    const { data } = await (await createClient()).from("scheduled_lessons").select("service_id, school_lesson_id, eu_topic_id").eq("id", id).maybeSingle();
+    plannedLesson = !!data && !data.service_id && !!(data.school_lesson_id || data.eu_topic_id);
+  }
+  if (!serviceId && !plannedLesson) return { error: "Vælg en ydelse." };
 
   const values = {
     instructor_id: instructorId,
     lesson_date: date,
     start_time: start,
     lesson_count: count,
-    service_id: serviceId,
+    service_id: serviceId || null,
     student_ids: formData.getAll("studentIds").map(String).filter(Boolean),
     student_name: text("studentName") || null,
     note: text("note") || null,

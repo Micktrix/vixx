@@ -76,6 +76,34 @@ test("kontoret planlægger lektioner, KTA med to elever og en teoriprøve fra ho
     expect(shared.note).toBe("KTA");
     expect(shared.lesson_count).toBe(4);
 
+    // Ved musen: hvornår og hvilken lærer.
+    await expect(rowA.locator('[data-state="planned"]').first()).toHaveAttribute("title", /kl\. \d{2}:\d{2} · Lars Jensen/);
+
+    // Mørkelektionen flyttes i kalenderen uden ydelse, og tavlen følger med.
+    const later = new Date(Date.now() + 14 * 864e5).toLocaleDateString("sv-SE", { timeZone: "Europe/Copenhagen" });
+    const { data: aRow } = await admin.from("students").select("id, profiles!inner(full_name)").eq("profiles.full_name", a).single();
+    const { data: aLessons } = await admin.from("scheduled_lessons").select("id, note").contains("student_ids", [aRow!.id]);
+    const darkId = aLessons!.find((l) => /mørke/.test(l.note ?? ""))!.id;
+    await page.goto(`/kontor/planlaeg?id=${darkId}`);
+    await expect(page.getByTestId("planned-no-service")).toBeVisible();
+    await page.getByLabel("Dato").fill(later);
+    await page.getByRole("button", { name: "Gem ændringer" }).click();
+    await page.waitForURL(/\/kontor\?/);
+    await page.goto(teamUrl);
+    await expect(rowA.getByTestId("board-fact-dark")).toHaveText(`${Number(later.slice(8, 10))}/${Number(later.slice(5, 7))}`);
+
+    // Aflys: tryk på den gule lektion; B tages af den fælles KTA, A's lektion 1 fjernes helt.
+    page.on("dialog", (d) => d.accept());
+    await rowB.locator('[data-plan="KTA"]').click();
+    await page.getByTestId("plan-cancel").getByRole("button", { name: "Aflys lektionen" }).click();
+    await expect(rowB.getByTestId("board-fact-kta")).toHaveAttribute("data-tone", "none");
+    await expect(rowA.getByTestId("board-fact-kta")).toHaveAttribute("data-tone", "booked");
+    await page.getByTestId("plan-dialog").getByRole("button", { name: "Luk" }).click();
+    await rowA.locator('[data-plan="Lektion 1"]').click();
+    await page.getByTestId("plan-cancel").getByRole("button", { name: "Aflys lektionen" }).click();
+    await expect(rowA.locator('[data-plan="Lektion 1"] span')).toHaveAttribute("data-state", "missing");
+    await page.getByTestId("plan-dialog").getByRole("button", { name: "Luk" }).click();
+
     // Teoriprøve for B: en aftale på eleven.
     await rowB.locator('[data-plan="teoriprøve"]').click();
     const dialog = page.getByTestId("plan-dialog");
