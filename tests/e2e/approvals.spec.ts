@@ -121,3 +121,32 @@ test("en admin, der også underviser, kan rette og sende en afvist lektion igen"
   await expect(page.getByTestId("registration")).toContainText("Afventer");
   await expect(page.getByTestId("registration")).not.toContainText("Rettet af kontoret");
 });
+
+// Samlet pr. lærer (27. nov. 2026): overblik, "Godkend de N, der matcher" og flueben + "Godkend valgte".
+test("godkendelser samlet pr. lærer: matchende er foldet sammen, og valgte kan godkendes samlet", async ({ browser, page }) => {
+  const { instructorId } = await newTeacher(browser, "E2E Samlet");
+  const { data: lesson } = await localAdmin()
+    .from("scheduled_lessons")
+    .insert({ school_id: SCHOOL, instructor_id: instructorId, service_id: B_PRIVAT, lesson_date: today(), start_time: "08:00", lesson_count: 2, origin: "office" })
+    .select("id")
+    .single();
+  await pendingRegistration(instructorId, "08:00", { scheduled_lesson_id: lesson!.id });
+  await pendingRegistration(instructorId, "12:00");
+  await pendingRegistration(instructorId, "14:30", { lesson_count: 1 });
+
+  await officeFor(page, instructorId);
+  const group = page.getByTestId("approval-teacher");
+  await expect(group.getByTestId("approval-summary")).toContainText("3 afventer");
+  await expect(group.getByTestId("approval-attention").getByTestId("approval-row")).toHaveCount(2);
+  await expect(group.getByTestId("approval-matching").getByTestId("approval-row")).toBeHidden(); // foldet sammen
+
+  // Flueben ved den ene uplanlagte og "Godkend valgte".
+  await group.getByTestId("approval-attention").getByTestId("approval-row").filter({ hasText: "12:00" }).getByRole("checkbox").check();
+  await group.getByRole("button", { name: "Godkend valgte" }).click();
+  await expect(page.getByTestId("approval-row")).toHaveCount(2);
+
+  // "Godkend de 1, der matcher" for læreren.
+  await page.getByTestId("approval-teacher").getByRole("button", { name: "Godkend de 1, der matcher" }).click();
+  await expect(page.getByTestId("approval-row")).toHaveCount(1);
+  await expect(page.getByTestId("approval-row")).toContainText("14:30");
+});

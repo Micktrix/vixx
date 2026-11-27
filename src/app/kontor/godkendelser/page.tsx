@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { InstructorFilter } from "../calendar/instructor-filter";
 import { loadSchedule } from "../schedule-data";
 import { sendReminder } from "../beskeder/actions";
-import { approveMatching, approveRegistration, rejectRegistration } from "./actions";
+import { approveMatching, approveRegistration, approveSelected, rejectRegistration } from "./actions";
 import { loadApprovals, type ApprovalRow, type Status } from "./data";
 
 const TABS: { status: Status; label: string }[] = [
@@ -149,7 +149,9 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/kontor
         </section>
       )}
 
-      {rows.length ? (
+      {status === "pending" && rows.length > 0 ? (
+        groupByTeacher(rows).map((g) => <TeacherGroup key={g.id} rows={g.rows} isLocked={isLocked} deciderName={deciderName} />)
+      ) : rows.length ? (
         <section className="overflow-x-auto rounded-[20px] border border-line bg-surface">
           <table className="w-full min-w-[900px] text-left text-[14px]">
             <thead className="text-[12px] text-muted">
@@ -159,7 +161,7 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/kontor
                 <th className="px-3 py-2.5 font-semibold">Lektion</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Plan.</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Reg.</th>
-                <th className="px-3 py-2.5 font-semibold">{status === "pending" ? "Kontrol" : "Status"}</th>
+                <th className="px-3 py-2.5 font-semibold">Status</th>
                 <th className="py-2.5 pr-[18px] pl-3" />
               </tr>
             </thead>
@@ -171,21 +173,11 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/kontor
                   <tr key={r.id} className={`align-top ${newGroup ? "border-t border-line" : ""}`} data-testid="approval-row">
                     <td className="py-3 pr-3 pl-[18px]">{newGroup && <b>{r.instructorName}</b>}</td>
                     <td className="px-3 py-3 whitespace-nowrap">{newGroup && formatShortDay(r.date)}</td>
-                    <td className="px-3 py-3">
-                      <span className="text-muted">{formatSpan(r)}</span> <b>{r.serviceName}</b>
-                      {r.studentName && <span className="block text-[13px] text-muted">{r.studentName.includes(",") ? "Elever" : "Elev"}: {r.studentName}</span>}
-                      {r.note && <span className="block text-[13px] text-muted">{r.note}</span>}
-                    </td>
-                    <td className="px-3 py-3 text-right">{r.plannedCount ?? "–"}</td>
-                    <td className="px-3 py-3 text-right">
-                      <b>{r.count}</b>
-                    </td>
+                    <LessonCells r={r} />
                     <td className="px-3 py-3">
                       <Decision row={r} deciderName={r.decidedBy ? deciderName.get(r.decidedBy) : undefined} />
                     </td>
-                    <td className="py-3 pr-[18px] pl-3">
-                      {isLocked(r.date) ? <span className="text-muted">Låst</span> : <Actions row={r} />}
-                    </td>
+                    <td className="py-3 pr-[18px] pl-3">{isLocked(r.date) ? <span className="text-muted">Låst</span> : <Actions row={r} />}</td>
                   </tr>
                 );
               })}
@@ -196,6 +188,133 @@ export default async function ApprovalsPage({ searchParams }: PageProps<"/kontor
         <p className="rounded-[20px] border border-line bg-surface px-[18px] py-4 text-muted">{EMPTY[status]}</p>
       )}
     </>
+  );
+}
+
+function groupByTeacher(rows: ApprovalRow[]) {
+  const groups: { id: string; rows: ApprovalRow[] }[] = [];
+  for (const r of rows) {
+    const g = groups.find((x) => x.id === r.instructorId);
+    if (g) g.rows.push(r);
+    else groups.push({ id: r.instructorId, rows: [r] });
+  }
+  return groups;
+}
+
+function LessonCells({ r }: { r: ApprovalRow }) {
+  const off = r.plannedCount != null && r.plannedCount !== r.count;
+  return (
+    <>
+      <td className="px-3 py-3">
+        <span className="text-muted">{formatSpan(r)}</span> <b>{r.serviceName}</b>
+        {r.studentName && <span className="block text-[13px] text-muted">{r.studentName.includes(",") ? "Elever" : "Elev"}: {r.studentName}</span>}
+        {r.note && <span className="block text-[13px] text-muted">{r.note}</span>}
+      </td>
+      <td className="px-3 py-3 text-right">{r.plannedCount ?? "–"}</td>
+      <td className={`px-3 py-3 text-right ${off ? "text-accent-ink" : ""}`}>
+        <b>{r.count}</b>
+      </td>
+    </>
+  );
+}
+
+// Én lærer (Mangler godkendelse): overblik og "Godkend de N, der matcher" øverst. Afvigelser og uplanlagte står
+// åbne; dem der matcher skemaet er foldet sammen. Flueben + "Godkend valgte" til flere på én gang.
+function TeacherGroup({ rows, isLocked, deciderName }: { rows: ApprovalRow[]; isLocked: (d: string) => boolean; deciderName: Map<string, string> }) {
+  const id = rows[0].instructorId;
+  const open = rows.filter((r) => !isLocked(r.date));
+  const matching = rows.filter((r) => r.flag === "matcher");
+  const others = rows.filter((r) => r.flag !== "matcher");
+  const matchingOpen = matching.filter((r) => !isLocked(r.date)).length;
+  const bulk = `bulk-${id}`;
+  const table = (list: ApprovalRow[]) => (
+    <table className="w-full min-w-[720px] text-left text-[14px]">
+      <thead className="text-[12px] text-muted">
+        <tr>
+          <th className="w-8 py-2 pl-[18px]" />
+          <th className="px-3 py-2 font-semibold">Dato</th>
+          <th className="px-3 py-2 font-semibold">Lektion</th>
+          <th className="px-3 py-2 text-right font-semibold">Plan.</th>
+          <th className="px-3 py-2 text-right font-semibold">Reg.</th>
+          <th className="px-3 py-2 font-semibold">Kontrol</th>
+          <th className="py-2 pr-[18px] pl-3" />
+        </tr>
+      </thead>
+      <tbody>
+        {list.map((r, i) => {
+          const newDay = i === 0 || list[i - 1].date !== r.date;
+          return (
+            <tr key={r.id} className={`align-top ${newDay ? "border-t border-line" : ""}`} data-testid="approval-row">
+              <td className="py-3 pl-[18px]">
+                {!isLocked(r.date) && (
+                  <input
+                    type="checkbox"
+                    name="ids"
+                    value={r.id}
+                    form={bulk}
+                    aria-label={`Vælg ${formatShortDay(r.date)} ${formatSpan(r)}`}
+                    className="mt-0.5 size-[18px] accent-accent"
+                  />
+                )}
+              </td>
+              <td className="px-3 py-3 whitespace-nowrap">{newDay ? formatShortDay(r.date) : ""}</td>
+              <LessonCells r={r} />
+              <td className="px-3 py-3">
+                <Decision row={r} deciderName={r.decidedBy ? deciderName.get(r.decidedBy) : undefined} />
+              </td>
+              <td className="py-3 pr-[18px] pl-3">{isLocked(r.date) ? <span className="text-muted">Låst</span> : <Actions row={r} />}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
+  return (
+    <section className="flex flex-col rounded-[20px] border border-line bg-surface" data-testid="approval-teacher">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-[18px] py-3.5">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-bold">{rows[0].instructorName}</h2>
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm" data-testid="approval-summary">
+            <span>
+              <b>{rows.length}</b> afventer
+            </span>
+            {(Object.keys(FLAG_LABEL) as Flag[]).map((f) => {
+              const n = rows.filter((r) => r.flag === f).length;
+              return n ? (
+                <span key={f} className="flex items-center gap-1">
+                  <Pill tone={FLAG_TONE[f]}>{n}</Pill> {FLAG_LABEL[f].toLowerCase()}
+                </span>
+              ) : null;
+            })}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-start gap-2">
+          {matchingOpen > 0 && (
+            <ActionForm action={approveMatching} submitLabel={`Godkend de ${matchingOpen}, der matcher`} pendingLabel="Godkender …" className="flex flex-col items-end gap-2">
+              <input type="hidden" name="instructorId" value={id} />
+            </ActionForm>
+          )}
+          {open.length > 0 && (
+            <ActionForm id={bulk} action={approveSelected} submitLabel="Godkend valgte" pendingLabel="Godkender …" primary={false} className="flex flex-col items-end gap-2" />
+          )}
+        </div>
+      </div>
+      {others.length > 0 ? (
+        <div className="overflow-x-auto border-t border-line" data-testid="approval-attention">
+          <p className="px-[18px] pt-2.5 text-[13px] font-semibold text-accent-ink">Kræver et kig ({others.length})</p>
+          {table(others)}
+        </div>
+      ) : (
+        <p className="border-t border-line px-[18px] py-2.5 text-[13px] text-muted">Ingen afvigelser. Alt matcher skemaet.</p>
+      )}
+      {matching.length > 0 && (
+        <details className="border-t border-line" data-testid="approval-matching">
+          <summary className="cursor-pointer px-[18px] py-2.5 text-sm font-semibold text-muted">Vis de {matching.length}, der matcher skemaet</summary>
+          <div className="overflow-x-auto">{table(matching)}</div>
+        </details>
+      )}
+    </section>
   );
 }
 

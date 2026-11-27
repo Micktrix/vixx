@@ -28,6 +28,7 @@ export function ActionForm({
   primary = true,
   className = "flex flex-col gap-3",
   children,
+  id,
 }: {
   action: FormAction;
   submitLabel: string;
@@ -36,11 +37,12 @@ export function ActionForm({
   primary?: boolean;
   className?: string;
   children?: ReactNode;
+  id?: string; // felter andre steder på siden kan høre til formularen med form="id" (fx flueben i en tabel)
 }) {
   const { state, onSubmit, pending } = useFormAction(action, confirmText);
 
   return (
-    <form onSubmit={onSubmit} className={className}>
+    <form id={id} onSubmit={onSubmit} className={className}>
       {children}
       <div>
         <button type="submit" disabled={pending} className={primary ? primaryButtonClass : buttonClass}>

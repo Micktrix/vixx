@@ -71,6 +71,31 @@ export async function approveMatching(_prev: ActionState, formData: FormData): P
     : { message: `${approved} lektion${approved === 1 ? "" : "er"} godkendt.` };
 }
 
+// "Godkend valgte": de afventende lektioner med flueben (fx nogle afvigelser, kontoret har kigget på).
+export async function approveSelected(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { membership } = await requireRole(["admin"]);
+  const ids = formData.getAll("ids").map(String).filter(Boolean);
+  if (!ids.length) return { error: "Sæt flueben ved de lektioner, der skal godkendes." };
+  const supabase = await createClient();
+  let approved = 0;
+  const problems: string[] = [];
+  for (const id of ids) {
+    const { data, error } = await supabase
+      .from("registrations")
+      .update({ status: "approved" })
+      .eq("id", id)
+      .eq("school_id", membership.schoolId)
+      .eq("status", "pending")
+      .select("lesson_date");
+    if (error) problems.push(error.message);
+    else if (data?.length) approved++;
+  }
+  refresh();
+  return problems.length
+    ? { error: `${approved} godkendt. Ikke godkendt: ${problems.join(" ")}` }
+    : { message: `${approved} lektion${approved === 1 ? "" : "er"} godkendt.` };
+}
+
 export async function rejectRegistration(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { user, membership } = await requireRole(["admin"]);
   const comment = String(formData.get("comment") ?? "").trim();
