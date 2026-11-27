@@ -32,7 +32,7 @@ test("en lærer klarer dagen fra telefonen: udført, uplanlagt, egen planlægnin
   await page.goto("/laerer");
   const panel = page.getByTestId("day-panel");
   await expect(panel.getByTestId("planned")).toContainText("Planlagt af kontoret");
-  await panel.getByRole("link", { name: "Til løn" }).click();
+  await panel.getByRole("link", { name: "Til løn", exact: true }).click();
   await expect(page.getByLabel("Note (valgfri)")).toHaveValue("Elev E2E");
   await expect(page.getByTestId("student-picker")).toHaveCount(0);
   await page.getByRole("button", { name: "Send til løn" }).click();
