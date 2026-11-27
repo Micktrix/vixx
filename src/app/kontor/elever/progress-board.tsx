@@ -3,7 +3,9 @@ import { Fragment, type ReactNode } from "react";
 import { FACT_TONE } from "@/components/facts-strip";
 import { euTestKinds, factText, facts, KIND_LABEL } from "@/lib/appointments";
 import { formatDate } from "@/lib/dates";
+import { lessonLabel } from "@/lib/lesson-plan";
 import { moduleProgress, progressText } from "@/lib/module-progress";
+import { PlanCell, type PlanTarget } from "./board-planner";
 import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./data";
 
 // Forløbstavle: én række pr. elev med elevens egne overskrifter over boksene (Michael 26. nov. 2026): lektionerne
@@ -12,7 +14,18 @@ import { progress, type CourseInfo, type StudentInfo, type EuTotals } from "./da
 const SHORT = { kta: "KTA", dark: "Mørke", theory_test: "Teori", driving_test: "Køre" } as const;
 // Samme felt som faktaboksen: ✓ (grøn), "…" (gul, modul i gang) eller "–" (grå).
 const box = "inline-block min-w-[28px] rounded-md border px-1.5 py-0.5 text-center text-[12px] font-semibold whitespace-nowrap";
-export function ProgressBoard({ course, students, euHours }: { course: CourseInfo; students: StudentInfo[]; euHours: Map<string, EuTotals> }) {
+export function ProgressBoard({
+  course,
+  students,
+  euHours,
+  planned = new Map(),
+}: {
+  course: CourseInfo;
+  students: StudentInfo[];
+  euHours: Map<string, EuTotals>;
+  planned?: Map<string, string>; // "elev:lektion" -> dato (planlagt fra tavlen)
+}) {
+  const ktaLesson = course.lessons.find((l) => l.kind === "kta");
   // KTA står i faktaboksen (grøn, når KTA-lektionen er kørt eller KTA er markeret), ikke i lektionsrækken.
   const lessons = course.lessons.filter((l) => l.kind !== "kta");
   return (
@@ -20,7 +33,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-line px-[18px] py-3">
         <h2 className="text-lg font-bold">{course.name}</h2>
         <span className="text-[13px] text-muted">
-          {course.lessons.length ? "✓ = kørt · gul = booket" : "✓ = afsluttet · … = i gang · gul = booket"}
+          {course.lessons.length ? "✓ = kørt · gul = planlagt · tryk på – for at planlægge" : "✓ = afsluttet · … = i gang · gul = booket"}
         </span>
       </div>
       <table className="w-full text-left text-[14px]">
@@ -42,15 +55,20 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                       {lessons.length
                         ? lessons.map((l) => {
                             const done = s.lessonSignoffs.find((x) => x.school_lesson_id === l.id);
+                            const on = planned.get(`${s.id}:${l.id}`);
+                            const cell = (
+                              <span
+                                data-state={done ? "done" : on ? "planned" : "missing"}
+                                className={`${box} ${FACT_TONE[done ? "done" : on ? "booked" : "none"]}`}
+                                title={`${l.title}: ${done ? `kørt ${done.lesson_date} · ${done.instructor_name}` : on ? `planlagt ${formatDate(on)}` : "mangler"}`}
+                              >
+                                {done ? "✓" : on ? shortDate(on) : "–"}
+                              </span>
+                            );
+                            const target: PlanTarget = { type: "lesson", schoolLessonId: l.id, count: l.units.length || 1, label: lessonLabel(l) };
                             return (
                               <Cell key={l.id} label={String(l.number)}>
-                                <span
-                                  data-state={done ? "done" : "missing"}
-                                  className={`${box} ${FACT_TONE[done ? "done" : "none"]}`}
-                                  title={`${l.title}: ${done ? `kørt ${done.lesson_date} · ${done.instructor_name}` : "mangler"}`}
-                                >
-                                  {done ? "✓" : "–"}
-                                </span>
+                                {done ? cell : <PlanCell studentId={s.id} studentName={s.name} target={target}>{cell}</PlanCell>}
                               </Cell>
                             );
                           })
@@ -84,18 +102,37 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                         </span>
                       </Cell>
                       <span className="ml-auto flex items-end gap-x-2 pl-4">
-                      {facts(modules, s.appointments).map((f) => (
-                        <Cell key={f.kind} label={SHORT[f.kind as keyof typeof SHORT] ?? KIND_LABEL[f.kind]}>
+                      {facts(modules, s.appointments).map((f) => {
+                        // KTA med lektionsplan: KTA-lektionen planlægges hos en lærer (kørt = grøn).
+                        const ktaDone = f.kind === "kta" && !!ktaLesson && s.lessonSignoffs.some((x) => x.school_lesson_id === ktaLesson.id);
+                        const ktaOn = f.kind === "kta" && ktaLesson ? planned.get(`${s.id}:${ktaLesson.id}`) : undefined;
+                        const tone = ktaDone ? "done" : f.tone === "none" && ktaOn ? "booked" : f.tone;
+                        const date = f.tone === "booked" && f.current ? f.current.on_date : ktaOn;
+                        const cell = (
                           <span
                             data-testid={`board-fact-${f.kind}`}
-                            data-tone={f.tone}
-                            className={`inline-block min-w-[28px] rounded-md border px-1.5 py-0.5 text-center text-[12px] font-semibold whitespace-nowrap ${FACT_TONE[f.tone]}`}
-                            title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`}
+                            data-tone={tone}
+                            className={`${box} ${FACT_TONE[tone]}`}
+                            title={`${KIND_LABEL[f.kind]}: ${ktaOn && f.tone === "none" ? `planlagt ${formatDate(ktaOn)}` : factText(f, formatDate)}`}
                           >
-                            {f.tone === "done" ? "✓" : f.tone === "booked" && f.current ? shortDate(f.current.on_date) : "–"}
+                            {tone === "done" ? "✓" : tone === "booked" && date ? shortDate(date) : "–"}
                           </span>
-                        </Cell>
-                      ))}
+                        );
+                        // Mørke ligger i lektionsrækken, når forløbet har lektionsplan.
+                        const target: PlanTarget | null =
+                          tone === "done"
+                            ? null
+                            : f.kind === "kta" && ktaLesson
+                              ? { type: "lesson", schoolLessonId: ktaLesson.id, count: ktaLesson.units.length || 1, label: "KTA" }
+                              : tone === "none" && !(f.kind === "dark" && lessons.length)
+                                ? { type: "appointment", kind: f.kind, label: KIND_LABEL[f.kind].toLowerCase() }
+                                : null;
+                        return (
+                          <Cell key={f.kind} label={SHORT[f.kind as keyof typeof SHORT] ?? KIND_LABEL[f.kind]}>
+                            {target ? <PlanCell studentId={s.id} studentName={s.name} target={target}>{cell}</PlanCell> : cell}
+                          </Cell>
+                        );
+                      })}
                       </span>
                     </div>
                   </td>
@@ -105,7 +142,7 @@ export function ProgressBoard({ course, students, euHours }: { course: CourseInf
                   <tr data-testid="board-eu" data-student={s.name}>
                     <td className="sticky left-0 bg-surface px-[18px] pb-3 align-bottom text-[12px] font-semibold text-muted">EU</td>
                     <td className="pb-3 pr-[18px] pl-1">
-                      <EuLine s={s} totals={eu} modules={modules} />
+                      <EuLine s={s} totals={eu} modules={modules} planned={planned} />
                     </td>
                   </tr>
                 )}
@@ -133,7 +170,7 @@ function Cell({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function EuLine({ s, totals, modules }: { s: StudentInfo; totals: EuTotals; modules: ReturnType<typeof moduleProgress> }) {
+function EuLine({ s, totals, modules, planned }: { s: StudentInfo; totals: EuTotals; modules: ReturnType<typeof moduleProgress>; planned: Map<string, string> }) {
   const total = [...totals.hours.values()].reduce((n, h) => n + h, 0);
   const done = s.euSignoffs.filter((x) => x.kind === "topic" && x.eu_topic_id).reduce((n, x) => n + (totals.hours.get(x.eu_topic_id!) ?? 0), 0);
   const tests = facts(modules, s.appointments, euTestKinds(totals.kind)).filter((f) => f.kind === "lastsikring" || f.kind === "multitest");
@@ -147,21 +184,31 @@ function EuLine({ s, totals, modules }: { s: StudentInfo; totals: EuTotals; modu
       </Cell>
       {totals.driveList.map((d) => {
         const ok = s.euSignoffs.some((x) => x.kind === "drive" && x.eu_topic_id === d.id);
+        const on = planned.get(`${s.id}:${d.id}`);
+        const tone = ok ? "done" : on ? "booked" : "none";
+        const cell = (
+          <span data-testid="board-eu-drive" data-label={driveShort(d.title)} data-tone={tone} title={`${d.title}: ${ok ? "kørt" : on ? `planlagt ${formatDate(on)}` : "mangler"}`} className={`${box} ${FACT_TONE[tone]}`}>
+            {ok ? "✓" : on ? shortDate(on) : "–"}
+          </span>
+        );
         return (
           <Cell key={d.id} label={driveShort(d.title)}>
-            <span data-testid="board-eu-drive" data-label={driveShort(d.title)} data-tone={ok ? "done" : "none"} title={`${d.title}: ${ok ? "kørt" : "mangler"}`} className={`${box} ${FACT_TONE[ok ? "done" : "none"]}`}>
-              {ok ? "✓" : "–"}
-            </span>
+            {ok ? cell : <PlanCell studentId={s.id} studentName={s.name} target={{ type: "eu", euTopicId: d.id, count: d.lessons, label: d.title }}>{cell}</PlanCell>}
           </Cell>
         );
       })}
-      {tests.map((f) => (
-        <Cell key={f.kind} label={KIND_LABEL[f.kind]}>
+      {tests.map((f) => {
+        const cell = (
           <span data-testid={`board-fact-${f.kind}`} data-tone={f.tone} title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`} className={`${box} ${FACT_TONE[f.tone]}`}>
             {f.tone === "done" ? "✓" : f.tone === "booked" && f.current ? shortDate(f.current.on_date) : "–"}
           </span>
-        </Cell>
-      ))}
+        );
+        return (
+          <Cell key={f.kind} label={KIND_LABEL[f.kind]}>
+            {f.tone === "none" ? <PlanCell studentId={s.id} studentName={s.name} target={{ type: "appointment", kind: f.kind, label: KIND_LABEL[f.kind].toLowerCase() }}>{cell}</PlanCell> : cell}
+          </Cell>
+        );
+      })}
     </div>
   );
 }

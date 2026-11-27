@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { ADMIN, INSTRUCTOR, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, INSTRUCTOR, PASSWORD, loginOk, openBoxes } from "./helpers";
 
 const EMIL = "00000000-0000-4000-ad00-000000000031"; // har EU Gods i seed
 
@@ -24,6 +24,7 @@ test("læreren bekræfter EU ved scanning, og EU-planen kan printes", async ({ b
     const office = await browser.newPage();
     await loginOk(office, ADMIN, PASSWORD);
     await office.goto(`/kontor/elever/${EMIL}`);
+    await openBoxes(office);
     await expect(office.getByTestId("eu-topics-status")).toContainText("Lars Jensen");
     await expect(office.getByTestId("eu-course")).toHaveValue(/[0-9a-f-]{36}/);
     const pdf = await office.request.get(`/api/eu-plan/${EMIL}`);
@@ -42,6 +43,7 @@ test("EU-prøverne, holdtavlen og elevens app viser EU", async ({ browser }) => 
   const office = await browser.newPage();
   await loginOk(office, ADMIN, PASSWORD);
   await office.goto(`/kontor/elever/${EMIL}`);
+  await openBoxes(office);
   await expect(office.getByTestId("fact-lastsikring")).toHaveAttribute("data-tone", "none");
   await expect(office.getByTestId("fact-multitest")).toBeVisible();
   await office.goto(`/kontor/elever/hold/${student!.team_id}`);
@@ -89,6 +91,7 @@ test("læreren krydser EU af fra elevens side med valgt dato", async ({ page }) 
   try {
     await loginOk(page, INSTRUCTOR, PASSWORD);
     await page.goto(`/kontor/elever/${EMIL}`);
+    await openBoxes(page);
     const sign = page.getByTestId("eu-sign");
     await sign.locator("summary").click();
     await sign.getByLabel("Dato").fill(yesterday);

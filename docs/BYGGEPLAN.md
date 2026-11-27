@@ -433,6 +433,13 @@ fordeler på modulerne og sætter underskrifterne det rigtige sted.
 - **KTA og Mørke i faktaboksen** bliver grønne af sig selv, når KTA-lektionen og mørkelektionen (lektion 6) er
   bekræftet; ingen manuel markering nødvendig.
 
+### Trin E11 – Planlæg fra holdtavlen (aftalt med Michael 27. nov. 2026; bygget 27. nov., migration `20261127100000_plan_from_board`)
+- Alle (admin, kontor og lærere) kan trykke på et manglende felt på holdtavlen og planlægge det i en lille boks uden at gå ind på eleven.
+- Lektion 1–9, KTA (lektionsplanen) og EU-køretimer: underviser, dato (i dag og frem) og starttid fra skolens lektionsplan (optagede tider kan ikke vælges). Bliver en planlagt lektion (`scheduled_lessons` med `school_lesson_id`/`eu_topic_id`, uden ydelse, `note` = lektionens navn) i lærerens og elevens kalender. Feltet bliver gult med datoen.
+- **Adskilt fra lønnen:** ingen ydelse og ingen "Udført"-knap på den; læreren registrerer stadig selv timer og lektioner.
+- Flere elever: har læreren allerede samme lektion på samme tid (fx KTA), vises tiden som "sæt eleven på", og eleven føjes til lektionen i stedet for at låse læreren.
+- Teoriprøve, køreprøve, Lastsikring og Multitest (og KTA/Mørke på B) bliver aftaler på eleven (`student_appointments`) med dato, evt. klokkeslæt og adresse.
+
 ### Idéer (aftalt 14. nov. 2026, ikke prioriteret endnu)
 - Tilmelding af nye elever fra skolens hjemmeside: eleven udfylder en formular, kontoret godkender, og eleven
   oprettes med login. Frivilligt afsnit "Hensyn" (ordblind, farveblind, nedsat hørelse, koncentrationsbesvær,

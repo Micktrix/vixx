@@ -145,9 +145,9 @@ export function DayPanel({
               {lessonResources[l.id] && ` · ${lessonResources[l.id]}`}
             </span>
             {l.studentName && <span className="text-[13px] text-muted">{l.studentName.includes(",") ? "Elever" : "Elev"}: {l.studentName}</span>}
-            {l.note && <span className="text-[13px] text-muted">Note: {l.note}</span>}
+            {l.note && !l.planned && <span className="text-[13px] text-muted">Note: {l.note}</span>}
           </span>
-          {!locked && !future && (
+          {!locked && !future && !l.planned && (
             <ActionForm action={markDone} submitLabel="Udført" pendingLabel="…" className="flex flex-col items-end gap-1">
               <input type="hidden" name="lessonId" value={l.id} />
             </ActionForm>

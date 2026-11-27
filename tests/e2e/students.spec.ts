@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { OFFICE, PASSWORD, chooseOwnPassword, loginOk, newPhone } from "./helpers";
+import { OFFICE, PASSWORD, chooseOwnPassword, loginOk, newPhone, openBoxes } from "./helpers";
 
 test("kontoret opretter et hold og en elev, og eleven ser sit forløb i sin egen app", async ({ browser, page }) => {
   const suffix = Date.now() % 100000;
@@ -57,6 +57,7 @@ test("kontoret nulstiller en elevs kode til telefonnummeret", async ({ page }) =
   await loginOk(page, OFFICE, PASSWORD);
   await page.goto("/kontor/elever/00000000-0000-4000-ad00-000000000032");
   await expect(page.getByRole("heading", { name: "Freja Elev" })).toBeVisible();
+  await openBoxes(page);
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Nulstil kode" }).click();
   await expect(page.getByTestId("temp-password")).toHaveText("20000032");
@@ -107,6 +108,7 @@ test("kontoret afslutter en elevs forløb: eleven kan ikke logge ind, er væk fr
   try {
     await loginOk(page, OFFICE, PASSWORD);
     await page.goto(`/kontor/elever/${freja}`);
+    await openBoxes(page);
     page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Afslut forløb" }).click();
     await expect(page.getByTestId("student-finished")).toContainText("Bestået køreprøve");
@@ -126,6 +128,7 @@ test("kontoret afslutter en elevs forløb: eleven kan ikke logge ind, er væk fr
 
     // Genåbn.
     await page.goto(`/kontor/elever/${freja}`);
+    await openBoxes(page);
     page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Genåbn eleven" }).click();
     await expect(page.getByRole("heading", { name: "Afslut forløb" })).toBeVisible();

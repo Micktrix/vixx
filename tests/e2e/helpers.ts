@@ -87,3 +87,6 @@ export async function newTeacher(browser: Browser, name: string) {
   await chooseOwnPassword(page, "laererens-kode");
   return { page, instructorId };
 }
+
+// Boksene på elevens side kan foldes sammen og starter lukkede; testene åbner dem.
+export const openBoxes = (page: Page) => page.locator("details[data-box]").evaluateAll((ds) => ds.forEach((d) => ((d as HTMLDetailsElement).open = true)));

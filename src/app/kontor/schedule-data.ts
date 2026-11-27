@@ -128,7 +128,7 @@ export async function loadSchedule(schoolId: string, from: string, to: string): 
       date: l.lesson_date,
       start: l.start_time.slice(0, 5),
       count: l.lesson_count,
-      serviceName: (l.services as unknown as { name: string } | null)?.name ?? "",
+      serviceName: (l.services as unknown as { name: string } | null)?.name ?? l.note ?? "Planlagt",
       studentName: studentsLabel(l.student_ids, names, l.student_name),
       note: l.note,
     })),

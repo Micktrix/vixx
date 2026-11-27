@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, loginOk, openBoxes } from "./helpers";
 
 const LARS = "00000000-0000-4000-a200-000000000011";
 const FREJA = "00000000-0000-4000-ad00-000000000032";
@@ -46,6 +46,7 @@ test("læreren åbner en tid, eleven anmoder, læreren godkender, og eleven meld
 
     // Eleven ser lektionen og melder afbud; tiden er åben igen.
     await student.reload();
+    await openBoxes(student);
     await expect(student.getByTestId("student-upcoming")).toContainText("Lars Jensen");
     student.once("dialog", (d) => d.accept());
     await student.getByRole("button", { name: "Meld afbud" }).click();
@@ -69,6 +70,7 @@ test("kontoret giver en elev faste lærere og lov til at anmode", async ({ page 
   try {
     await loginOk(page, OFFICE, PASSWORD);
     await page.goto(`/kontor/elever/${FREJA}`);
+    await openBoxes(page);
     await page.getByTestId("student-teachers").getByText("Lars Jensen").click();
     await page.getByLabel("Må selv anmode om kørelektioner hos de faste lærere").check();
     await page.getByRole("button", { name: "Gem" }).first().click();

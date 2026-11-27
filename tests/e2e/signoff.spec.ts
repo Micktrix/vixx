@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { localAdmin } from "./db";
-import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, loginOk } from "./helpers";
+import { ADMIN, INSTRUCTOR, OFFICE, PASSWORD, loginOk, openBoxes } from "./helpers";
 
 const EMIL = "00000000-0000-4000-ad00-000000000031"; // elev på C-holdet (teori bekræftes ved afslutning)
 
@@ -83,6 +83,7 @@ test("B: teori scannes og tæller op hos eleven", async ({ browser }) => {
     const office = await browser.newPage();
     await loginOk(office, ADMIN, PASSWORD);
     await office.goto(`/kontor/elever/${BENT}`);
+    await openBoxes(office);
     await expect(office.getByTestId("student-modules")).toContainText("Teori 3 af 5");
   } finally {
     await admin.from("module_signoffs").delete().eq("student_id", BENT).eq("kind", "theory").gte("lesson_date", new Date().toISOString().slice(0, 10));
@@ -107,12 +108,14 @@ test("læreren afslutter et modul fra elevens side uden ny scanning", async ({ b
     const office = await browser.newPage();
     await loginOk(office, OFFICE, PASSWORD);
     await office.goto(`/kontor/elever/${EMIL}`);
+    await openBoxes(office);
     await expect(office.getByText("Modulet afsluttes af en lærer")).toBeVisible();
     await expect(office.getByText(/gæstelærer/)).toHaveCount(0);
     await office.close();
 
     await loginOk(page, ADMIN, PASSWORD);
     await page.goto(`/kontor/elever/${EMIL}`);
+    await openBoxes(page);
     await expect(page.getByTestId("complete-status")).toContainText("minimum er nået");
     await expect(page.getByLabel("Teorilektioner i modulet")).toHaveValue("8");
     await page.getByRole("checkbox", { name: /Jeg erklærer/ }).check();
@@ -128,6 +131,7 @@ test("læreren afslutter et modul fra elevens side uden ny scanning", async ({ b
     const { data: done } = await admin.from("module_completions").select("instructor_name, declaration, theory_lessons").eq("student_id", EMIL).single();
     expect(done).toEqual({ instructor_name: "Anne Admin", declaration: true, theory_lessons: 8 });
     await page.reload();
+    await openBoxes(page);
     await expect(page.getByRole("heading", { name: "Afslut modul 2" })).toBeVisible();
     await expect(page.getByTestId("complete-status")).toContainText("Kørsel 0 af 5"); // mørke ligger i modul 3 (trin E10)
   } finally {

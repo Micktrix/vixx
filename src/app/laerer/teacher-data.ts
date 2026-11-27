@@ -60,6 +60,7 @@ export type TeacherLesson = Span & {
   studentName: string | null;
   note: string | null;
   origin: "office" | "instructor";
+  planned: boolean; // planlagt fra holdtavlen: ingen ydelse; læreren registrerer selv timerne (trin E11)
 };
 
 // Alt for lærerens egne dage i en periode. RLS sikrer, at læreren kun ser sit eget.
@@ -149,7 +150,8 @@ export async function loadTeacherPeriod(teacher: Teacher, from: string, to: stri
         date: l.lesson_date,
         start: l.start_time.slice(0, 5),
         count: l.lesson_count,
-        serviceName: name(l.services),
+        serviceName: name(l.services) || l.note || "Planlagt",
+        planned: !l.services, // planlagt fra holdtavlen: ingen ydelse, læreren registrerer selv timerne (trin E11)
         studentName: studentsLabel(l.student_ids, names, l.student_name),
         note: l.note,
         origin: l.origin,

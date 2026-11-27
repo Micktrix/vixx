@@ -15,7 +15,7 @@ export async function EuBox({ studentId, courseId, canSign }: { studentId: strin
   const p = euProgress((topics ?? []) as EuTopic[], (signoffs ?? []) as EuSignoff[]);
   const done = p.topics.filter((t) => t.done).length;
   return (
-    <Box title={course?.name ?? "EU"} hint={`${done} af ${p.topics.length} emner · ${euOfText(p.hoursDone, p.hoursTotal)} · ${p.driveLessons} køretimer`}>
+    <Box collapsible title={course?.name ?? "EU"} hint={`${done} af ${p.topics.length} emner · ${euOfText(p.hoursDone, p.hoursTotal)} · ${p.driveLessons} køretimer`}>
       <a
         href={`/api/eu-plan/${studentId}`}
         target="_blank"

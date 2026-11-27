@@ -9,6 +9,8 @@ import { parseDateInput, todayDk } from "@/lib/dates";
 import { normalizePhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import type { Span } from "@/lib/schedule";
+import { getDay } from "../planlaeg/actions";
 
 // Hold og elever. Kontoret (admin og office) opretter og retter; RLS håndhæver det også.
 
@@ -438,4 +440,102 @@ export async function signEu(_prev: ActionState, formData: FormData): Promise<Ac
   revalidatePath("/laerer", "layout");
   revalidatePath("/elev", "layout");
   return { message: "EU er bekræftet." };
+}
+
+// Planlæg fra holdtavlen (trin E11): en manglende lektion (1–9, KTA) eller EU-køretime bliver en planlagt lektion i
+// lærerens og elevens kalender. Adskilt fra lønnen: ingen ydelse; læreren registrerer selv timerne. Har læreren
+// allerede samme lektion på samme tidspunkt (fx KTA med flere elever), sættes eleven på den i stedet.
+export async function planFromBoard(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, membership } = await requireRole(["admin", "office"]);
+  const studentId = text(formData, "studentId");
+  const instructorId = text(formData, "instructorId");
+  const date = parseDateInput(text(formData, "date"));
+  const start = text(formData, "start");
+  const schoolLessonId = text(formData, "schoolLessonId") || null;
+  const euTopicId = text(formData, "euTopicId") || null;
+  const label = text(formData, "label").slice(0, 80);
+  if (!instructorId) return { error: "Vælg en underviser." };
+  if (!date) return { error: "Vælg en dato." };
+  if (date < todayDk()) return { error: "Der kan kun planlægges fra i dag og frem." };
+  if (!/^\d{2}:\d{2}$/.test(start)) return { error: "Vælg et starttidspunkt." };
+  if (!schoolLessonId && !euTopicId) return { error: "Lektionen mangler." };
+  const supabase = await createClient();
+
+  // Antal lektioner á 45 min. følger lektionen.
+  let count = 1;
+  if (schoolLessonId) {
+    const { data } = await supabase.from("school_lessons").select("units").eq("id", schoolLessonId).single();
+    count = (data?.units as number[] | undefined)?.length ?? 1;
+  } else {
+    const { data } = await supabase.from("eu_topics").select("lessons").eq("id", euTopicId!).single();
+    count = data?.lessons ?? 1;
+  }
+
+  // Samme lektion hos samme lærer på samme tid: sæt eleven på (flere elever på KTA og EU-ture).
+  let same = supabase
+    .from("scheduled_lessons")
+    .select("id, student_ids")
+    .eq("school_id", membership.schoolId)
+    .eq("instructor_id", instructorId)
+    .eq("lesson_date", date)
+    .eq("start_time", start);
+  same = schoolLessonId ? same.eq("school_lesson_id", schoolLessonId) : same.eq("eu_topic_id", euTopicId!);
+  const { data: existing } = await same.maybeSingle();
+  if (existing) {
+    const ids = (existing.student_ids as string[]) ?? [];
+    if (ids.includes(studentId)) return { error: "Eleven er allerede på den lektion." };
+    const { error } = await supabase.from("scheduled_lessons").update({ student_ids: [...ids, studentId] }).eq("id", existing.id);
+    if (error?.code === "23514") return { error: error.message };
+    if (error) return { error: "Eleven kunne ikke sættes på lektionen. Prøv igen." };
+  } else {
+    const { error } = await supabase.from("scheduled_lessons").insert({
+      school_id: membership.schoolId,
+      instructor_id: instructorId,
+      lesson_date: date,
+      start_time: start,
+      lesson_count: count,
+      service_id: null,
+      student_ids: [studentId],
+      note: label || null,
+      origin: "office",
+      created_by: user.id,
+      school_lesson_id: schoolLessonId,
+      eu_topic_id: euTopicId,
+    });
+    if (error?.code === "23P01" || error?.code === "23514") return { error: error.message };
+    if (error?.code === "42501") return { error: "Du har ikke adgang til at planlægge for denne lærer." };
+    if (error) return { error: "Lektionen kunne ikke planlægges. Prøv igen." };
+  }
+  revalidatePath(PAGE, "layout");
+  revalidatePath("/kontor", "layout");
+  revalidatePath("/laerer", "layout");
+  revalidatePath("/elev", "layout");
+  return { message: existing ? "Eleven er sat på den planlagte lektion." : "Lektionen er planlagt og ligger i lærerens kalender." };
+}
+
+// Lærerens dag til holdtavlens planlæg-boks: optagede tider, ferie og de starttider, hvor læreren allerede har
+// samme lektion (dér kan eleven sættes på, fx KTA med flere elever).
+export async function boardDay(
+  instructorId: string,
+  date: string,
+  ref: { schoolLessonId?: string; euTopicId?: string },
+): Promise<{ busy: Span[]; join: string[]; holiday: boolean } | null> {
+  const { membership } = await requireRole(["admin", "office"]);
+  if (!parseDateInput(date)) return null;
+  const day = await getDay(instructorId, date);
+  if (!day) return null;
+  const supabase = await createClient();
+  let q = supabase
+    .from("scheduled_lessons")
+    .select("start_time")
+    .eq("school_id", membership.schoolId)
+    .eq("instructor_id", instructorId)
+    .eq("lesson_date", date);
+  q = ref.schoolLessonId ? q.eq("school_lesson_id", ref.schoolLessonId) : q.eq("eu_topic_id", ref.euTopicId ?? "");
+  const { data } = await q;
+  return {
+    busy: [...day.lessons, ...day.absences, ...day.bookings],
+    join: (data ?? []).map((l) => String(l.start_time).slice(0, 5)),
+    holiday: day.holiday === "approved",
+  };
 }

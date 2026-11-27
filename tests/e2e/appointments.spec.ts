@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { localAdmin } from "./db";
-import { INSTRUCTOR, PASSWORD, loginOk } from "./helpers";
+import { INSTRUCTOR, PASSWORD, loginOk, openBoxes } from "./helpers";
 
 const BENT = "00000000-0000-4000-ad00-000000000033"; // B-elev uden hold
 
@@ -25,6 +25,7 @@ test("læreren ruller et modul ud og skriver prøver og KTA ind på eleven; elev
   try {
     await loginOk(page, INSTRUCTOR, PASSWORD);
     await page.goto(`/kontor/elever/${BENT}`);
+    await openBoxes(page);
 
     // Ønske 2: modul 1 rulles ud og viser køreemner og hvem der kørte hvornår.
     await expect(page.getByTestId("module-details").first()).toBeHidden();

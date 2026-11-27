@@ -9,14 +9,17 @@ export function PlanTeachersBox({
   id,
   teachers,
   chosen,
+  collapsible = false,
 }: {
   target: "team" | "student";
   id: string;
   teachers: { id: string; name: string }[];
   chosen: string[];
+  collapsible?: boolean;
 }) {
   return (
     <Box
+      collapsible={collapsible}
       title="Undervisende kørelærere"
       hint={target === "team" ? "Kommer øverst på modulplanen for alle holdets elever" : "Kommer øverst på elevens modulplan"}
     >

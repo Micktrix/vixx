@@ -93,7 +93,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
       </header>
 
       {course && course.modules.length > 0 && (
-        <Box
+        <Box collapsible
           title={course.lessons.length ? "Lektionsplan" : "Modulplan"}
           hint={
             course.lessons.length
@@ -222,6 +222,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
 
       {!team && (
         <PlanTeachersBox
+          collapsible
           target="student"
           id={student.id}
           teachers={teachers.filter((t) => t.active)}
@@ -229,7 +230,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         />
       )}
 
-      <Box title="Kørelektioner" hint="Faste lærere og anmodning om tider">
+      <Box collapsible title="Kørelektioner" hint="Faste lærere og anmodning om tider">
         <ActionForm action={saveStudentTeachers} submitLabel="Gem" className="flex flex-col gap-3">
           <input type="hidden" name="id" value={student.id} />
           <fieldset className="flex flex-col gap-2">
@@ -250,7 +251,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         </ActionForm>
       </Box>
 
-      <Box title="Oplysninger">
+      <Box collapsible title="Oplysninger">
         <ActionForm action={updateStudent} submitLabel="Gem" className="flex flex-col gap-4">
           <input type="hidden" name="id" value={student.id} />
           <TextField label="Navn" name="fullName" required maxLength={80} defaultValue={student.name} className="max-w-[360px]" />
@@ -272,7 +273,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
       </Box>
 
       {student.finished || !student.active ? (
-        <Box title="Forløbet er afsluttet">
+        <Box collapsible title="Forløbet er afsluttet">
           <ActionForm action={reopenStudent} submitLabel="Genåbn eleven" primary={false} confirmText="Gør eleven aktiv igen?">
             <input type="hidden" name="id" value={student.id} />
             <p className="text-[15px]" data-testid="student-finished">
@@ -286,7 +287,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         </Box>
       ) : (
         <div id="afslut-forloeb" className="scroll-mt-4">
-        <Box title="Afslut forløb" hint="Fx når eleven har bestået køreprøven">
+        <Box collapsible title="Afslut forløb" hint="Fx når eleven har bestået køreprøven">
           <ActionForm
             action={finishStudent}
             submitLabel="Afslut forløb"
@@ -316,7 +317,7 @@ export default async function StudentPage({ params }: PageProps<"/kontor/elever/
         </div>
       )}
 
-      <Box title="Login">
+      <Box collapsible title="Login">
         <ActionForm
           action={resetStudentPassword}
           submitLabel="Nulstil kode"
@@ -356,12 +357,12 @@ function CompleteModuleBox({
   const title = `Afslut modul ${m.number}`;
   if (!teaches)
     return (
-      <Box title={title}>
+      <Box collapsible title={title}>
         <p className="text-sm text-muted">Modulet afsluttes af en lærer: ved scanning eller her på elevens side, når læreren er logget ind.</p>
       </Box>
     );
   return (
-    <Box title={title} hint="Uden ny scanning, med din underskrift">
+    <Box collapsible title={title} hint="Uden ny scanning, med din underskrift">
       <ActionForm
         action={completeModule}
         submitLabel={title}

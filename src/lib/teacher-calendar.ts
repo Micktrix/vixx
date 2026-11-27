@@ -30,7 +30,7 @@ export async function teacherCalendar(token: string): Promise<string | null> {
   const [lessons, bookings, absences, holidays] = await Promise.all([
     admin
       .from("scheduled_lessons")
-      .select("id, lesson_date, start_time, span_minutes, lesson_count, services(name)")
+      .select("id, lesson_date, start_time, span_minutes, lesson_count, note, services(name)")
       .eq("instructor_id", id)
       .gte("lesson_date", from)
       .lte("lesson_date", to),
@@ -66,7 +66,7 @@ export async function teacherCalendar(token: string): Promise<string | null> {
         uid: `lesson-${l.id}`,
         date: l.lesson_date,
         ...storedSpan(l.start_time, l.span_minutes),
-        summary: [name(l.services) || "Lektion", resource].filter(Boolean).join(" · "),
+        summary: [name(l.services) || l.note || "Lektion", resource].filter(Boolean).join(" · "),
         description: `${l.lesson_count} ${l.lesson_count === 1 ? "lektion" : "lektioner"}`,
         location: resource,
       };

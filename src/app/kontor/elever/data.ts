@@ -141,7 +141,7 @@ export function progress(student: StudentInfo, course: CourseInfo | undefined) {
 }
 
 // Til holdtavlen pr. EU-forløb: emnernes faste timer (emne → timer) og køretimerne i alt (á 45 min.).
-export type EuTotals = { name: string; kind: string; hours: Map<string, number>; drives: number; driveList: { id: string; title: string; sort: number }[] };
+export type EuTotals = { name: string; kind: string; hours: Map<string, number>; drives: number; driveList: { id: string; title: string; sort: number; lessons: number }[] };
 export async function loadEuHours(schoolId: string) {
   const supabase = await createClient();
   const { data } = await supabase.from("eu_topics").select("id, course_id, kind, sort, code, hours, lessons, courses(name, kind)").eq("school_id", schoolId);
@@ -155,9 +155,27 @@ export async function loadEuHours(schoolId: string) {
     if (t.kind === "topic") c.hours.set(t.id, Number(t.hours ?? 0));
     else {
       c.drives += Number(t.lessons ?? 0);
-      c.driveList.push({ id: t.id, title: t.code, sort: t.sort });
+      c.driveList.push({ id: t.id, title: t.code, sort: t.sort, lessons: Number(t.lessons ?? 1) || 1 });
       c.driveList.sort((a, b) => a.sort - b.sort);
     }
+  }
+  return out;
+}
+
+// Planlagte lektioner fra holdtavlen (trin E11), fra i dag og frem: "elev:lektion" -> første dato.
+export async function loadBoardPlans(schoolId: string, today: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("scheduled_lessons")
+    .select("lesson_date, student_ids, school_lesson_id, eu_topic_id")
+    .eq("school_id", schoolId)
+    .gte("lesson_date", today)
+    .or("school_lesson_id.not.is.null,eu_topic_id.not.is.null")
+    .order("lesson_date");
+  const out = new Map<string, string>();
+  for (const l of data ?? []) {
+    const ref = l.school_lesson_id ?? l.eu_topic_id;
+    for (const s of (l.student_ids as string[]) ?? []) if (!out.has(`${s}:${ref}`)) out.set(`${s}:${ref}`, l.lesson_date);
   }
   return out;
 }
