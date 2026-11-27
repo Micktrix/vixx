@@ -41,7 +41,7 @@ test("en lærer klarer dagen fra telefonen: udført, uplanlagt, egen planlægnin
   await expect(panel.getByTestId("planned")).toHaveCount(0);
 
   // Uplanlagt lektion senere samme dag. Optagede tider kan ikke vælges.
-  await panel.getByRole("link", { name: "+ Tilføj lektioner" }).click();
+  await panel.getByRole("link", { name: "+ Lektioner til løn" }).click();
   await expect(page.getByRole("option", { name: "08:45 – optaget" })).toHaveAttribute("disabled");
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
   await page.getByRole("button", { name: "Færre" }).click(); // 2 → 1
@@ -53,7 +53,7 @@ test("en lærer klarer dagen fra telefonen: udført, uplanlagt, egen planlægnin
 
   // Egen lektion i morgen.
   await page.goto(`/laerer?dag=${daysFromToday(1)}`);
-  await page.getByRole("link", { name: "+ Planlæg" }).click();
+  await page.getByRole("link", { name: "+ Planlæg undervisning" }).click();
   await page.getByRole("link", { name: "Anden lektion (uden lektionsplan)" }).click();
   await page.getByLabel("Ydelse").selectOption({ label: "B privat" });
   await page.getByLabel("Starttidspunkt").selectOption("08:45");
@@ -130,7 +130,7 @@ test("en låst lønperiode kan ikke ændres fra appen", async ({ page }) => {
   await loginOk(page, "20000013", PASSWORD); // Søren
   await page.goto(`/laerer?dag=${locked!.starts_on}`);
   await expect(page.getByText("Lønperioden er låst")).toBeVisible();
-  await expect(page.getByRole("link", { name: "+ Tilføj lektioner" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "+ Lektioner til løn" })).toHaveCount(0);
 });
 
 test("læreren føjer sine lektioner til telefonens kalender, uden elevnavne", async ({ browser, request }) => {

@@ -111,7 +111,7 @@ async function PlanForStudent({ teacher, date, studentId }: { teacher: Awaited<R
   };
 
   return (
-    <Screen title="Planlæg" sub={formatLongDate(date)} back={{ href: `/laerer?dag=${date}`, label: "Kalender" }}>
+    <Screen title="Planlæg undervisning" sub={formatLongDate(date)} back={{ href: `/laerer?dag=${date}`, label: "Kalender" }}>
       <form className="flex flex-col gap-2 rounded-[20px] border border-line bg-surface p-[18px]" data-testid="plan-student">
         <input type="hidden" name="dato" value={date} />
         <label className="flex flex-col gap-1.5 text-sm font-bold">

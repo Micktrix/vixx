@@ -34,7 +34,7 @@ export function TeacherLessonForm({
   plan: LessonPlan; // skolens lektionsplan; kun dens starttider kan vælges
   busy: Span[];
   hiddenFields: Record<string, string>;
-  students?: StudentOption[]; // skolens elever til valg af elev (ikke ved "Til løn"/"Tilføj lektioner")
+  students?: StudentOption[]; // skolens elever til valg af elev (ikke ved "Til løn"/"Lektioner til løn")
   initial: {
     serviceId?: string;
     count?: number;

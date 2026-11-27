@@ -191,18 +191,18 @@ export function DayPanel({
         <>
           {date >= today && (
             <Link href={`/laerer/planlaeg?dato=${date}`} className={`${bigButton} border border-accent bg-accent text-ink`}>
-              + Planlæg
+              + Planlæg undervisning
             </Link>
           )}
           {!future && (
             <Link href={`/laerer/registrer?dato=${date}`} className={`${bigButton} border border-line2 bg-surface`}>
-              + Tilføj lektioner
+              + Lektioner til løn
             </Link>
           )}
           <p className="text-[13px] text-muted">
             {future
               ? "Planlagte lektioner ligger i kalenderen og tæller ikke i lønnen. Tryk \"Til løn\", når de er kørt."
-              : "Kørt en planlagt lektion? Tryk \"Til løn\" på den. \"Tilføj lektioner\" er til det, der ikke var planlagt."}
+              : "Kørt en planlagt lektion? Tryk \"Til løn\" på den. \"Lektioner til løn\" er til det, der ikke var planlagt."}
           </p>
         </>
       )}

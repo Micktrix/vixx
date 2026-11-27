@@ -8,7 +8,7 @@ import { TeacherLessonForm } from "../lesson-form";
 import { Screen } from "../screen";
 import { allowedServices, getTeacher, isLocked, loadTeacherPeriod } from "../teacher-data";
 
-// "Til løn" på en planlagt lektion, "Tilføj lektioner" (ikke planlagt) eller ret en registrering, der ikke er godkendt.
+// "Til løn" på en planlagt lektion, "Lektioner til løn" (ikke planlagt) eller ret en registrering, der ikke er godkendt.
 // Lønnen skal kun bruge ydelse, tid og antal; eleverne hører til planlægningen. En note er nok (Michael 27. nov. 2026).
 export default async function RegisterPage({ searchParams }: PageProps<"/laerer/registrer">) {
   const teacher = await getTeacher();
@@ -53,7 +53,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
 
   return (
     <Screen
-      title={reg ? (reg.status === "rejected" ? "Ret og send igen" : "Ret lektion") : lesson ? "Til løn" : "Tilføj lektioner"}
+      title={reg ? (reg.status === "rejected" ? "Ret og send igen" : "Ret lektion") : lesson ? "Til løn" : "Lektioner til løn"}
       sub={formatLongDate(date)}
       back={{ href: back, label: "Kalender" }}
     >

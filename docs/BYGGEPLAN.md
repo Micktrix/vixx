@@ -442,8 +442,8 @@ fordeler på modulerne og sætter underskrifterne det rigtige sted.
 
 #### E11b – "Til løn" og "Planlæg" i lærerens app (Michael 27. nov. 2026, bygget til afprøvning på test)
 - "Udført" er erstattet af "Til løn" på planlagte lektioner (i dag og tidligere): ydelse vælges af læreren, tid/antal/note udfyldt, ingen elever. Registreringen kobles til lektionen (`scheduled_lesson_id`).
-- "Tilføj lektioner" (ikke planlagt) har heller ikke elevvalg længere. Kontorets rettelse af en registrering beholder elevvalget.
-- "+ Planlæg" (i dag og frem): vælg elev, se hvad eleven mangler (lektion 1–9, KTA, EU-køretimer) og planlæg med dato og tid for læreren selv. "Anden lektion (uden lektionsplan)" bruger den gamle formular med ydelse. B har ingen lektionsplan og bruger "Anden lektion".
+- "Lektioner til løn" (ikke planlagt) har heller ikke elevvalg længere. Kontorets rettelse af en registrering beholder elevvalget.
+- "+ Planlæg undervisning" (i dag og frem): vælg elev, se hvad eleven mangler (lektion 1–9, KTA, EU-køretimer) og planlæg med dato og tid for læreren selv. "Anden lektion (uden lektionsplan)" bruger den gamle formular med ydelse. B har ingen lektionsplan og bruger "Anden lektion".
 - Forsiden: "X kørte lektioner mangler at komme på løn" med "Til løn" pr. lektion (indeværende lønperiode).
 - Planlagte lektioner fra lektionsplanen kan fjernes fra lærerens dag ("Fjern").
 
