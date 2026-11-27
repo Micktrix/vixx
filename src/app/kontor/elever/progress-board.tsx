@@ -25,7 +25,8 @@ export function ProgressBoard({
   euHours: Map<string, EuTotals>;
   planned?: Map<string, string>; // "elev:lektion" -> dato (planlagt fra tavlen)
 }) {
-  const ktaLesson = course.lessons.find((l) => l.kind === "kta");
+  // KTA og Mørke i faktaboksen planlægger lektionsplanens KTA- og mørkelektion.
+  const factLesson = { kta: course.lessons.find((l) => l.kind === "kta"), dark: course.lessons.find((l) => l.kind === "dark") } as const;
   // KTA står i faktaboksen (grøn, når KTA-lektionen er kørt eller KTA er markeret), ikke i lektionsrækken.
   const lessons = course.lessons.filter((l) => l.kind !== "kta");
   return (
@@ -104,8 +105,9 @@ export function ProgressBoard({
                       <span className="ml-auto flex items-end gap-x-2 pl-4">
                       {facts(modules, s.appointments).map((f) => {
                         // KTA med lektionsplan: KTA-lektionen planlægges hos en lærer (kørt = grøn).
-                        const ktaDone = f.kind === "kta" && !!ktaLesson && s.lessonSignoffs.some((x) => x.school_lesson_id === ktaLesson.id);
-                        const ktaOn = f.kind === "kta" && ktaLesson ? planned.get(`${s.id}:${ktaLesson.id}`) : undefined;
+                        const fl = f.kind === "kta" || f.kind === "dark" ? factLesson[f.kind] : undefined;
+                        const ktaDone = !!fl && s.lessonSignoffs.some((x) => x.school_lesson_id === fl.id);
+                        const ktaOn = fl ? planned.get(`${s.id}:${fl.id}`) : undefined;
                         const tone = ktaDone ? "done" : f.tone === "none" && ktaOn ? "booked" : f.tone;
                         const date = f.tone === "booked" && f.current ? f.current.on_date : ktaOn;
                         const cell = (
@@ -118,13 +120,12 @@ export function ProgressBoard({
                             {tone === "done" ? "✓" : tone === "booked" && date ? shortDate(date) : "–"}
                           </span>
                         );
-                        // Mørke ligger i lektionsrækken, når forløbet har lektionsplan.
                         const target: PlanTarget | null =
                           tone === "done"
                             ? null
-                            : f.kind === "kta" && ktaLesson
-                              ? { type: "lesson", schoolLessonId: ktaLesson.id, count: ktaLesson.units.length || 1, label: "KTA" }
-                              : tone === "none" && !(f.kind === "dark" && lessons.length)
+                            : fl
+                              ? { type: "lesson", schoolLessonId: fl.id, count: fl.units.length || 1, label: f.kind === "kta" ? "KTA" : lessonLabel(fl) }
+                              : tone === "none"
                                 ? { type: "appointment", kind: f.kind, label: KIND_LABEL[f.kind].toLowerCase() }
                                 : null;
                         return (

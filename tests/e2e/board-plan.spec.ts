@@ -58,6 +58,11 @@ test("kontoret planlægger lektioner, KTA med to elever og en teoriprøve fra ho
     await planIn(rowA.locator('[data-plan="Lektion 1"]'), page, date);
     await expect(rowA.locator('[data-state="planned"]')).toHaveText(short);
 
+    // Mørke i faktaboksen planlægger mørkelektionen (også gul i lektionsrækken).
+    await planIn(rowA.getByTestId("board-fact-dark").locator(".."), page, date);
+    await expect(rowA.getByTestId("board-fact-dark")).toHaveAttribute("data-tone", "booked");
+    await expect(rowA.locator('[data-state="planned"]')).toHaveCount(2);
+
     // KTA: A planlægges, og B sættes på samme lektion hos samme lærer.
     await planIn(rowA.locator('[data-plan="KTA"]'), page, date);
     await expect(rowA.getByTestId("board-fact-kta")).toHaveAttribute("data-tone", "booked");
@@ -65,7 +70,7 @@ test("kontoret planlægger lektioner, KTA med to elever og en teoriprøve fra ho
     await expect(rowB.getByTestId("board-fact-kta")).toHaveText(short);
 
     const { data: kta } = await admin.from("scheduled_lessons").select("student_ids, service_id, note, lesson_count").not("school_lesson_id", "is", null).overlaps("student_ids", ids);
-    expect(kta).toHaveLength(2); // lektion 1 og én fælles KTA
+    expect(kta).toHaveLength(3); // lektion 1, mørke og én fælles KTA
     const shared = kta!.find((l) => l.student_ids.length === 2)!;
     expect(shared.service_id).toBeNull(); // adskilt fra lønnen
     expect(shared.note).toBe("KTA");
