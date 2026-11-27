@@ -46,7 +46,7 @@ type Row = {
   office_edited_at: string | null;
   unit_price_ore: number | null;
   services: { name: string } | null;
-  scheduled_lessons: { lesson_count: number; service_id: string } | null;
+  scheduled_lessons: { lesson_count: number; service_id: string | null } | null;
   instructors: { school_members: { profiles: { full_name: string } | null } | null } | null;
 };
 

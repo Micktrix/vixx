@@ -11,5 +11,8 @@ describe("kontrol mod skemaet", () => {
   it("andet antal eller anden ydelse afviger", () => {
     expect(flagFor({ serviceId: "a", count: 3 }, { serviceId: "a", count: 4 })).toBe("afvigelse");
     expect(flagFor({ serviceId: "b", count: 2 }, { serviceId: "a", count: 2 })).toBe("afvigelse");
+    // Planlagt fra lektionsplanen (ingen ydelse): kun antallet tæller.
+    expect(flagFor({ serviceId: "b", count: 2 }, { serviceId: null, count: 2 })).toBe("matcher");
+    expect(flagFor({ serviceId: "b", count: 1 }, { serviceId: null, count: 2 })).toBe("afvigelse");
   });
 });
