@@ -13,6 +13,7 @@ test("læreren tegner sin underskrift, gemmer og låser den, og kan låse op og 
     await page.goto("/laerer/beskeder");
     await page.getByRole("link", { name: "Min underskrift" }).click();
 
+    await page.getByRole("button", { name: "Skriv under" }).click(); // åbner feltet i fuld skærm
     const pad = page.getByTestId("signature-pad");
     await expect(pad.getByRole("button", { name: "Gem og lås" })).toBeDisabled();
     const box = (await pad.getByLabel("Tegn din underskrift her").boundingBox())!;
