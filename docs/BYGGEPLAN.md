@@ -476,6 +476,11 @@ Skal bygges samlet, fordi de deler e-mail og samtykke. Mails sendes via Resend (
   når dit bevis udløber?"; deltageren scanner og udfylder navn, e-mail og "Ja tak" (samtykket kommer direkte fra personen, som
   quizzens `/q/<kode>` uden login). Kontoret kan også selv tilføje/indlæse, men skal så kunne dokumentere samtykket.
   Påmindelse på mail (fx 6 og 2 mdr. før) med afmeld-link; SMS senere. Samme person kan få en ny dato, når kurset tages igen.
+- **Udsendelser til grupper (idé, Michael 28. nov. 2026):** admin kan sende en mail til en gruppe, fx alle med ADR ("nye
+  regler"), alle med EU/kode 95, eller elever på et forløb/hold. Emne + tekst, viser antal modtagere før afsendelse, afmeld-
+  link i hver mail, log over hvad der er sendt til hvem og hvornår. Kun til dem, der har sagt ja til netop den slags mails
+  (samtykketeksten skal derfor dække "påmindelser og vigtige nyheder om mit kursus"). Kun admin. Obs: Resends gratis plan har
+  et loft over mails pr. dag/måned – tjek før større udsendelser.
 - **Samtykke (vigtigt):** påmindelser og salg er markedsføring → eleven siger aktivt ja (flueben, tidspunkt gemmes),
   afmeld-link i hver mail, data gemmes kun så længe der er samtykke (ellers slettes som i dag ved afsluttet forløb).
   Står i skolens privatlivstekst; skolen bør få samtykketeksten tjekket (revisor/advokat).
