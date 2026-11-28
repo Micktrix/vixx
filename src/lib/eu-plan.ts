@@ -58,6 +58,7 @@ type EuPlan = {
   teachers: { name: string; strokes: string | null }[];
   progress: EuProgress;
   strokes: Map<string, string | null>; // underskrift pr. bekræftelse
+  studentSigns: Map<string, { at: string; strokes: string }>; // elevens bekræftelse i appen (28. nov. 2026)
   passed: { lastsikring: string | null; multitest: string | null }; // beståede prøver (faktaboksen)
 };
 
@@ -86,7 +87,11 @@ export async function loadEuPlan(studentId: string): Promise<EuPlan | null> {
   const passedOn = (k: string) => (tests ?? []).filter((t) => t.kind === k).map((t) => t.on_date as string).sort()[0] ?? null;
   const rows = (signoffs ?? []) as (EuSignoff & { instructor_id: string })[];
   const admin = createAdminClient();
-  const { data: strokeRows } = await admin.from("eu_signoffs").select("id, strokes").in("id", rows.length ? rows.map((r) => r.id) : [randomUUID()]);
+  const signoffIds = rows.length ? rows.map((r) => r.id) : [randomUUID()];
+  const [{ data: strokeRows }, { data: confirmed }] = await Promise.all([
+    admin.from("eu_signoffs").select("id, strokes").in("id", signoffIds),
+    admin.from("student_confirmations").select("eu_signoff_id, strokes, created_at").eq("status", "confirmed").in("eu_signoff_id", signoffIds),
+  ]);
   // Lærerlisten: dem kontoret har valgt (undervisende kørelærere), så dem, der har bekræftet EU.
   const ids = [...new Set([...(chosenRows ?? []).map((r) => r.instructor_id as string), ...rows.map((r) => r.instructor_id)])];
   const { data: inst } = ids.length ? await admin.from("instructors").select("id, user_id").in("id", ids) : { data: [] };
@@ -111,6 +116,7 @@ export async function loadEuPlan(studentId: string): Promise<EuPlan | null> {
     teachers,
     progress: euProgress((topics ?? []) as EuTopic[], rows),
     strokes: new Map((strokeRows ?? []).map((r) => [r.id as string, r.strokes as string | null])),
+    studentSigns: new Map((confirmed ?? []).filter((c) => c.strokes).map((c) => [c.eu_signoff_id as string, { at: c.created_at as string, strokes: c.strokes as string }])),
     passed: { lastsikring: passedOn("lastsikring"), multitest: passedOn("multitest") },
   };
 }
@@ -259,7 +265,7 @@ export async function renderEuPlan(plan: EuPlan): Promise<Uint8Array> {
     field("Faktisk anvendt tid:", t.hours != null ? String(t.hours).replace(".", ",") : "", M, 300, 140);
     y -= 20;
     signLine("Underviserens underskrift:", t.done ? plan.strokes.get(t.done.id) : null, M);
-    signLine("Chaufførens underskrift:", null, M);
+    signLine("Chaufførens underskrift:", t.done ? plan.studentSigns.get(t.done.id)?.strokes : null, M);
     y -= 14;
   }
   const doneHours = plan.progress.hoursDone;
@@ -299,6 +305,8 @@ export async function renderEuPlan(plan: EuPlan): Promise<Uint8Array> {
     page.drawText("Elev:", { x: cols[3] + 3, y: y - rowH / 2 - 8, size: 6.5, font, color: ink });
     const s = d.done ? plan.strokes.get(d.done.id) : null;
     if (s) drawStrokes(page, s, { x: cols[3] + 22, y: y - rowH / 2, width: cols[4] - cols[3] - 26, height: rowH / 2 });
+    const me = d.done ? plan.studentSigns.get(d.done.id) : undefined;
+    if (me) drawStrokes(page, me.strokes, { x: cols[3] + 22, y: y - rowH, width: cols[4] - cols[3] - 26, height: rowH / 2 });
     y -= rowH;
   }
   y -= 12;
@@ -310,7 +318,7 @@ export async function renderEuPlan(plan: EuPlan): Promise<Uint8Array> {
 // Hver ny udgave af den printede EU-plan gemmes og slettes aldrig (som modulplanen): samme arkiv
 // (`module_plan_versions`, lageret `module-plans`) med EU-forløbets navn som skabelon.
 export async function archiveEuPlan(plan: EuPlan, pdf: Uint8Array, userId: string) {
-  const content = { kind: plan.kind, student: plan.student, school: plan.school, teachers: plan.teachers, progress: plan.progress, passed: plan.passed };
+  const content = { kind: plan.kind, student: plan.student, school: plan.school, teachers: plan.teachers, progress: plan.progress, passed: plan.passed, confirmed: [...plan.studentSigns.keys()].sort() };
   const hash = createHash("sha256").update(JSON.stringify(content)).digest("hex");
   const admin = createAdminClient();
   const { data: existing } = await admin.from("module_plan_versions").select("id").eq("student_id", plan.studentId).eq("content_hash", hash).maybeSingle();

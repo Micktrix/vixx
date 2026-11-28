@@ -8,7 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // Lektionsplanen som PDF (trin E10): hver lektion med dato, "faktisk anvendt tid" (lektionens længde) og den kørende
-// lærers underskrift. Eleven skriver under med kuglepen. Hver ny udgave gemmes (som modulplanen).
+// lærers underskrift. Elevens underskrift kommer på, når eleven har bekræftet lektionen i appen (28. nov. 2026); ellers
+// skriver eleven under med kuglepen. Hver ny udgave gemmes (som modulplanen).
 
 type Plan = {
   studentId: string;
@@ -16,8 +17,11 @@ type Plan = {
   courseName: string;
   student: { name: string; phone: string };
   school: { name: string; address: string; phone: string };
-  lessons: (SchoolLesson & { done: (LessonSignoff & { strokes: string | null }) | null })[];
+  lessons: (SchoolLesson & { done: (LessonSignoff & { strokes: string | null; student: StudentConfirmation | null }) | null })[];
 };
+
+// Elevens bekræftelse i appen: hvornår og en kopi af elevens underskrift.
+export type StudentConfirmation = { at: string; strokes: string };
 
 export async function loadLessonPlan(studentId: string): Promise<Plan | null> {
   const supabase = await createClient();
@@ -34,10 +38,16 @@ export async function loadLessonPlan(studentId: string): Promise<Plan | null> {
   ]);
   if (!lessons?.length) return null;
   const rows = (signoffs ?? []) as (LessonSignoff & { id: string })[];
-  const { data: strokes } = await createAdminClient()
-    .from("lesson_signoffs")
-    .select("id, strokes")
-    .in("id", rows.length ? rows.map((r) => r.id) : [randomUUID()]);
+  const ids = rows.length ? rows.map((r) => r.id) : [randomUUID()];
+  const admin = createAdminClient();
+  const [{ data: strokes }, { data: confirmed }] = await Promise.all([
+    admin.from("lesson_signoffs").select("id, strokes").in("id", ids),
+    admin.from("student_confirmations").select("lesson_signoff_id, strokes, created_at").eq("status", "confirmed").in("lesson_signoff_id", ids),
+  ]);
+  const studentFor = (id: string): StudentConfirmation | null => {
+    const c = (confirmed ?? []).find((x) => x.lesson_signoff_id === id);
+    return c?.strokes ? { at: c.created_at as string, strokes: c.strokes as string } : null;
+  };
   const profile = s.profiles as unknown as { full_name: string; phone: string } | null;
   return {
     studentId: s.id,
@@ -49,10 +59,21 @@ export async function loadLessonPlan(studentId: string): Promise<Plan | null> {
       .sort((a, b) => a.number - b.number)
       .map((l) => {
         const done = rows.find((r) => r.school_lesson_id === l.id);
-        return { ...l, done: done ? { ...done, strokes: (strokes ?? []).find((x) => x.id === done.id)?.strokes ?? null } : null };
+        return {
+          ...l,
+          done: done ? { ...done, strokes: (strokes ?? []).find((x) => x.id === done.id)?.strokes ?? null, student: studentFor(done.id) } : null,
+        };
       }),
   };
 }
+
+// "28.11.2026 kl. 18:02" (dansk tid).
+export const confirmedAt = (iso: string) => {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString("da-DK", { timeZone: "Europe/Copenhagen", day: "2-digit", month: "2-digit", year: "numeric" });
+  const time = d.toLocaleTimeString("da-DK", { timeZone: "Europe/Copenhagen", hour: "2-digit", minute: "2-digit" });
+  return `${day} kl. ${time}`;
+};
 
 const date = (iso: string) => {
   const [y, m, d] = iso.split("-");
@@ -142,6 +163,10 @@ export async function renderLessonPlan(plan: Plan): Promise<Uint8Array> {
       page.drawText(date(l.done.lesson_date), { x: bx + 6, y: by - 24, size: 10, font, color: ink });
       page.drawText(String(l.units.length * 45), { x: bx + BOX_W * 0.62 + 8, y: by - 24, size: 10, font, color: ink });
       if (l.done.strokes) drawStrokes(page, l.done.strokes, { x: bx + 70, y: by - rowH * 2 + 2, width: BOX_W - 80, height: rowH - 10 });
+      if (l.done.student) {
+        drawStrokes(page, l.done.student.strokes, { x: bx + 70, y: by - rowH * 3 + 2, width: BOX_W - 80, height: rowH - 10 });
+        page.drawText(`Bekræftet i Vixx ${confirmedAt(l.done.student.at)}`, { x: bx + 3, y: by - rowH * 3 + 3, size: 5.5, font, color: rgb(0.4, 0.4, 0.4) });
+      }
     }
     y = Math.min(y, by - rowH * 3) - 18;
   }
@@ -151,7 +176,7 @@ export async function renderLessonPlan(plan: Plan): Promise<Uint8Array> {
 // Hver ny udgave gemmes og slettes aldrig (arkivet `module_plan_versions`, lageret `module-plans`).
 export async function archiveLessonPlan(plan: Plan, pdf: Uint8Array, userId: string) {
   const hash = createHash("sha256")
-    .update(JSON.stringify({ kind: "lessons", student: plan.student, lessons: plan.lessons.map((l) => [l.id, l.done?.lesson_date, l.done?.instructor_name, l.done?.skipped]) }))
+    .update(JSON.stringify({ kind: "lessons", student: plan.student, lessons: plan.lessons.map((l) => [l.id, l.done?.lesson_date, l.done?.instructor_name, l.done?.skipped, l.done?.student?.at]) }))
     .digest("hex");
   const admin = createAdminClient();
   const { data: existing } = await admin.from("module_plan_versions").select("id").eq("student_id", plan.studentId).eq("content_hash", hash).maybeSingle();

@@ -10,6 +10,7 @@ import { FactsStrip } from "@/components/facts-strip";
 import { euTestKinds, type Appointment } from "@/lib/appointments";
 import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euOfText, euProgress, type EuSignoff, type EuTopic } from "@/lib/eu";
 import { formatDate } from "@/lib/dates";
+import { ToConfirmBox, type ToConfirm } from "./to-confirm";
 
 // Elevens forside: QR-koden, som læreren scanner, og modulplanen med lektioner talt op mod minimum, opstart og
 // afslutning pr. modul. Bruges af elevens app og af admins demo-elev i kontoret.
@@ -19,6 +20,7 @@ export async function StudentHome({
   schoolName,
   action,
   qrHref = "/elev/qr",
+  demo = false,
 }: {
   studentId: string;
   firstName: string;
@@ -36,6 +38,14 @@ export async function StudentHome({
     .eq("id", studentId)
     .maybeSingle();
   if (!student) return null;
+  // Scanninger, der venter på elevens bekræftelse (ikke for demo-eleven, som ingen logger ind som).
+  const { data: school } = await supabase.from("students").select("school_id").eq("id", studentId).single();
+  const [{ data: toConfirm }, { data: signature }] = demo
+    ? [{ data: [] }, { data: null }]
+    : await Promise.all([
+        supabase.rpc("student_to_confirm", { p_school: school!.school_id }),
+        supabase.rpc("student_my_signature", { p_school: school!.school_id }),
+      ]);
 
   const course = student.courses as unknown as { name: string; theory_at_scan: boolean; course_modules: (PlanModule & { topics: string | null })[]; school_lessons: SchoolLesson[] } | null;
   const team = student.teams as unknown as { name: string } | null;
@@ -54,6 +64,7 @@ export async function StudentHome({
       <Link href={qrHref} className="flex items-center justify-center rounded-[18px] bg-accent px-4 py-4 text-[17px] font-bold text-ink">
         Vis min QR-kode
       </Link>
+      <ToConfirmBox items={(toConfirm ?? []) as ToConfirm[]} hasSignature={!!signature} />
       {course?.course_modules.length ? (
         <>
         <FactsStrip

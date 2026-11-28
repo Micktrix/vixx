@@ -447,6 +447,15 @@ fordeler på modulerne og sætter underskrifterne det rigtige sted.
 - Forsiden: "X kørte lektioner mangler at komme på løn" med "Til løn" pr. lektion (indeværende lønperiode).
 - Planlagte lektioner fra lektionsplanen kan fjernes fra lærerens dag ("Fjern").
 
+### Trin E13 – Elevens underskrift og bekræftelse i appen (Michael 28. nov. 2026; migration `20261128100000_student_confirmations`)
+- Eleven skriver under én gang (Mere → Min underskrift, fuld skærm som lærerne). Gemt og låst; kun eleven og serveren kan læse den.
+- Forsiden: "N lektioner venter på din bekræftelse" med hver scanning (lektion i lektionsplanen, EU-emne/-køretime, B-modulscanning):
+  "Bekræft" (kopi af underskriften og tidspunkt gemmes) eller "Det passer ikke" (med note; læreren, der scannede, får besked). "Bekræft alle".
+- Læreren må køre videre (næste lektion/modul), selv om eleven ikke har bekræftet.
+- Elevens underskrift kommer på lektionsplanen (rækken "Elevens underskrift" + "Bekræftet i Vixx dato kl.") og EU-planen (Chaufførens
+  underskrift / Elev i køretimerne). Ikke på Færdselsstyrelsens modulplan (intet felt; Michael valgte kun lektionsplanen).
+- Senere/idé: vise elevens svar (bekræftet / passer ikke) på elevens side i kontoret.
+
 ### Trin E12 – Teoritræning for elever (idé fra Michael 27. nov. 2026, IKKE bygget, ikke prioriteret)
 Eleven logger ind og øver teoriprøven i Vixx. Bygger videre på quiz og vidensbank (E-quiz/materialer), som i dag
 ikke er åbne for elever.

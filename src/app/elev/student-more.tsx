@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CalendarBox } from "@/components/calendar-box";
 import { signOut } from "@/lib/auth/actions";
 import { formatPhone } from "@/lib/phone";
@@ -49,6 +50,13 @@ export async function StudentMore({
         ))}
         {!people.length && <p className="text-sm text-muted">Kontakt kontoret, hvis du har spørgsmål.</p>}
       </section>
+
+      {!demo && (
+        <Link href="/elev/underskrift" className="flex items-center justify-between rounded-[20px] border border-line bg-surface p-[18px] font-bold">
+          Min underskrift
+          <span className="text-accent-ink">›</span>
+        </Link>
+      )}
 
       <CalendarBox
         httpsUrl={`${await siteOrigin()}/kalender/${student.calendar_token}.ics`}
