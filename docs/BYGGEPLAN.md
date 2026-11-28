@@ -456,6 +456,23 @@ fordeler på modulerne og sætter underskrifterne det rigtige sted.
   underskrift / Elev i køretimerne). Ikke på Færdselsstyrelsens modulplan (intet felt; Michael valgte kun lektionsplanen).
 - Senere/idé: vise elevens svar (bekræftet / passer ikke) på elevens side i kontoret.
 
+### Trin E14 – Elevens e-mail, velkomst, tak og kursus-påmindelser (idé fra Michael 28. nov. 2026, IKKE bygget)
+Skal bygges samlet, fordi de deler e-mail og samtykke. Mails sendes via Resend (som backup-CSV'en).
+- **E-mail ved første login:** efter valg af egen kode: "Din e-mail – så sender skolen dig en guide". Bekræftelsesmail.
+  Åbent: obligatorisk eller valgfri (forslag: valgfri med påmindelse).
+- **Velkomstmail med guide** pr. forløb (B, C, C/E, D, EU): hvad eleven skal have klar (lægeerklæring, billede, borger.dk,
+  førstehjælp), skolens regler (afbud, betaling, mødetid, adresse), hvordan appen virker. Samme guide i appen under
+  Mere → "Kom godt i gang". Admin skriver teksten selv under Indstillinger (åbent: standardtekst fra Vixx?).
+  Kan senere kobles til E7 (tjekliste før prøven, flueben i faktaboksen).
+- **Tak-mail efter forløbet** (når "Afslut forløb" = bestået køreprøve/kursus): "Tak fordi du valgte [skolen] …". En ren
+  tak må sendes; med salg/anmeldelseslink kræver det samtykke (se nedenfor).
+- **Kurser og beviser + påmindelser:** ADR grund/tank, EU efteruddannelse (kode 95), førstehjælp m.fl. gemmes med dato og
+  udløb (typisk 5 år; kontoret kan rette). Mail fx 6 og 2 måneder før udløb med link til skolen. Kontoret ser "udløber snart".
+  Kurserne og deres gyldighed vedligeholdes af admin.
+- **Samtykke (vigtigt):** påmindelser og salg er markedsføring → eleven siger aktivt ja (flueben, tidspunkt gemmes),
+  afmeld-link i hver mail, data gemmes kun så længe der er samtykke (ellers slettes som i dag ved afsluttet forløb).
+  Står i skolens privatlivstekst; skolen bør få samtykketeksten tjekket (revisor/advokat).
+
 ### Trin E12 – Teoritræning for elever (idé fra Michael 27. nov. 2026, IKKE bygget, ikke prioriteret)
 Eleven logger ind og øver teoriprøven i Vixx. Bygger videre på quiz og vidensbank (E-quiz/materialer), som i dag
 ikke er åbne for elever.
