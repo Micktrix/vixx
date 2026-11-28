@@ -79,7 +79,7 @@ export async function StudentHome({
               {course.name}
               {team?.name && <span className="block text-[15px] font-normal text-muted">{team.name}</span>}
             </h2>
-            <LessonPlanList lessons={course.school_lessons} signoffs={(student.lesson_signoffs ?? []) as LessonSignoff[]} />
+            <LessonPlanList lessons={course.school_lessons} signoffs={(student.lesson_signoffs ?? []) as LessonSignoff[]} hideDone />
           </section>
         ) : (
         <StudentModules

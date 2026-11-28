@@ -30,6 +30,10 @@ test("eleven skriver under, bekræfter en lektion og melder, at en anden ikke pa
     await loginOk(page, "20000031", PASSWORD);
     const box = page.getByTestId("to-confirm");
     await expect(box).toContainText("2 lektioner venter på din bekræftelse");
+    // Forløbet viser kun de manglende lektioner; de kørte står i kalenderen.
+    await expect(page.getByTestId("lessons-done-count")).toContainText("2 af 10 lektioner kørt");
+    await expect(page.getByTestId("lesson-plan")).not.toContainText("Lektion 7");
+    await expect(page.getByTestId("lesson-plan")).toContainText("Lektion 1");
 
     // Først underskriften.
     await box.getByRole("link", { name: "Skriv under" }).click();
