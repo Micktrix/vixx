@@ -57,6 +57,7 @@ test("EU-prøverne, holdtavlen og elevens app viser EU", async ({ browser }) => 
   const app = await browser.newPage();
   await loginOk(app, "20000031", PASSWORD);
   await expect(app.getByTestId("student-eu")).toContainText("EU Gods");
+  await expect(app.getByTestId("eu-topics-done")).toContainText("emner gennemført"); // kun de manglende emner vises
   await expect(app.getByTestId("fact-multitest")).toBeVisible();
 });
 

@@ -9,7 +9,6 @@ import type { LessonSignoff, SchoolLesson } from "@/lib/lesson-plan";
 import { FactsStrip } from "@/components/facts-strip";
 import { euTestKinds, type Appointment } from "@/lib/appointments";
 import { EU_SIGNOFF_FIELDS, EU_TOPIC_FIELDS, euOfText, euProgress, type EuSignoff, type EuTopic } from "@/lib/eu";
-import { formatDate } from "@/lib/dates";
 import { ToConfirmBox, type ToConfirm } from "./to-confirm";
 
 // Elevens forside: QR-koden, som læreren scanner, og modulplanen med lektioner talt op mod minimum, opstart og
@@ -118,13 +117,18 @@ function StudentEu({ eu }: { eu: NonNullable<Awaited<ReturnType<typeof loadStude
       <p className="text-[14px] text-muted">
         {euOfText(p.hoursDone, p.hoursTotal)} · {p.driveLessons} køretimer á 45 min.
       </p>
+      {/* Kun de manglende emner (Michael 28. nov. 2026), som kørekortets lektioner. */}
+      <p className="text-[14px] text-muted" data-testid="eu-topics-done">
+        {p.topics.filter((t) => t.done).length} af {p.topics.length} emner gennemført
+      </p>
       <ul className="flex flex-col gap-0.5 text-[14px]">
-        {p.topics.map((t) => (
-          <li key={t.id} className={t.done ? "text-ok" : "text-muted"}>
-            {t.done ? "✓" : "○"} <b>{t.code}</b> {t.goal}
-            {t.done && ` · ${formatDate(t.done.signed_on)}`}
-          </li>
-        ))}
+        {p.topics
+          .filter((t) => !t.done)
+          .map((t) => (
+            <li key={t.id} className="text-muted">
+              ○ <b>{t.code}</b> {t.goal}
+            </li>
+          ))}
       </ul>
     </section>
   );
