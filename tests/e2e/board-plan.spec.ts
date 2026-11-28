@@ -58,6 +58,12 @@ test("kontoret planlægger lektioner, KTA med to elever og en teoriprøve fra ho
     await planIn(rowA.locator('[data-plan="Lektion 1"]'), page, date);
     await expect(rowA.locator('[data-state="planned"]')).toHaveText(short);
 
+    // Mørke kan ligge uden for lektionsplanens tider (aftenkørsel): alle kvarterer kan vælges.
+    await rowA.getByTestId("board-fact-dark").locator("..").click();
+    await page.getByTestId("plan-dialog").locator('select[name="instructorId"]').selectOption({ label: "Lars Jensen" });
+    await expect(page.getByTestId("plan-dialog").locator('select[name="start"] option[value="19:15"]')).toHaveCount(1);
+    await page.getByTestId("plan-dialog").getByRole("button", { name: "Annuller" }).click();
+
     // Mørke i faktaboksen planlægger mørkelektionen (også gul i lektionsrækken).
     await planIn(rowA.getByTestId("board-fact-dark").locator(".."), page, date);
     await expect(rowA.getByTestId("board-fact-dark")).toHaveAttribute("data-tone", "booked");

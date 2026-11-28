@@ -66,7 +66,7 @@ export function ProgressBoard({
                                 {done ? "✓" : on ? shortDate(on.date) : "–"}
                               </span>
                             );
-                            const target: PlanTarget = { type: "lesson", schoolLessonId: l.id, count: l.units.length || 1, label: lessonLabel(l) };
+                            const target: PlanTarget = { type: "lesson", schoolLessonId: l.id, count: l.units.length || 1, label: lessonLabel(l), anyTime: l.kind === "dark" };
                             return (
                               <Cell key={l.id} label={String(l.number)}>
                                 {done ? cell : <PlanCell studentId={s.id} studentName={s.name} target={target} planned={on}>{cell}</PlanCell>}
@@ -124,7 +124,7 @@ export function ProgressBoard({
                           tone === "done"
                             ? null
                             : fl
-                              ? { type: "lesson", schoolLessonId: fl.id, count: fl.units.length || 1, label: f.kind === "kta" ? "KTA" : lessonLabel(fl) }
+                              ? { type: "lesson", schoolLessonId: fl.id, count: fl.units.length || 1, label: f.kind === "kta" ? "KTA" : lessonLabel(fl), anyTime: fl.kind === "dark" }
                               : { type: "appointment", kind: f.kind, label: KIND_LABEL[f.kind].toLowerCase() };
                         return (
                           <Cell key={f.kind} label={SHORT[f.kind as keyof typeof SHORT] ?? KIND_LABEL[f.kind]}>

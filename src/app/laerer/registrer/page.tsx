@@ -49,6 +49,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
   const openPlanned = period.lessons.filter((l) => !period.registrations.some((r) => r.scheduledLessonId === l.id));
   if (lesson && !openPlanned.some((l) => l.id === lesson.id)) redirect(back); // allerede sendt til løn
   const planned = lesson ? period.lessons.find((l) => l.id === lesson.id) : undefined;
+  const lessonStart = lesson?.start_time.slice(0, 5); // fx en mørkelektion kl. 18:15 uden for lektionsplanen
   const lessonNote = planned ? [lesson?.note, planned.studentName].filter(Boolean).join(" · ") : undefined;
 
   return (
@@ -84,7 +85,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/laerer/
           action={saveRegistration}
           submitLabel={reg ? (reg.status === "rejected" ? "Send igen" : "Gem ændringer") : lesson ? "Send til løn" : "Gem lektioner"}
           services={services}
-          plan={teacher.plan}
+          plan={lessonStart && !teacher.plan.starts.includes(lessonStart) ? { ...teacher.plan, starts: [...teacher.plan.starts, lessonStart].sort() } : teacher.plan}
           busy={busy}
           hiddenFields={{ date, ...(reg ? { id: reg.id } : {}), ...(lesson ? { scheduledLessonId: lesson.id } : {}) }}
           initial={{

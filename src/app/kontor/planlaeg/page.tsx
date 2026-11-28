@@ -4,7 +4,7 @@ import { ActionForm } from "@/components/form";
 import { requireRole } from "@/lib/auth/session";
 import { busyByResource, loadBookings, loadResources } from "@/lib/booking-data";
 import { formatLongDate, parseDateInput, todayDk } from "@/lib/dates";
-import { toPlan } from "@/lib/schedule";
+import { TIME_SLOTS, toPlan } from "@/lib/schedule";
 import { loadStudentOptions } from "@/lib/student-options";
 import { createClient } from "@/lib/supabase/server";
 import { calendarHref } from "../calendar/params";
@@ -55,6 +55,11 @@ export default async function PlanLessonPage({ searchParams }: PageProps<"/konto
   const plan = toPlan(school?.lesson_starts, lesson?.lesson_minutes ?? school?.lesson_minutes ?? 45);
   const lessonStart = lesson?.start_time.slice(0, 5);
   if (lessonStart && !plan.starts.includes(lessonStart)) plan.starts = [...plan.starts, lessonStart].sort();
+  // Mørkelektionen fra lektionsplanen må ligge på alle kvarterer (aftenkørsel).
+  if (lesson?.school_lesson_id) {
+    const { data: sl } = await supabase.from("school_lessons").select("kind").eq("id", lesson.school_lesson_id).maybeSingle();
+    if (sl?.kind === "dark") plan.starts = TIME_SLOTS;
+  }
 
   return (
     <>

@@ -5,7 +5,7 @@ import { ResultBox, useFormAction } from "@/components/form";
 import { QuarterTime } from "@/components/quarter-time";
 import { inputClass } from "@/components/styles";
 import { formatDate, formatLongDate } from "@/lib/dates";
-import { planSlotIsFree, type LessonPlan, type Span } from "@/lib/schedule";
+import { planSlotIsFree, TIME_SLOTS, type LessonPlan, type Span } from "@/lib/schedule";
 import { addAppointment, boardDay, cancelBoardPlan, deleteAppointment, planFromBoard, setAppointmentStatus } from "./actions";
 
 // Planlæg fra holdtavlen (trin E11, Michael 27. nov. 2026): tryk på en manglende lektion, EU-køretime eller prøve,
@@ -24,7 +24,7 @@ export function PlannerProvider({ children, ...ctx }: Ctx & { children: ReactNod
 export type Booked = { id: string; text: string; test: boolean };
 
 export type PlanTarget =
-  | { type: "lesson"; schoolLessonId: string; count: number; label: string }
+  | { type: "lesson"; schoolLessonId: string; count: number; label: string; anyTime?: boolean } // anyTime: mørke, alle kvarterer
   | { type: "eu"; euTopicId: string; count: number; label: string }
   | { type: "appointment"; kind: string; label: string };
 
@@ -120,7 +120,9 @@ function LessonForm({
   }, [instructorId, date]);
 
   // Ledige starttider i skolens lektionsplan; har læreren samme lektion på tiden, kan eleven sættes på.
-  const options = ctx.plan.starts.map((t) => {
+  // Mørke køres om aftenen: alle kvarterer, ikke kun lektionsplanens starttider (Michael 28. nov. 2026).
+  const starts = target.type === "lesson" && target.anyTime ? TIME_SLOTS : ctx.plan.starts;
+  const options = starts.map((t) => {
     const join = !!day?.join.includes(t);
     const free = !!day && !day.holiday && planSlotIsFree(ctx.plan, t, target.count, day.busy);
     return { t, join, ok: join || free };

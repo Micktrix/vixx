@@ -141,7 +141,7 @@ async function PlanForStudent({ teacher, date, studentId }: { teacher: Awaited<R
             {course && course.lessons.length > 0 && !missing.length && <p className="text-sm text-muted">Alle lektioner i lektionsplanen er kørt.</p>}
             {missing.map((l) => (
               <PlanCell key={l.id} studentId={student.id} studentName={student.name} className={row}
-                target={{ type: "lesson", schoolLessonId: l.id, count: l.units.length || 1, label: l.kind === "kta" ? "KTA" : lessonLabel(l) }} planned={planned.get(`${student.id}:${l.id}`)}>
+                target={{ type: "lesson", schoolLessonId: l.id, count: l.units.length || 1, label: l.kind === "kta" ? "KTA" : lessonLabel(l), anyTime: l.kind === "dark" }} planned={planned.get(`${student.id}:${l.id}`)}>
                 <span className="flex flex-col">
                   <b>{l.kind === "kta" ? "KTA (køreteknisk anlæg)" : lessonLabel(l)}</b>
                   <span className="text-[13px] text-muted">{lengthText(l)}</span>
