@@ -466,10 +466,10 @@ Skal bygges samlet, fordi de deler e-mail og samtykke. Mails sendes via Resend (
   Kan senere kobles til E7 (tjekliste før prøven, flueben i faktaboksen).
 - **Tak-mail efter forløbet** (når "Afslut forløb" = bestået køreprøve/kursus): "Tak fordi du valgte [skolen] …". En ren
   tak må sendes; med salg/anmeldelseslink kræver det samtykke (se nedenfor).
-- **Kurser og beviser + påmindelser:** ADR grund/tank, EU efteruddannelse (kode 95), førstehjælp m.fl. gemmes med dato og
+- **Kurser og beviser + påmindelser:** ADR grund/tank og EU efteruddannelse (kode 95) m.fl. gemmes (førstehjælp er en del af EU og registreres ikke for sig, Michael 28. nov. 2026) med dato og
   udløb (typisk 5 år; kontoret kan rette). Mail fx 6 og 2 måneder før udløb med link til skolen. Kontoret ser "udløber snart".
   Kurserne og deres gyldighed vedligeholdes af admin.
-- **Kursusregister uden elev-login (Michael 28. nov. 2026, valgt retning):** til efteruddannelse (EU/kode 95), ADR, førstehjælp
+- **Kursusregister uden elev-login (Michael 28. nov. 2026, valgt retning):** til efteruddannelse (EU/kode 95), ADR
   m.fl. oprettes deltagerne IKKE som elever. En deltager = navn, e-mail og/eller telefon, kursus, dato, udløb (typisk +5 år) og
   samtykke med tidspunkt. Kontoret ser listen med "udløber snart" og kan filtrere på kursus.
   **Tilmelding med QR-kode på sidste kursusdag** (valgt): læreren viser en QR-kode (storskærm/papir) "Vil du have en påmindelse,
