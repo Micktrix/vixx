@@ -4,16 +4,16 @@ import { INSTRUCTOR, PASSWORD, loginOk, openBoxes } from "./helpers";
 
 const BENT = "00000000-0000-4000-ad00-000000000033"; // B-elev uden hold
 
+// Booking sker i faktaboksens blok (28. nov. 2026: "+ Ny aftale" er væk).
+const KIND: Record<string, string> = { Teoriprøve: "theory_test", Køreprøve: "driving_test" };
 async function book(page: Page, kind: string, date: string) {
-  const details = page.getByTestId("new-appointment");
-  if ((await details.getAttribute("open")) === null) await details.getByText("+ Ny aftale").click();
-  const form = details.locator("form");
-  await form.getByLabel("Aftale").selectOption({ label: kind });
-  await form.getByLabel("Dato").fill(date);
-  await form.getByLabel("Klokkeslæt").fill("12:00");
-  await form.getByLabel(/Adresse/).fill("Prøvecentret, Aarhus");
-  await form.getByRole("button", { name: "Gem aftale" }).click();
-  await expect(page.getByText("Aftalen er gemt.")).toBeVisible();
+  const card = page.getByTestId(`fact-${KIND[kind]}`);
+  if ((await card.getAttribute("open")) === null) await card.locator("summary").click();
+  await card.getByLabel("Dato").fill(date);
+  await card.getByLabel("Klokkeslæt").fill("12:00");
+  await card.getByLabel(/Adresse/).fill("Prøvecentret, Aarhus");
+  await card.getByRole("button", { name: /^Book/ }).click();
+  await expect(card).toHaveAttribute("data-tone", "booked");
 }
 
 // Ønske 2 og 3 (21. nov. 2026): moduler rullet ud, aftaler og faktaboksen på eleven, og eleven ser dem i sin app.
@@ -39,9 +39,9 @@ test("læreren ruller et modul ud og skriver prøver og KTA ind på eleven; elev
     await book(page, "Teoriprøve", today);
     await expect(theory).toHaveAttribute("data-tone", "booked");
     await expect(theory).toContainText("kl. 12:00, Prøvecentret, Aarhus");
-    await theory.locator("summary").click();
+    if ((await theory.getAttribute("open")) === null) await theory.locator("summary").click();
     await theory.getByRole("button", { name: "Ikke bestået" }).click();
-    await expect(theory).toHaveAttribute("data-tone", "none");
+    await expect(theory).toHaveAttribute("data-tone", "failed"); // rød, til en ny prøve er booket
     await expect(theory).toContainText("Ikke bestået");
     await book(page, "Teoriprøve", today);
     await expect(theory).toHaveAttribute("data-tone", "booked");
@@ -60,7 +60,7 @@ test("læreren ruller et modul ud og skriver prøver og KTA ind på eleven; elev
     const later = new Date(Date.now() + 5 * 864e5).toLocaleDateString("sv-SE", { timeZone: "Europe/Copenhagen" });
     await book(page, "Køreprøve", later);
     const driving = page.getByTestId("fact-driving_test");
-    await driving.locator("summary").click();
+    if ((await driving.getAttribute("open")) === null) await driving.locator("summary").click();
     await driving.getByRole("button", { name: "Bestået", exact: true }).click();
     await expect(driving).toHaveAttribute("data-tone", "done");
     await expect(page.getByRole("link", { name: "Afslut forløb (bestået køreprøve)?" })).toBeVisible();
@@ -94,6 +94,18 @@ test("holdtavlen viser elevens prøver og aftaler", async ({ page }) => {
     await expect(row.getByTestId("board-fact-theory_test")).toHaveText(`${Number(later.slice(8, 10))}/${Number(later.slice(5, 7))}`);
     await expect(row.getByTestId("board-fact-kta")).toHaveAttribute("data-tone", "none");
     await expect(row.getByTestId("board-fact-dark")).toHaveAttribute("data-tone", "none");
+
+    // Fra tavlen: ikke bestået → rød ✗ → ny prøve booket → gul.
+    page.on("dialog", (d) => d.accept());
+    await row.locator('[data-plan="teoriprøve"]').click();
+    await page.getByTestId("plan-booked").getByRole("button", { name: "Ikke bestået" }).click();
+    await expect(row.getByTestId("board-fact-theory_test")).toHaveAttribute("data-tone", "failed");
+    await expect(row.getByTestId("board-fact-theory_test")).toHaveText("✗");
+    await page.getByTestId("plan-dialog").getByRole("button", { name: "Luk" }).click();
+    await row.locator('[data-plan="teoriprøve"]').click();
+    await page.getByTestId("plan-dialog").getByLabel("Dato").fill(later);
+    await page.getByTestId("plan-dialog").getByRole("button", { name: "Gem aftale" }).click();
+    await expect(row.getByTestId("board-fact-theory_test")).toHaveAttribute("data-tone", "booked");
   } finally {
     await admin.from("student_appointments").delete().eq("student_id", EMIL);
   }

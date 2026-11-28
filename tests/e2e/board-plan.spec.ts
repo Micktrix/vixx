@@ -109,8 +109,8 @@ test("kontoret planlægger lektioner, KTA med to elever og en teoriprøve fra ho
     const dialog = page.getByTestId("plan-dialog");
     await dialog.getByLabel("Dato").fill(date);
     await dialog.getByRole("button", { name: "Gem aftale" }).click();
-    // Feltet bliver gult, og boksen lukker af sig selv (der er intet mere at planlægge).
-    await expect(dialog).toBeHidden();
+    await expect(dialog.getByRole("status")).toContainText("Aftalen er gemt.");
+    await dialog.getByRole("button", { name: "Luk" }).click();
     await expect(rowB.getByTestId("board-fact-theory_test")).toHaveAttribute("data-tone", "booked");
   } finally {
     if (ids.length) {

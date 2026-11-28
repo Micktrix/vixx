@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { FACT_TONE } from "@/components/facts-strip";
-import { euTestKinds, factText, facts, KIND_LABEL } from "@/lib/appointments";
+import { appointmentText, euTestKinds, factText, facts, isTest, KIND_LABEL, type Fact } from "@/lib/appointments";
 import { formatDate } from "@/lib/dates";
 import { lessonLabel } from "@/lib/lesson-plan";
 import { moduleProgress, progressText } from "@/lib/module-progress";
-import { PlanCell, type PlanTarget } from "./board-planner";
+import { PlanCell, type Booked, type PlanTarget } from "./board-planner";
 import { progress, type BoardPlan, type CourseInfo, type StudentInfo, type EuTotals } from "./data";
 
 // Forløbstavle: én række pr. elev med elevens egne overskrifter over boksene (Michael 26. nov. 2026): lektionerne
@@ -117,7 +117,7 @@ export function ProgressBoard({
                             className={`${box} ${FACT_TONE[tone]}`}
                             title={`${KIND_LABEL[f.kind]}: ${ktaOn && f.tone === "none" ? planText(ktaOn) : factText(f, formatDate)}`}
                           >
-                            {tone === "done" ? "✓" : tone === "booked" && date ? shortDate(date) : "–"}
+                            {factMark(tone, date)}
                           </span>
                         );
                         const target: PlanTarget | null =
@@ -125,12 +125,10 @@ export function ProgressBoard({
                             ? null
                             : fl
                               ? { type: "lesson", schoolLessonId: fl.id, count: fl.units.length || 1, label: f.kind === "kta" ? "KTA" : lessonLabel(fl) }
-                              : tone === "none"
-                                ? { type: "appointment", kind: f.kind, label: KIND_LABEL[f.kind].toLowerCase() }
-                                : null;
+                              : { type: "appointment", kind: f.kind, label: KIND_LABEL[f.kind].toLowerCase() };
                         return (
                           <Cell key={f.kind} label={SHORT[f.kind as keyof typeof SHORT] ?? KIND_LABEL[f.kind]}>
-                            {target ? <PlanCell studentId={s.id} studentName={s.name} target={target} planned={target.type === "lesson" ? ktaOn : undefined}>{cell}</PlanCell> : cell}
+                            {target ? <PlanCell studentId={s.id} studentName={s.name} target={target} planned={target.type === "lesson" ? ktaOn : undefined} booked={target.type === "appointment" ? bookedOf(f) : undefined}>{cell}</PlanCell> : cell}
                           </Cell>
                         );
                       })}
@@ -158,6 +156,16 @@ export function ProgressBoard({
 
 // "planlagt 27. nov. kl. 10:45 · Lars Jensen" (ved musen).
 const planText = (p: BoardPlan) => `planlagt ${formatDate(p.date)} kl. ${p.start}${p.instructor ? ` · ${p.instructor}` : ""}`;
+
+// Feltets tegn: ✓ (grøn), dato (gul), ✗ (rød = ikke bestået) eller – (grå).
+const factMark = (tone: Fact["tone"], date?: string) =>
+  tone === "done" ? "✓" : tone === "booked" && date ? shortDate(date) : tone === "failed" ? "✗" : "–";
+
+// Den bookede aftale, så den kan få bestået/ikke bestået fra tavlen.
+const bookedOf = (f: Fact): Booked | undefined =>
+  f.tone === "booked" && f.current?.status === "booked"
+    ? { id: f.current.id, text: `Booket ${appointmentText(f.current, formatDate)}`, test: isTest(f.kind) }
+    : undefined;
 
 // "23/11" til tavlen.
 const shortDate = (iso: string) => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
@@ -204,12 +212,18 @@ function EuLine({ s, totals, modules, planned }: { s: StudentInfo; totals: EuTot
       {tests.map((f) => {
         const cell = (
           <span data-testid={`board-fact-${f.kind}`} data-tone={f.tone} title={`${KIND_LABEL[f.kind]}: ${factText(f, formatDate)}`} className={`${box} ${FACT_TONE[f.tone]}`}>
-            {f.tone === "done" ? "✓" : f.tone === "booked" && f.current ? shortDate(f.current.on_date) : "–"}
+            {factMark(f.tone, f.current?.on_date)}
           </span>
         );
         return (
           <Cell key={f.kind} label={KIND_LABEL[f.kind]}>
-            {f.tone === "none" ? <PlanCell studentId={s.id} studentName={s.name} target={{ type: "appointment", kind: f.kind, label: KIND_LABEL[f.kind].toLowerCase() }}>{cell}</PlanCell> : cell}
+            {f.tone !== "done" ? (
+              <PlanCell studentId={s.id} studentName={s.name} target={{ type: "appointment", kind: f.kind, label: KIND_LABEL[f.kind].toLowerCase() }} booked={bookedOf(f)}>
+                {cell}
+              </PlanCell>
+            ) : (
+              cell
+            )}
           </Cell>
         );
       })}

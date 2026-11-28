@@ -6,6 +6,7 @@ export const FACT_TONE = {
   none: "border-line bg-soft text-muted",
   booked: "border-warn-line bg-warn-bg text-warn",
   done: "border-ok/30 bg-ok-bg text-ok",
+  failed: "border-bad/30 bg-bad-bg text-bad",
 } as const;
 
 // Faktaboksen kun til visning: KTA, Mørke, Teoriprøve og Køreprøve (grå/gul/grøn) med aftalernes dato, tid og

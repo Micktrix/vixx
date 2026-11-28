@@ -1,7 +1,8 @@
 import { isKtaTopic, type ModuleProgress } from "./module-progress";
 
 // Aftaler på eleven og faktaboksen (Michael, 21. nov. 2026): KTA, Mørke, Teoriprøve og Køreprøve.
-// grå = intet gjort, gul = booket (der er en aftale), grøn = gennemført/bestået.
+// grå = intet gjort, gul = booket (der er en aftale), grøn = gennemført/bestået, rød = ikke bestået (indtil en ny
+// prøve er booket; Michael 28. nov. 2026).
 // KTA og Mørke bliver grønne af sig selv ved scanning (afsnit 9 kørt / 7.19 bekræftet) eller manuelt.
 
 export const APPOINTMENT_KINDS = ["kta", "dark", "theory_test", "driving_test", "lastsikring", "multitest"] as const;
@@ -33,7 +34,7 @@ export const isTest = (k: AppointmentKind) => k !== "kta" && k !== "dark";
 
 export type Fact = {
   kind: AppointmentKind;
-  tone: "none" | "booked" | "done";
+  tone: "none" | "booked" | "done" | "failed";
   auto: boolean; // grøn af sig selv fra scanningen
   current: Appointment | null; // den aftale, der bestemmer farven (booket eller bestået)
   history: Appointment[]; // alle aftaler, nyeste først
@@ -51,7 +52,7 @@ export function facts(modules: ModuleProgress[], appointments: Appointment[], ex
     const latest = history[0] ?? null;
     const auto = (kind === "kta" && ktaScanned) || (kind === "dark" && darkScanned);
     const booked = latest?.status === "booked" ? latest : null;
-    const tone = passed || auto ? "done" : booked ? "booked" : "none";
+    const tone = passed || auto ? "done" : booked ? "booked" : latest?.status === "failed" ? "failed" : "none";
     return { kind, tone, auto, current: passed ?? booked, history };
   });
 }

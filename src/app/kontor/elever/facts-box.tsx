@@ -1,6 +1,5 @@
 import { FACT_TONE } from "@/components/facts-strip";
 import { ActionForm, TextField } from "@/components/form";
-import { inputClass } from "@/components/styles";
 import { appointmentText, factText, isTest, KIND_LABEL, type Fact } from "@/lib/appointments";
 import { formatDate } from "@/lib/dates";
 import { addAppointment, deleteAppointment, markFactDone, setAppointmentStatus } from "./actions";
@@ -26,31 +25,14 @@ export function FactsBox({ studentId, facts, canFinish }: { studentId: string; f
         </p>
       )}
 
-      <details className="text-sm" data-testid="new-appointment">
-        <summary className="cursor-pointer font-semibold text-muted hover:text-ink">+ Ny aftale</summary>
-        <ActionForm action={addAppointment} submitLabel="Gem aftale" className="mt-2 flex flex-wrap items-end gap-3">
-          <input type="hidden" name="studentId" value={studentId} />
-          <label className="flex flex-col gap-1.5 text-sm font-bold">
-            Aftale
-            <select name="kind" defaultValue="theory_test" className={`${inputClass} w-[170px]`}>
-              {facts.map((f) => (
-                <option key={f.kind} value={f.kind}>
-                  {KIND_LABEL[f.kind]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <TextField label="Dato" name="date" type="date" required />
-          <TextField label="Klokkeslæt" name="time" type="time" />
-          <TextField label="Adresse (valgfri)" name="address" maxLength={200} className="min-w-[220px] flex-1" />
-        </ActionForm>
-      </details>
+      <p className="text-[13px] text-muted">Tryk på en blok for at booke, eller for at sætte bestået/ikke bestået.</p>
     </section>
   );
 }
 
-// En blok i faktaboksen. Tryk på den for at ændre status: bestået/gennemført, ikke bestået, slet, eller (KTA og
-// mørke) markér gennemført. Historikken står i blokken.
+// En blok i faktaboksen. Tryk på den for at booke (grå eller rød = ikke bestået; "+ Ny aftale" er væk, Michael
+// 28. nov. 2026) eller ændre status: bestået/gennemført, ikke bestået, slet, eller (KTA og mørke) markér gennemført.
+// Historikken står i blokken.
 function FactCard({ studentId, fact: f }: { studentId: string; fact: Fact }) {
   const booked = f.current?.status === "booked" ? f.current : null;
   const past = f.history.filter((a) => a.id !== booked?.id);
@@ -78,7 +60,15 @@ function FactCard({ studentId, fact: f }: { studentId: string; fact: Fact }) {
             <input type="hidden" name="kind" value={f.kind} />
           </ActionForm>
         )}
-        {!booked && !manual && !past.length && <span className="text-muted">Book den med &quot;+ Ny aftale&quot;.</span>}
+        {!booked && f.tone !== "done" && (
+          <ActionForm action={addAppointment} submitLabel={f.tone === "failed" ? "Book ny prøve" : "Book"} className="flex w-full flex-col gap-2">
+            <input type="hidden" name="studentId" value={studentId} />
+            <input type="hidden" name="kind" value={f.kind} />
+            <TextField label="Dato" name="date" type="date" required />
+            <TextField label="Klokkeslæt" name="time" type="time" />
+            <TextField label="Adresse (valgfri)" name="address" maxLength={200} />
+          </ActionForm>
+        )}
         {past.length > 0 && (
           <ul className="text-muted">
             {past.map((a) => (

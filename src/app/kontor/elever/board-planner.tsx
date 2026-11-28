@@ -5,7 +5,7 @@ import { ResultBox, useFormAction } from "@/components/form";
 import { inputClass } from "@/components/styles";
 import { formatDate, formatLongDate } from "@/lib/dates";
 import { planSlotIsFree, type LessonPlan, type Span } from "@/lib/schedule";
-import { addAppointment, boardDay, cancelBoardPlan, planFromBoard } from "./actions";
+import { addAppointment, boardDay, cancelBoardPlan, deleteAppointment, planFromBoard, setAppointmentStatus } from "./actions";
 
 // Planlæg fra holdtavlen (trin E11, Michael 27. nov. 2026): tryk på en manglende lektion, EU-køretime eller prøve,
 // og planlæg den uden at gå ind på eleven. Lektionen kommer i lærerens og elevens kalender, men er adskilt fra
@@ -19,6 +19,8 @@ const Planner = createContext<Ctx | null>(null);
 export function PlannerProvider({ children, ...ctx }: Ctx & { children: ReactNode }) {
   return <Planner.Provider value={ctx}>{children}</Planner.Provider>;
 }
+
+export type Booked = { id: string; text: string; test: boolean };
 
 export type PlanTarget =
   | { type: "lesson"; schoolLessonId: string; count: number; label: string }
@@ -36,6 +38,7 @@ export function PlanCell({
   children,
   className = "cursor-pointer rounded-md hover:ring-2 hover:ring-accent",
   planned,
+  booked,
 }: {
   studentId: string;
   studentName: string;
@@ -43,15 +46,17 @@ export function PlanCell({
   children: ReactNode;
   className?: string;
   planned?: { id: string; date: string; start: string; instructor: string }; // allerede planlagt: kan aflyses
+  booked?: Booked; // booket aftale (prøve, KTA/mørke på B): bestået/ikke bestået, gennemført eller slet
 }) {
   const ctx = useContext(Planner);
   const [open, setOpen] = useState(false);
   // Den planlagte lektion, som den var, da boksen blev åbnet (tavlen opdateres under den, når man planlægger/aflyser).
   const [shown, setShown] = useState<typeof planned>(undefined);
+  const [shownBooked, setShownBooked] = useState<Booked | undefined>(undefined);
   if (!ctx) return <>{children}</>;
   return (
     <>
-      <button type="button" onClick={() => (setShown(planned), setOpen(true))} className={className} title={`Planlæg ${target.label}`} data-testid="plan-cell" data-plan={target.label}>
+      <button type="button" onClick={() => (setShown(planned), setShownBooked(booked), setOpen(true))} className={className} title={`Planlæg ${target.label}`} data-testid="plan-cell" data-plan={target.label}>
         {children}
       </button>
       {open && (
@@ -64,10 +69,12 @@ export function PlanCell({
             data-testid="plan-dialog"
           >
             <div>
-              <h2 className="text-lg font-bold">Planlæg {target.label}</h2>
+              <h2 className="text-lg font-bold">{shownBooked ? target.label[0].toUpperCase() + target.label.slice(1) : `Planlæg ${target.label}`}</h2>
               <p className="text-[13px] text-muted">{studentName}</p>
             </div>
-            {shown ? (
+            {shownBooked ? (
+              <BookedForm booked={shownBooked} onClose={() => setOpen(false)} />
+            ) : shown ? (
               <CancelForm studentId={studentId} planned={shown} onClose={() => setOpen(false)} />
             ) : target.type === "appointment" ? (
               <AppointmentForm studentId={studentId} kind={target.kind} today={ctx.today} onClose={() => setOpen(false)} />
@@ -234,5 +241,54 @@ function CancelForm({ studentId, planned, onClose }: { studentId: string; planne
         </button>
       </div>
     </form>
+  );
+}
+
+// En booket aftale: "Booket 2. dec. kl. 12:00, Prøvecentret". Bestået/ikke bestået (prøver) eller gennemført
+// (KTA/mørke) kan ikke ændres bagefter; ikke bestået bliver rødt på tavlen, til en ny prøve er booket.
+function BookedForm({ booked, onClose }: { booked: Booked; onClose: () => void }) {
+  const pass = useFormAction(setAppointmentStatus, `${booked.test ? "Bestået" : "Gennemført"}? Det kan ikke ændres bagefter.`);
+  const fail = useFormAction(setAppointmentStatus, "Ikke bestået? Det kan ikke ændres bagefter.");
+  const del = useFormAction(deleteAppointment, "Slet aftalen?");
+  const result = pass.state ?? fail.state ?? del.state;
+  const done = result && !("error" in result);
+  return (
+    <div className="flex flex-col gap-3" data-testid="plan-booked">
+      <p className="rounded-xl border border-warn-line bg-warn-bg px-3.5 py-2.5">
+        <b>{booked.text}</b>
+      </p>
+      {!done && (
+        <div className="flex flex-wrap gap-2">
+          <form onSubmit={pass.onSubmit}>
+            <input type="hidden" name="id" value={booked.id} />
+            <input type="hidden" name="status" value="passed" />
+            <button type="submit" disabled={pass.pending} className={primary}>
+              {booked.test ? "Bestået" : "Gennemført"}
+            </button>
+          </form>
+          {booked.test && (
+            <form onSubmit={fail.onSubmit}>
+              <input type="hidden" name="id" value={booked.id} />
+              <input type="hidden" name="status" value="failed" />
+              <button type="submit" disabled={fail.pending} className="h-11 rounded-xl border border-bad/40 bg-surface px-4 text-[15px] font-bold text-bad disabled:opacity-60">
+                Ikke bestået
+              </button>
+            </form>
+          )}
+          <form onSubmit={del.onSubmit}>
+            <input type="hidden" name="id" value={booked.id} />
+            <button type="submit" disabled={del.pending} className={plain}>
+              Slet aftalen
+            </button>
+          </form>
+        </div>
+      )}
+      <ResultBox state={result} />
+      <div>
+        <button type="button" onClick={onClose} className={plain}>
+          Luk
+        </button>
+      </div>
+    </div>
   );
 }
