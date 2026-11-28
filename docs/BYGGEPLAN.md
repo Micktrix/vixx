@@ -459,7 +459,7 @@ fordeler på modulerne og sætter underskrifterne det rigtige sted.
 ### Trin E14 – Elevens e-mail, velkomst, tak og kursus-påmindelser (idé fra Michael 28. nov. 2026, IKKE bygget)
 Skal bygges samlet, fordi de deler e-mail og samtykke. Mails sendes via Resend (som backup-CSV'en).
 - **E-mail ved første login:** efter valg af egen kode: "Din e-mail – så sender skolen dig en guide". Bekræftelsesmail.
-  Åbent: obligatorisk eller valgfri (forslag: valgfri med påmindelse).
+  **Afklaret (Michael 28. nov. 2026): e-mail er VALGFRI.** Velkomstguiden står altid i appen, så kontoret kan henvise dertil.
 - **Velkomstmail med guide** pr. forløb (B, C, C/E, D, EU): hvad eleven skal have klar (lægeerklæring, billede, borger.dk,
   førstehjælp), skolens regler (afbud, betaling, mødetid, adresse), hvordan appen virker. Samme guide i appen under
   Mere → "Kom godt i gang". Admin skriver teksten selv under Indstillinger (åbent: standardtekst fra Vixx?).
