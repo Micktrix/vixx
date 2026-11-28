@@ -469,6 +469,13 @@ Skal bygges samlet, fordi de deler e-mail og samtykke. Mails sendes via Resend (
 - **Kurser og beviser + påmindelser:** ADR grund/tank, EU efteruddannelse (kode 95), førstehjælp m.fl. gemmes med dato og
   udløb (typisk 5 år; kontoret kan rette). Mail fx 6 og 2 måneder før udløb med link til skolen. Kontoret ser "udløber snart".
   Kurserne og deres gyldighed vedligeholdes af admin.
+- **Kursusregister uden elev-login (Michael 28. nov. 2026, valgt retning):** til efteruddannelse (EU/kode 95), ADR, førstehjælp
+  m.fl. oprettes deltagerne IKKE som elever. En deltager = navn, e-mail og/eller telefon, kursus, dato, udløb (typisk +5 år) og
+  samtykke med tidspunkt. Kontoret ser listen med "udløber snart" og kan filtrere på kursus.
+  **Tilmelding med QR-kode på sidste kursusdag** (valgt): læreren viser en QR-kode (storskærm/papir) "Vil du have en påmindelse,
+  når dit bevis udløber?"; deltageren scanner og udfylder navn, e-mail og "Ja tak" (samtykket kommer direkte fra personen, som
+  quizzens `/q/<kode>` uden login). Kontoret kan også selv tilføje/indlæse, men skal så kunne dokumentere samtykket.
+  Påmindelse på mail (fx 6 og 2 mdr. før) med afmeld-link; SMS senere. Samme person kan få en ny dato, når kurset tages igen.
 - **Samtykke (vigtigt):** påmindelser og salg er markedsføring → eleven siger aktivt ja (flueben, tidspunkt gemmes),
   afmeld-link i hver mail, data gemmes kun så længe der er samtykke (ellers slettes som i dag ved afsluttet forløb).
   Står i skolens privatlivstekst; skolen bør få samtykketeksten tjekket (revisor/advokat).
