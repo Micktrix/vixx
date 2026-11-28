@@ -10,7 +10,7 @@ async function book(page: Page, kind: string, date: string) {
   const card = page.getByTestId(`fact-${KIND[kind]}`);
   if ((await card.getAttribute("open")) === null) await card.locator("summary").click();
   await card.getByLabel("Dato").fill(date);
-  await card.getByLabel("Klokkeslæt").fill("12:00");
+  await card.getByLabel("Klokkeslæt (valgfri)").selectOption("12:00");
   await card.getByLabel(/Adresse/).fill("Prøvecentret, Aarhus");
   await card.getByRole("button", { name: /^Book/ }).click();
   await expect(card).toHaveAttribute("data-tone", "booked");

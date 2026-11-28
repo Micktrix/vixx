@@ -1,5 +1,6 @@
 import { FACT_TONE } from "@/components/facts-strip";
 import { ActionForm, TextField } from "@/components/form";
+import { QuarterTime } from "@/components/quarter-time";
 import { appointmentText, factText, isTest, KIND_LABEL, type Fact } from "@/lib/appointments";
 import { formatDate } from "@/lib/dates";
 import { addAppointment, deleteAppointment, markFactDone, setAppointmentStatus } from "./actions";
@@ -65,7 +66,7 @@ function FactCard({ studentId, fact: f }: { studentId: string; fact: Fact }) {
             <input type="hidden" name="studentId" value={studentId} />
             <input type="hidden" name="kind" value={f.kind} />
             <TextField label="Dato" name="date" type="date" required />
-            <TextField label="Klokkeslæt" name="time" type="time" />
+            <QuarterTime />
             <TextField label="Adresse (valgfri)" name="address" maxLength={200} />
           </ActionForm>
         )}

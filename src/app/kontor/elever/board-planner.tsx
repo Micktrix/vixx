@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { ResultBox, useFormAction } from "@/components/form";
+import { QuarterTime } from "@/components/quarter-time";
 import { inputClass } from "@/components/styles";
 import { formatDate, formatLongDate } from "@/lib/dates";
 import { planSlotIsFree, type LessonPlan, type Span } from "@/lib/schedule";
@@ -193,10 +194,7 @@ function AppointmentForm({ studentId, kind, today, onClose }: { studentId: strin
         Dato
         <input type="date" name="date" min={today} defaultValue={today} required className={inputClass} />
       </label>
-      <label className="flex flex-col gap-1.5 text-sm font-bold">
-        Klokkeslæt (valgfri)
-        <input type="time" name="time" className={inputClass} />
-      </label>
+      <QuarterTime />
       <label className="flex flex-col gap-1.5 text-sm font-bold">
         Adresse (valgfri)
         <input name="address" maxLength={200} className={inputClass} />
